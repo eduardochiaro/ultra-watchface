@@ -1,0 +1,67 @@
+{
+  "name": "ultra-watchface",
+  "author": "MakeAwesomeHappen",
+  "version": "1.0.0",
+  "keywords": [
+    "pebble-app"
+  ],
+  "private": true,
+  "scripts": {
+    "build": "pebble clean && pebble build",
+    "emulator": "npm run build && pebble install --emulator",
+    "phone": "npm run build && pebble install --phone",
+    "config": "pebble emu-app-config --emulator",
+    "logs": "pebble logs",
+    "font": "node scripts/gen-svg-font.js resources/fonts/Nunito-Bold.ttf resources/fonts/nunito.svg nunito \" %,-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz°\" && fctx-compiler resources/fonts/nunito.svg && mv resources/nunito.ffont resources/fonts/nunito.ffont"
+  },
+  "pebble": {
+    "displayName": "Ultra",
+    "uuid": "69495bb8-66e5-43fd-a3c2-e28a0d8be949",
+    "sdkVersion": "3",
+    "enableMultiJS": true,
+    "targetPlatforms": [
+      "emery",
+      "gabbro"
+    ],
+    "watchapp": {
+      "watchface": true
+    },
+    "messageKeys": [
+      "TEMP",
+      "TEMP_MIN",
+      "TEMP_MAX",
+      "RAIN",
+      "SUNRISE",
+      "SUNSET",
+      "SLOT_TL",
+      "SLOT_TR",
+      "SLOT_BR",
+      "SLOT_BL",
+      "SECONDS",
+      "STEP_GOAL",
+      "UNITS"
+    ],
+    "resources": {
+      "media": [
+        {
+          "type": "raw",
+          "name": "FONT",
+          "file": "fonts/nunito.ffont"
+        }
+      ]
+    },
+    "capabilities": [
+      "health",
+      "configurable",
+      "location"
+    ]
+  },
+  "dependencies": {
+    "@rebble/clay": "^1.1.0",
+    "pebble-fctx": "^1.6.5"
+  },
+  "devDependencies": {
+    "opentype.js": "^2.0.0",
+    "pebble-fctx-compiler": "^1.2.2"
+  }
+}
