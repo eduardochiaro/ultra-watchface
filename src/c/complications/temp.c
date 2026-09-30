@@ -24,5 +24,5 @@ void comp_temp_draw(GContext *ctx, const Slot *slot) {
   slot_arc(ctx, s, 0, 100, GColorChromeYellow);
   slot_dot(ctx, s, pct, s->thickness / 2 + 2, GColorWhite, GColorBlack);
   snprintf(buf, sizeof(buf), "%d°", w->temp);
-  text_draw_along(ctx, buf, slot_point(s, pct, COMP_THUMB), s->center, COMP_TEXT + 3, GColorWhite);
+  text_draw_along(ctx, buf, slot_point(s, pct, COMP_THUMB), s->center, COMP_TEXT + 2, GColorWhite);
 }

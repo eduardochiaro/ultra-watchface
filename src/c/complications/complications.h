@@ -30,7 +30,7 @@ void complication_draw(ComplicationId id, GContext *ctx, const Slot *s);
 #else
 #define COMP_TEXT   8
 #define COMP_ICON   10
-#define COMP_THUMB  13
+#define COMP_THUMB  14
 #endif
 #define COMP_GAP    4    // px between an arc end and its label/icon
 

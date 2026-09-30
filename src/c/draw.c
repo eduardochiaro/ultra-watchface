@@ -121,11 +121,47 @@ void text_draw(GContext *ctx, const char *txt, GPoint c, int size, GColor color)
   draw_text(ctx, txt, c, size, color, 0);
 }
 
-// Baseline tangent to the circle; bottom half flips so it never reads upside down.
+static int isqrt(int n) {
+  int x = 0;
+  while ((x + 1) * (x + 1) <= n) x++;
+  return x;
+}
+
+// Curved text centered on `c`, on the circle through it around `center`: each
+// glyph is placed and turned on its own. The bottom half runs the other way so
+// it never reads upside down.
+// ponytail: per-glyph widths, no kerning; fine for digits and %.
 void text_draw_along(GContext *ctx, const char *txt, GPoint c, GPoint center, int size,
                      GColor color) {
-  int32_t a = atan2_lookup(c.x - center.x, center.y - c.y);
-  draw_text(ctx, txt, c, size, color, cos_lookup(a) >= 0 ? a : a + TRIG_MAX_ANGLE / 2);
+  if (!s_font) return;
+  int dx = c.x - center.x, dy = c.y - center.y;
+  int r = isqrt(dx * dx + dy * dy);
+  if (r == 0) return;
+  int32_t a = atan2_lookup(dx, -dy);
+  bool top = cos_lookup(a) >= 0;
+  FContext f;
+  fctx_init_context(&f, ctx);
+  fctx_set_text_cap_height(&f, s_font, size);
+  fctx_set_fill_color(&f, color);
+  fixed_t x = -fctx_string_width(&f, txt, s_font) / 2;  // arc offset of the next glyph
+  for (const char *p = txt; *p;) {
+    char ch[5];
+    int n = 1;
+    while (n < 4 && (p[n] & 0xC0) == 0x80) n++;  // one UTF-8 char
+    memcpy(ch, p, n);
+    ch[n] = '\0';
+    p += n;
+    fixed_t w = fctx_string_width(&f, ch, s_font);
+    int32_t ang = a + (top ? 1 : -1) * (x + w / 2) * (TRIG_MAX_ANGLE * 10 / 63) / INT_TO_FIXED(r);
+    x += w;
+    fctx_set_rotation(&f, top ? ang : ang + TRIG_MAX_ANGLE / 2);
+    fctx_set_offset(&f, FPoint(INT_TO_FIXED(center.x) + sin_lookup(ang) * INT_TO_FIXED(r) / TRIG_MAX_RATIO,
+                               INT_TO_FIXED(center.y) - cos_lookup(ang) * INT_TO_FIXED(r) / TRIG_MAX_RATIO));
+    fctx_begin_fill(&f);
+    fctx_draw_string(&f, ch, s_font, GTextAlignmentCenter, FTextAnchorCapMiddle);
+    fctx_end_fill(&f);
+  }
+  fctx_deinit_context(&f);
 }
 
 int text_width(GContext *ctx, const char *txt, int size) {

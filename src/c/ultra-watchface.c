@@ -81,7 +81,7 @@ static void draw_dial(GContext *ctx, GPoint c) {
   graphics_draw_circle(ctx, c, DIAL_R);
 
   graphics_context_set_stroke_color(ctx, GColorDarkGray);
-  graphics_context_set_stroke_width(ctx, 2);
+  graphics_context_set_stroke_width(ctx, 1);
   graphics_draw_circle(ctx, c, DIAL_R + 4);
 }
 

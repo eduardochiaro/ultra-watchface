@@ -33,7 +33,7 @@ void icon_block(GContext *ctx, GPoint c, int size, GColor color);
 // Text centered on `c` (cap height `size` px). Text and icons are clamped so
 // they stay on screen.
 void text_draw(GContext *ctx, const char *txt, GPoint c, int size, GColor color);
-// Same, rotated to follow the circle around `center` (edge labels).
+// Same, curved along the circle around `center` (edge labels). Not clamped.
 void text_draw_along(GContext *ctx, const char *txt, GPoint c, GPoint center, int size,
                      GColor color);
 int text_width(GContext *ctx, const char *txt, int size);
