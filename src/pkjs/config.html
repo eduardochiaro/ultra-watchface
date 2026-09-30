@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ultra</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap">
+<style>
+	:root {
+		color-scheme: dark;
+		--ground: #0d0e10;
+		--card: #16181b;
+		--field: #1e2125;
+		--line: #26292e;
+		--edge: #33363b;
+		--ink: #f1f1ee;
+		--soft: #9ea1a7;
+		--dim: #8c9096;
+		--accent: #FFAA00;
+	}
+	* { box-sizing: border-box; }
+	body {
+		margin: 0;
+		padding: 24px 16px 40px;
+		background: var(--ground);
+		color: var(--ink);
+		font: 16px/1.4 Nunito, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	}
+	main { max-width: 30rem; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+	button, input, select { font: inherit; color: inherit; }
+	button { cursor: pointer; }
+	button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+	header { display: flex; align-items: baseline; justify-content: space-between; }
+	h1 { margin: 0; font-size: 30px; font-weight: 800; }
+	h2 { margin: 0 0 12px; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--soft); }
+	.soft { color: var(--soft); font-size: 14px; }
+	.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
+	.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+	/* Preview: sizes come from the watch's own metrics, see face() */
+	.preview { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 16px 18px; border-radius: 24px; }
+	.bezel { padding: 12px; background: #202226; border: 1px solid var(--edge); border-radius: 34px; }
+	.screen { overflow: hidden; line-height: 0; border-radius: 6px; }
+	.round, .round .screen { border-radius: 50%; }
+	.screen svg { display: block; font-family: Nunito, sans-serif; font-weight: 700; }
+	.caption { font-size: 12px; color: var(--dim); }
+
+	.corner { display: flex; flex-direction: column; gap: 6px; padding: 12px; }
+	.corner span { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--soft); }
+	select { min-height: 44px; width: 100%; padding: 0 10px; background: var(--field); border: 1px solid var(--edge); border-radius: 10px; font-size: 15px; font-weight: 700; }
+
+	.scheme { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 12px; background: var(--card); border: 2px solid var(--line); border-radius: 16px; text-align: left; font-size: 14px; font-weight: 700; line-height: 1.25; }
+	.scheme[aria-pressed="true"] { border-color: var(--accent); }
+	.swatch { flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 3px; width: 36px; height: 36px; border-radius: 50%; }
+	.swatch i { width: 6px; height: 6px; border-radius: 50%; }
+
+	.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; }
+	.row + .row { border-top: 1px solid var(--line); }
+	.row b, .row label { font-size: 15px; font-weight: 700; }
+	.row small { display: block; font-size: 13px; color: var(--soft); }
+	.goal { flex-direction: column; align-items: stretch; gap: 10px; }
+	.goal output { font-weight: 800; font-variant-numeric: tabular-nums; color: var(--accent); }
+	.goal input { width: 100%; min-height: 32px; margin: 0; accent-color: var(--accent); }
+	.ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--dim); }
+	.seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; background: var(--ground); border-radius: 999px; }
+	.seg button { min-width: 52px; min-height: 44px; border: 0; border-radius: 999px; background: transparent; color: #c9cbcf; font-size: 15px; font-weight: 800; }
+	.seg button[aria-pressed="true"] { background: var(--accent); color: #141414; }
+	.switch { flex-shrink: 0; display: flex; align-items: center; width: 56px; height: 44px; padding: 0; border: 0; background: transparent; }
+	.switch i { display: flex; align-items: center; width: 52px; height: 30px; padding: 3px; border-radius: 999px; background: #3a3d43; transition: background .15s; }
+	.switch i::after { content: ""; width: 24px; height: 24px; border-radius: 50%; background: var(--ink); transition: transform .15s; }
+	.switch[aria-checked="true"] i { background: var(--accent); }
+	.switch[aria-checked="true"] i::after { transform: translateX(22px); }
+
+	#save { min-height: 52px; border: 0; border-radius: 16px; background: var(--accent); color: #141414; font-size: 16px; font-weight: 800; }
+</style>
+</head>
+<body>
+<main>
+	<header>
+		<h1>Ultra</h1>
+		<span class="soft">Watchface settings</span>
+	</header>
+
+	<section class="card preview" aria-label="Preview">
+		<div class="bezel" id="bezel"><div class="screen" id="screen"></div></div>
+		<span class="caption" id="caption"></span>
+	</section>
+
+	<section>
+		<h2>Complications</h2>
+		<div class="grid" id="corners"></div>
+	</section>
+
+	<section>
+		<h2>Color scheme</h2>
+		<div class="grid" id="schemes" role="group" aria-label="Color scheme"></div>
+	</section>
+
+	<section>
+		<h2>Options</h2>
+		<div class="card">
+			<div class="row">
+				<b id="units-label">Temperature</b>
+				<div class="seg" id="units" role="group" aria-labelledby="units-label">
+					<button type="button" data-units="0">°C</button>
+					<button type="button" data-units="1">°F</button>
+				</div>
+			</div>
+			<div class="row goal">
+				<div class="row" style="padding: 0">
+					<label for="goal">Daily step goal</label>
+					<output id="goal-text" for="goal"></output>
+				</div>
+				<input id="goal" type="range" min="1000" max="30000" step="500">
+				<div class="ends"><span>1,000</span><span>30,000</span></div>
+			</div>
+			<div class="row">
+				<div>
+					<b id="seconds-label">Seconds hand</b>
+					<small>Uses more battery</small>
+				</div>
+				<button type="button" class="switch" id="seconds" role="switch" aria-labelledby="seconds-label"><i></i></button>
+			</div>
+		</div>
+	</section>
+
+	<button type="button" id="save">Save</button>
+</main>
+
+<script src="config.js"></script>
+<script>
+(function () {
+	// Saved settings, last weather and watch model. The app carries this page
+	// and writes them into the line below before opening it.
+	var STATE = null; //$$STATE$$
+	var state = STATE || {};
+	var settings = withDefaults(state.settings);
+	// The emulator hands back a localhost URL to navigate to; a real phone takes
+	// the pebblejs://close form. Same payload either way.
+	var returnTo = new URLSearchParams(location.search).get("return_to");
+
+	// Last weather sent to the watch, else a sample. Steps and battery live on
+	// the watch only, so the preview always samples them.
+	var weather = state.weather || { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, SUNRISE: 420, SUNSET: 1140, imperial: false };
+	var STEPS = 6240, BATTERY = 82;
+
+	// The #defines at the top of ultra-watchface.c and complications.h
+	var GEO = {
+		emery: { w: 200, h: 228, DIAL_R: 94, NUM_R_BIG: 77, NUM_R: 69, NUM_BIG: 14, NUM_SMALL: 9, INNER_R: 54,
+			COMP_R: 108, COMP_T: 6, SUN_R: 32, SUN_T: 7, TEXT: 8, ICON: 10, THUMB: 14, scale: 1.3 },
+		gabbro: { w: 260, h: 260, DIAL_R: 88, NUM_R_BIG: 69, NUM_R: 72, NUM_BIG: 16, NUM_SMALL: 10, INNER_R: 51,
+			COMP_R: 118, COMP_T: 6, SUN_R: 30, SUN_T: 7, TEXT: 11, ICON: 12, THUMB: -17, scale: 1.1, round: true }
+	};
+	var g = GEO[state.platform] || GEO.emery;
+	var C = { black: "#000000", white: "#FFFFFF", dg: "#555555", lg: "#AAAAAA", track: "#000055", green: "#00FF00",
+		accent: "#FFAA00", picton: "#55AAFF", red: "#FF0000", pastel: "#FFFFAA", rajah: "#FFAA55" };
+
+	function $(id) { return document.getElementById(id); }
+
+	// theme() in draw.c: mono turns colors into white/dark gray, light flips grays
+	function theme(hex, scheme) {
+		var v = [1, 3, 5].map(function (i) { return Math.round(parseInt(hex.substr(i, 2), 16) / 85); });
+		var gray = v[0] === v[1] && v[1] === v[2];
+		if ((scheme & 2) && !gray) {
+			var m = v[0] >= 2 || v[1] >= 2 || v[2] >= 2 ? 3 : 1;  // fills vs tracks
+			v = [m, m, m];
+			gray = true;
+		}
+		if ((scheme & 1) && gray) v = [3 - v[0], 3 - v[0], 3 - v[0]];
+		return "#" + v.map(function (c) { return (c * 85).toString(16).padStart(2, "0"); }).join("");
+	}
+
+	// Weather is stored in the unit it was fetched in
+	function temp(t) {
+		var f = settings.UNITS === 1;
+		return f === !!weather.imperial ? t : Math.round(f ? t * 9 / 5 + 32 : (t - 32) * 5 / 9);
+	}
+
+	function face(now) {
+		var cx = g.w / 2, cy = g.h / 2, scheme = settings.SCHEME, out = [];
+		function T(c) { return theme(c, scheme); }
+		function f(n) { return Math.round(n * 100) / 100; }
+		function rad(a) { return a * Math.PI / 180; }
+		function P(a, r) { return [cx + r * Math.sin(rad(a)), cy - r * Math.cos(rad(a))]; }
+		function stroke(d, c, w) { out.push('<path d="' + d + '" fill="none" stroke="' + T(c) + '" stroke-width="' + w + '" stroke-linecap="round"/>'); }
+		function ring(r, c, w) { out.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + T(c) + '" stroke-width="' + w + '"/>'); }
+		function disc(p, r, c, edge) {
+			out.push('<circle cx="' + f(p[0]) + '" cy="' + f(p[1]) + '" r="' + r + '" fill="' + T(c) + '"' +
+				(edge ? ' stroke="' + T(edge) + '" stroke-width="1.5"' : "") + "/>");
+		}
+		function block(p, s, c) { out.push('<rect x="' + f(p[0] - s / 2) + '" y="' + f(p[1] - s / 2) + '" width="' + s + '" height="' + s + '" rx="2" fill="' + T(c) + '"/>'); }
+		function text(s, p, cap, c, rot) {
+			out.push('<text x="' + f(p[0]) + '" y="' + f(p[1]) + '" font-size="' + f(cap / 0.7) + '" fill="' + T(c) +
+				'" transform="rotate(' + f(rot) + " " + f(p[0]) + " " + f(p[1]) + ')" text-anchor="middle" dominant-baseline="central">' + s + "</text>");
+		}
+		function seg(p, q) { return "M" + f(p[0]) + " " + f(p[1]) + "L" + f(q[0]) + " " + f(q[1]); }
+		function arc(r, a, b) {
+			var p = P(a, r), q = P(b, r);
+			return "M" + f(p[0]) + " " + f(p[1]) + "A" + r + " " + r + " 0 " + (Math.abs(b - a) > 180 ? 1 : 0) + " " + (b > a ? 1 : 0) + " " + f(q[0]) + " " + f(q[1]);
+		}
+		// Curved text in draw.c: upright on the top half, flipped on the bottom
+		function along(s, a, r, cap, c) { text(s, P(a, r), cap, c, Math.cos(rad(a)) >= 0 ? a : a + 180); }
+
+		// Slot helpers from draw.c: a0 is the pinned end, percentages run a0 -> a1
+		function at(s, p) { return s.a0 + (s.a1 - s.a0) * p / 100; }
+		function leftEnd(s) { return P(s.a0, s.r)[0] <= P(s.a1, s.r)[0] ? 0 : 100; }
+		function deg(s, px) { return px / s.r * 180 / Math.PI * (s.a1 > s.a0 ? 1 : -1); }
+		function past(s, end, px) { return end === 0 ? s.a0 - deg(s, px) : s.a1 + deg(s, px); }
+		function trim(s, end, px) { if (end === 0) s.a0 += deg(s, px); else s.a1 -= deg(s, px); }
+		function sarc(s, p0, p1, c) { stroke(arc(s.r, at(s, p0), at(s, p1)), c, s.t); }
+		function dot(s, p, r) { disc(P(at(s, p), s.r), r, C.white, C.black); }
+		// ponytail: fixed per-glyph width; the watch measures with fctx
+		function endLabel(s, end, str) {
+			var w = str.length * g.TEXT / 0.7 * 0.6;
+			along(str, past(s, end, -w / 2), s.r, g.TEXT, C.white);
+			trim(s, end, w + 4 + s.t / 2);
+		}
+
+		// comp_fill_gauge: label on the left end, filling from the left
+		function bar(s0, pct, c, label) {
+			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
+			pct = Math.max(0, Math.min(100, pct));
+			endLabel(s, left, label);
+			sarc(s, 0, 100, C.track);
+			if (pct > 0) sarc(s, left, left ? 100 - pct : pct, c);
+			block(P(at(s0, 50), s0.r + s0.t / 2 + 4 + g.ICON / 2), g.ICON, c);
+		}
+		// comp_temp_draw: min on the left end, max on the right, thumb at now
+		function tempGauge(s0) {
+			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, lo = leftEnd(s);
+			var t = temp(weather.TEMP), min = temp(weather.TEMP_MIN), max = temp(weather.TEMP_MAX);
+			var pct = max > min ? Math.max(0, Math.min(100, Math.round((t - min) * 100 / (max - min)))) : 50;
+			if (lo) pct = 100 - pct;
+			endLabel(s, lo, String(min));
+			endLabel(s, 100 - lo, String(max));
+			sarc(s, 0, 100, C.accent);
+			dot(s, pct, s.t / 2 + 2);
+			along(t + "°", at(s, pct), s.r + g.THUMB, g.TEXT + 2, C.white);
+		}
+
+		// Corners: outer end pinned at 10/2/4/8 o'clock, 45° toward 12/6
+		var SIDE = { SLOT_TL: 300, SLOT_TR: 60, SLOT_BR: 120, SLOT_BL: 240 };
+		var DIR = { SLOT_TL: 1, SLOT_TR: -1, SLOT_BR: 1, SLOT_BL: -1 };
+		for (var k in SIDE) {
+			var s = { a0: SIDE[k], a1: SIDE[k] + DIR[k] * 45, r: g.COMP_R, t: g.COMP_T };
+			var id = settings[k];
+			if (id === 1) bar(s, Math.round(STEPS * 100 / settings.STEP_GOAL), C.green, String(STEPS));
+			if (id === 2) tempGauge(s);
+			if (id === 3) bar(s, BATTERY, BATTERY <= 20 ? C.red : C.accent, BATTERY + "%");
+			if (id === 4) bar(s, weather.RAIN, C.picton, weather.RAIN + "%");
+		}
+
+		// draw_dial
+		ring(g.INNER_R, C.dg, 1);
+		for (var i = 0; i < 60; i++) {
+			var hour = i % 5 === 0;
+			stroke(seg(P(i * 6, g.DIAL_R - 3), P(i * 6, g.DIAL_R - (hour ? 8 : 5))), hour ? C.lg : C.dg, 1);
+		}
+		for (var h = 1; h <= 12; h++) {
+			var big = h % 3 === 0;
+			if (big) stroke(seg(P(h * 30, g.DIAL_R + 1), P(h * 30, g.DIAL_R - 5)), C.accent, 3);
+			text(String(h), P(h * 30, big ? g.NUM_R_BIG : g.NUM_R), big ? g.NUM_BIG : g.NUM_SMALL,
+				big || (scheme & 1) ? C.white : C.lg, 0);
+		}
+		ring(g.DIAL_R, C.lg, 2);
+		ring(g.DIAL_R + 4, C.dg, 1);
+
+		// comp_sun_draw: 9 o'clock over the top to 3 o'clock, sunrise to sunset
+		var min = now.getHours() * 60 + now.getMinutes();
+		var day = weather.SUNSET > weather.SUNRISE ? (min - weather.SUNRISE) * 100 / (weather.SUNSET - weather.SUNRISE) : 0;
+		var sp = Math.max(0, Math.min(100, Math.round(day)));
+		var sun = { a0: -90, a1: 90, r: g.SUN_R, t: g.SUN_T };
+		sarc(sun, 0, 100, C.track);
+		[[40, C.picton], [70, C.pastel], [100, C.rajah]].reduce(function (from, band) {
+			var to = Math.min(band[0], sp);
+			if (from < to) sarc(sun, from, to, band[1]);
+			return to;
+		}, 0);
+		dot(sun, sp, sun.t / 2 + 3);
+		var badge = sun.t + 3;
+		[0, 100].forEach(function (p) {
+			var c = P(at(sun, p), sun.r);
+			c[1] += badge + 2;
+			disc(c, badge, C.black, C.dg);
+			block(c, badge, C.white);
+		});
+
+		// draw_hands
+		var ha = (now.getHours() % 12) * 30 + now.getMinutes() / 2, ma = now.getMinutes() * 6, sa = now.getSeconds() * 6;
+		stroke(seg([cx, cy], P(ha, g.DIAL_R * 0.38)), C.white, 6);
+		stroke(seg([cx, cy], P(ma, g.DIAL_R * 0.65)), C.white, 3);
+		if (settings.SECONDS) stroke(seg(P(sa + 180, g.DIAL_R * 0.25), P(sa, g.DIAL_R - 10)), C.accent, 2);
+		disc([cx, cy], 5, C.accent);
+		disc([cx, cy], 2, C.black);
+
+		return '<svg viewBox="0 0 ' + g.w + " " + g.h + '" width="' + g.w * g.scale + '" height="' + g.h * g.scale +
+			'" role="img" aria-label="Watchface preview"><rect width="' + g.w + '" height="' + g.h + '" fill="' + T(C.black) + '"/>' +
+			out.join("") + "</svg>";
+	}
+
+	function preview() {
+		$("screen").innerHTML = face(new Date());
+	}
+
+	function render() {
+		preview();
+		[].forEach.call($("schemes").children, function (b, i) { b.setAttribute("aria-pressed", settings.SCHEME === i); });
+		[].forEach.call($("units").children, function (b, i) { b.setAttribute("aria-pressed", settings.UNITS === i); });
+		$("goal").value = settings.STEP_GOAL;
+		$("goal-text").textContent = settings.STEP_GOAL.toLocaleString("en-US") + " steps";
+		$("seconds").setAttribute("aria-checked", !!settings.SECONDS);
+	}
+
+	// Built once; render() only flips state
+	if (g.round) $("bezel").classList.add("round");
+	$("caption").textContent = state.weather ? "Steps and battery are sample values" : "Sample data";
+	$("corners").innerHTML = CORNERS.map(function (c) {
+		return '<label class="card corner"><span>' + c.label + '</span><select data-slot="' + c.key + '">' +
+			COMPLICATIONS.map(function (o) {
+				return '<option value="' + o.value + '"' + (settings[c.key] === o.value ? " selected" : "") + ">" + o.label + "</option>";
+			}).join("") + "</select></label>";
+	}).join("");
+	$("schemes").innerHTML = SCHEMES.map(function (label, i) {
+		var dots = [C.green, C.accent, C.picton].map(function (c) { return '<i style="background:' + theme(c, i) + '"></i>'; }).join("");
+		return '<button type="button" class="scheme" data-scheme="' + i + '"><span class="swatch" style="background:' + theme(C.black, i) +
+			";box-shadow:inset 0 0 0 2px " + theme(C.lg, i) + ',0 0 0 1px #33363b">' + dots + "</span>" + label + "</button>";
+	}).join("");
+
+	document.addEventListener("change", function (e) {
+		if (e.target.dataset.slot) settings[e.target.dataset.slot] = +e.target.value;
+		render();
+	});
+	$("goal").addEventListener("input", function (e) {
+		settings.STEP_GOAL = +e.target.value;
+		render();
+	});
+	document.addEventListener("click", function (e) {
+		var b = e.target.closest("button");
+		if (!b) return;
+		if (b.dataset.scheme) settings.SCHEME = +b.dataset.scheme;
+		else if (b.dataset.units) settings.UNITS = +b.dataset.units;
+		else if (b.id === "seconds") settings.SECONDS = settings.SECONDS ? 0 : 1;
+		else if (b.id === "save") {
+			var payload = encodeURIComponent(JSON.stringify(settings));
+			location.href = returnTo ? (returnTo + payload) : ("pebblejs://close#" + payload);
+			return;
+		}
+		else return;
+		render();
+	});
+
+	render();
+	setInterval(preview, 1000);  // live hands
+})();
+</script>
+</body>
+</html>

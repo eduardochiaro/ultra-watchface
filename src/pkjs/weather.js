@@ -1,13 +1,8 @@
 // Open-Meteo, no key needed. Units are picked here (temperature_unit) so the
 // watch only ever displays what it gets.
 
-function savedSettings() {
-  try {
-    return JSON.parse(localStorage.getItem('clay-settings')) || {};
-  } catch (e) {
-    return {};
-  }
-}
+var savedSettings = require('./config').savedSettings;
+var WEATHER_KEY = 'ultra-weather';  // last message sent, for the settings preview
 
 function buildUrl(lat, lon, imperial) {
   return 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
@@ -50,12 +45,15 @@ function fetchJson(url, ok, fail) {
 }
 
 function getWeather() {
-  var units = savedSettings().UNITS;
-  var imperial = String(units && typeof units === 'object' ? units.value : units) === '1';
+  var imperial = savedSettings().UNITS === 1;
 
   navigator.geolocation.getCurrentPosition(function(pos) {
     fetchJson(buildUrl(pos.coords.latitude, pos.coords.longitude, imperial), function(data) {
-      Pebble.sendAppMessage(buildMessage(data), function() {
+      var msg = buildMessage(data);
+      msg.imperial = imperial;
+      localStorage.setItem(WEATHER_KEY, JSON.stringify(msg));
+      delete msg.imperial;
+      Pebble.sendAppMessage(msg, function() {
         console.log('Weather sent');
       }, function(err) {
         console.log('Weather send failed: ' + JSON.stringify(err));
@@ -70,3 +68,4 @@ function getWeather() {
 
 module.exports = getWeather;
 module.exports.buildMessage = buildMessage;
+module.exports.WEATHER_KEY = WEATHER_KEY;

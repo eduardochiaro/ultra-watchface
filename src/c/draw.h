@@ -38,4 +38,8 @@ void text_draw_along(GContext *ctx, const char *txt, GPoint c, GPoint center, in
                      GColor color);
 int text_width(GContext *ctx, const char *txt, int size);
 
+// Maps a color from the black scheme (what all drawing code is written in) to
+// the active scheme. The draw helpers apply it; direct graphics_* calls must too.
+GColor theme(GColor c);
+
 int32_t clamp_i32(int32_t v, int32_t lo, int32_t hi);

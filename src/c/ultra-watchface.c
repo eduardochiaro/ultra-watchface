@@ -50,13 +50,13 @@ static GPoint polar(GPoint c, int32_t angle, int r) {
 }
 
 static void line(GContext *ctx, GPoint a, GPoint b, int width, GColor color) {
-  graphics_context_set_stroke_color(ctx, color);
+  graphics_context_set_stroke_color(ctx, theme(color));
   graphics_context_set_stroke_width(ctx, width);
   graphics_draw_line(ctx, a, b);
 }
 
 static void draw_dial(GContext *ctx, GPoint c) {
-  graphics_context_set_stroke_color(ctx, GColorDarkGray);
+  graphics_context_set_stroke_color(ctx, theme(GColorDarkGray));
   graphics_context_set_stroke_width(ctx, 1);
   graphics_draw_circle(ctx, c, INNER_R);
 
@@ -74,13 +74,14 @@ static void draw_dial(GContext *ctx, GPoint c) {
     if (big) line(ctx, polar(c, a, DIAL_R + 1), polar(c, a, DIAL_R - 5), 3, ACCENT);
     snprintf(buf, sizeof(buf), "%d", h);
     text_draw(ctx, buf, polar(c, a, big ? NUM_R_BIG : NUM_R), big ? NUM_BIG : NUM_SMALL,
-              big ? GColorWhite : GColorLightGray);
+              // Dark gray is too faint on white; the palette has nothing between it and black.
+              big || (g_settings.scheme & SCHEME_LIGHT) ? GColorWhite : GColorLightGray);
   }
-  graphics_context_set_stroke_color(ctx, GColorLightGray);
+  graphics_context_set_stroke_color(ctx, theme(GColorLightGray));
   graphics_context_set_stroke_width(ctx, 2);
   graphics_draw_circle(ctx, c, DIAL_R);
 
-  graphics_context_set_stroke_color(ctx, GColorDarkGray);
+  graphics_context_set_stroke_color(ctx, theme(GColorDarkGray));
   graphics_context_set_stroke_width(ctx, 1);
   graphics_draw_circle(ctx, c, DIAL_R + 4);
 }
@@ -94,9 +95,9 @@ static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
     int32_t sa = DEG(t->tm_sec * 6);
     line(ctx, polar(c, sa + DEG(180), DIAL_R * 25 / 100), polar(c, sa, DIAL_R - 10), 2, ACCENT);
   }
-  graphics_context_set_fill_color(ctx, ACCENT);
+  graphics_context_set_fill_color(ctx, theme(ACCENT));
   graphics_fill_circle(ctx, c, 5);
-  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_context_set_fill_color(ctx, theme(GColorBlack));
   graphics_fill_circle(ctx, c, 2);
 }
 
@@ -104,7 +105,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(layer);
   GPoint c = grect_center_point(&b);
   graphics_context_set_antialiased(ctx, true);
-  graphics_context_set_fill_color(ctx, GColorBlack);
+  graphics_context_set_fill_color(ctx, theme(GColorBlack));
   graphics_fill_rect(ctx, b, 0, GCornerNone);
 
   // Corner complications: the outer side is pinned at 10/2/4/8 o'clock and
@@ -138,7 +139,7 @@ static void subscribe_ticks(void) {
   tick_timer_service_subscribe(g_settings.seconds ? SECOND_UNIT : MINUTE_UNIT, tick_handler);
 }
 
-// Clay sends selects as strings, toggles and sliders as ints.
+// The settings page sends ints; older saves sent selects as strings.
 static int32_t tuple_int(Tuple *t) {
   return t->type == TUPLE_CSTRING ? atoi(t->value->cstring) : t->value->int32;
 }
@@ -155,6 +156,7 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     Tuple *t;
     if ((t = dict_find(iter, MESSAGE_KEY_SECONDS))) g_settings.seconds = tuple_int(t);
     if ((t = dict_find(iter, MESSAGE_KEY_STEP_GOAL))) g_settings.step_goal = tuple_int(t);
+    if ((t = dict_find(iter, MESSAGE_KEY_SCHEME))) g_settings.scheme = clamp_i32(tuple_int(t), 0, 3);
     persist_write_data(PK_SETTINGS, &g_settings, sizeof(g_settings));
     subscribe_ticks();
   }
@@ -180,7 +182,7 @@ int main(void) {
   weather_init();
 
   s_window = window_create();
-  window_set_background_color(s_window, GColorBlack);
+  window_set_background_color(s_window, theme(GColorBlack));
   window_set_window_handlers(s_window, (WindowHandlers) {
     .load = window_load,
     .unload = window_unload,

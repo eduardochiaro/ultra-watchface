@@ -7,11 +7,12 @@
   ],
   "private": true,
   "scripts": {
-    "build": "pebble clean && pebble build",
+    "build": "node scripts/inline-config.mjs && pebble clean && pebble build",
     "emulator": "npm run build && pebble install --emulator",
     "phone": "npm run build && pebble install --phone",
     "config": "pebble emu-app-config --emulator",
     "logs": "pebble logs",
+    "test": "node test/page.test.js",
     "font": "node scripts/gen-svg-font.js resources/fonts/Nunito-Bold.ttf resources/fonts/nunito.svg nunito \" %,-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz°\" && fctx-compiler resources/fonts/nunito.svg && mv resources/nunito.ffont resources/fonts/nunito.ffont"
   },
   "pebble": {
@@ -39,6 +40,7 @@
       "SLOT_BL",
       "SECONDS",
       "STEP_GOAL",
+      "SCHEME",
       "UNITS"
     ],
     "resources": {
@@ -57,7 +59,6 @@
     ]
   },
   "dependencies": {
-    "@rebble/clay": "^1.1.0",
     "pebble-fctx": "^1.6.5"
   },
   "devDependencies": {

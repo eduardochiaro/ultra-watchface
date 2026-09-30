@@ -1,4 +1,5 @@
 #include "draw.h"
+#include "settings.h"
 #include <pebble-fctx/fctx.h>
 #include <pebble-fctx/ffont.h>
 
@@ -13,6 +14,16 @@ void draw_init(GSize screen) {
 
 void draw_deinit(void) {
   ffont_destroy(s_font);
+}
+
+GColor theme(GColor c) {
+  bool gray = c.r == c.g && c.g == c.b;
+  if ((g_settings.scheme & SCHEME_MONO) && !gray) {
+    c = (c.r >= 2 || c.g >= 2 || c.b >= 2) ? GColorWhite : GColorDarkGray;  // fills vs tracks
+    gray = true;
+  }
+  if ((g_settings.scheme & SCHEME_LIGHT) && gray) c.r = c.g = c.b = 3 - c.r;
+  return c;
 }
 
 int32_t clamp_i32(int32_t v, int32_t lo, int32_t hi) {
@@ -58,7 +69,7 @@ void slot_arc(GContext *ctx, const Slot *s, int from_pct, int to_pct, GColor col
   if (a > b) { int32_t t = a; a = b; b = t; }
   int outer = s->radius + s->thickness / 2;
   GRect box = GRect(s->center.x - outer, s->center.y - outer, outer * 2, outer * 2);
-  graphics_context_set_fill_color(ctx, color);
+  graphics_context_set_fill_color(ctx, theme(color));
   if (b > a) graphics_fill_radial(ctx, box, GOvalScaleModeFitCircle, s->thickness, a, b);
   // fill_circle(r) is 2r+1 wide; keep caps no wider than the arc.
   int cap = (s->thickness - 1) / 2;
@@ -68,9 +79,9 @@ void slot_arc(GContext *ctx, const Slot *s, int from_pct, int to_pct, GColor col
 
 void slot_dot(GContext *ctx, const Slot *s, int pct, int r, GColor fill, GColor ring) {
   GPoint p = slot_point(s, pct, 0);
-  graphics_context_set_fill_color(ctx, ring);
+  graphics_context_set_fill_color(ctx, theme(ring));
   graphics_fill_circle(ctx, p, r + 1);
-  graphics_context_set_fill_color(ctx, fill);
+  graphics_context_set_fill_color(ctx, theme(fill));
   graphics_fill_circle(ctx, p, r);
 }
 
@@ -95,7 +106,7 @@ static GPoint clamp_to_screen(GPoint c, int hw, int hh) {
 
 void icon_block(GContext *ctx, GPoint c, int size, GColor color) {
   c = clamp_to_screen(c, size / 2, size / 2);
-  graphics_context_set_fill_color(ctx, color);
+  graphics_context_set_fill_color(ctx, theme(color));
   graphics_fill_rect(ctx, GRect(c.x - size / 2, c.y - size / 2, size, size), 2, GCornersAll);
 }
 
@@ -110,7 +121,7 @@ static void draw_text(GContext *ctx, const char *txt, GPoint c, int size, GColor
   c = clamp_to_screen(c, (cs * hw + sn * hh) / TRIG_MAX_RATIO, (sn * hw + cs * hh) / TRIG_MAX_RATIO);
   fctx_set_rotation(&f, rot);
   fctx_set_offset(&f, FPointI(c.x, c.y));
-  fctx_set_fill_color(&f, color);
+  fctx_set_fill_color(&f, theme(color));
   fctx_begin_fill(&f);
   fctx_draw_string(&f, txt, s_font, GTextAlignmentCenter, FTextAnchorCapMiddle);
   fctx_end_fill(&f);
@@ -142,7 +153,7 @@ void text_draw_along(GContext *ctx, const char *txt, GPoint c, GPoint center, in
   FContext f;
   fctx_init_context(&f, ctx);
   fctx_set_text_cap_height(&f, s_font, size);
-  fctx_set_fill_color(&f, color);
+  fctx_set_fill_color(&f, theme(color));
   fixed_t x = -fctx_string_width(&f, txt, s_font) / 2;  // arc offset of the next glyph
   for (const char *p = txt; *p;) {
     char ch[5];
