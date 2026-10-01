@@ -18,6 +18,7 @@ void draw_init(GSize screen);  // loads the vector font
 void draw_deinit(void);
 
 GPoint slot_point(const Slot *s, int pct, int dr);
+int slot_len(const Slot *s);  // px along the centerline
 // Point `px` pixels beyond an arc end (end: 0 = a0, 100 = a1) along its circle.
 GPoint slot_past(const Slot *s, int end, int px);
 // Pull an end `px` pixels in toward the other end.

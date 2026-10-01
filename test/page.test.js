@@ -7,9 +7,9 @@ var config = require('../src/pkjs/config');
 
 // Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
-assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 2, CENTER_L: 4, CENTER_R: 7, CENTER_B: 6,
+assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6,
   SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8,
-  TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: '', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
+  TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
 // Text: only glyphs the watch font has, 12 max
 var texts = config.withDefaults({ TEXT_TL: 'Héllo <b>&"x" 12:30 and more', TEXT_B: 'Hello' });
 assert.deepStrictEqual([texts.TEXT_TL, texts.TEXT_B], ['Hllo bx 12:3', 'Hell']);
@@ -43,10 +43,10 @@ var svg = els.screen.innerHTML;
 assert.ok(svg.indexOf('viewBox="0 0 260 260"') > 0, 'gabbro geometry');
 assert.ok(svg.indexOf('fill="#ffffff"') > 0, 'white scheme background');
 assert.ok(svg.indexOf('>6240</text>') > 0, 'steps label');
-assert.ok(svg.indexOf('>24</text>') > 0, 'temp max label');
-assert.ok(svg.indexOf('>82%</text>') > 0, 'battery label');
-assert.ok(svg.indexOf('>30</text>') > 0, 'rain subdial');
-assert.ok(svg.indexOf('>42</text>') > 0 && svg.indexOf('>AQI</text>') > 0, 'AQI subdial');
+assert.ok(svg.indexOf('r="102"') > 0, 'gabbro dial');
+assert.ok(/font-size="18.57"[^>]*>21°<\/text>/.test(svg), 'gabbro temp corner: just now, on the arc');
+assert.ok(/font-size="15.71"[^>]*>82%<\/text>/.test(svg), 'gabbro battery: value leads the bar');
+assert.ok(svg.indexOf('>PB</text>') > 0 && svg.indexOf('>290</text>') > 0 && svg.indexOf(ctx.ICONS.sun_cloud) > 0, 'default subdials: text, elevation, weather');
 assert.ok(/>(SUN|MON|TUE|WED|THU|FRI|SAT)<\/text>/.test(svg), 'calendar weekday');
 assert.ok(svg.indexOf('stroke="#ffaa00" stroke-width="2"') > 0, 'seconds hand');
 assert.ok(els.schemes.innerHTML.indexOf('data-scheme="1" aria-pressed="true"') > 0);
@@ -97,7 +97,8 @@ var rainIcon = require('fs').readFileSync(__dirname + '/../resources/icons/rain.
 assert.ok(svg.indexOf(rainIcon) > 0 && svg.indexOf('>FT</text>') < 0, 'weather subdial');
 assert.ok(svg.indexOf('>82</text>') > 0, 'battery subdial');
 assert.strictEqual(svg.split('>AQI</text>').length - 1, 1, 'AQI word in the corner, no AQI subdial');
-assert.ok(svg.indexOf('>20</text>') > 0 && svg.indexOf('>328ft</text>') > 0, 'AQI and elevation corners');
+assert.ok(svg.indexOf('>20</text>') > 0, 'AQI corner');
+assert.ok(/font-size="14.29" fill="#ffffff"[^>]*>328ft<\/text>/.test(svg) && svg.indexOf('stroke="#ff0000" stroke-width="6"') < 0, 'elevation corner: curved text, no bar');
 assert.ok(els.centers.innerHTML.indexOf('value="12" selected') > 0, 'center pickers');
 
 var condition = require('../src/pkjs/weather').condition;

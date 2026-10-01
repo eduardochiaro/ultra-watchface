@@ -18,8 +18,7 @@ void comp_uv_draw(GContext *ctx, const Slot *s) {
   int v = g_weather.valid ? g_weather.uv : -1;
   char buf[8] = "--";
   if (v >= 0) snprintf(buf, sizeof(buf), "%d", v);
-  comp_fill_gauge(ctx, s, v >= 0 ? v * 100 / 11 : 0, uv_color(v), COMP_TRACK, "UV", NULL);
-  text_draw_along(ctx, buf, slot_point(s, 50, COMP_THUMB), s->center, COMP_TEXT + 2, GColorWhite);
+  comp_value_gauge(ctx, s, v >= 0 ? v * 100 / 11 : 0, uv_color(v), "UV", buf);
 }
 
 // UV index, 0..11 around the ring in its WHO band color.

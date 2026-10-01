@@ -6,12 +6,12 @@
 
 // Dial geometry, tuned per screen.
 #if defined(PBL_PLATFORM_GABBRO)   // 260x260 round: corner arcs hug the edge
-#define DIAL_R     88
-#define NUM_R_BIG  69   // 12/3/6/9
-#define NUM_R      72   // the other numerals
-#define NUM_BIG    16
-#define NUM_SMALL  10
-#define INNER_R    51   // ring around the subdials
+#define DIAL_R     102  // its outer ring stops 4px short of the corner labels
+#define NUM_R_BIG  81   // 12/3/6/9
+#define NUM_R      76   // the other numerals
+#define NUM_BIG    18
+#define NUM_SMALL  12
+#define INNER_R    59   // ring around the subdials
 #define COMP_R     118
 #define COMP_T     6
 #else                              // emery 200x228: dial fills the width, arcs in the corners
@@ -38,7 +38,8 @@ Settings g_settings = {
   .step_goal = 10000,
   .bg = GColorBlackARGB8,
   .accent = GColorChromeYellowARGB8,
-  .center = { COMP_TEMP, COMP_RAIN, COMP_AQI, COMP_CALENDAR },
+  .center = { COMP_CUSTOM, COMP_ELEVATION, COMP_WEATHER, COMP_CALENDAR },
+  .center_text = { "PB" },
 };
 
 static Window *s_window;

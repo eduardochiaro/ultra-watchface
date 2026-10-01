@@ -35,11 +35,10 @@ void complication_draw(ComplicationId id, GContext *ctx, const Slot *s);
 #if defined(PBL_PLATFORM_GABBRO)
 #define COMP_TEXT   11   // cap height of value labels
 #define COMP_ICON   12   // icon size
-#define COMP_THUMB  (-17) // radial offset of the label next to a thumb
 #else
 #define COMP_TEXT   8
 #define COMP_ICON   18
-#define COMP_THUMB  14
+#define COMP_THUMB  14   // radial offset of the label beside the arc; gabbro has none
 #endif
 #define COMP_GAP    4    // px between an arc end and its label/icon
 
@@ -67,16 +66,19 @@ void center_draw(GContext *ctx, GPoint c);
 
 // Subdial layout (tune per screen).
 #if defined(PBL_PLATFORM_GABBRO)
-#define SUB_D      29   // subdial center from the face center
-#define SUB_R      14   // ring centerline
+#define SUB_D      35   // subdial center from the face center
+#define SUB_R      17   // ring centerline
+#define SUB_TEXT   9    // value
+#define SUB_SMALL  7    // caption under it
+#define SUB_LOW    11   // caption's y below the subdial center, in the ring's gap
 #else
 #define SUB_D      31
 #define SUB_R      16
+#define SUB_TEXT   8
+#define SUB_SMALL  6
+#define SUB_LOW    10
 #endif
 #define SUB_T      3
-#define SUB_TEXT   8    // value
-#define SUB_SMALL  6    // caption under it
-#define SUB_LOW    10   // caption's y below the subdial center, in the ring's gap
 
 // Ring open at the bottom, filling clockwise from 8 o'clock.
 Slot center_ring(GPoint c);
@@ -96,9 +98,16 @@ void center_custom_draw(GContext *ctx, GPoint c, const char *txt);
 
 // Corner layout: the slot is the whole complication. Gauges put a label at
 // both ends, bars one on the left; labels eat into the arc, not past it.
-// Icons sit outside the arc, toward the corner.
+// Icons sit outside the arc, toward the corner; on gabbro they lead the bar,
+// "ICON 30% BAR".
 void comp_fill_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, GColor track,
                      const char *label, const char *icon);  // icon NULL: none
+// A bar with a caption and a value (AQI, UV).
+void comp_value_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, const char *caption,
+                      const char *value);
+// No bar: an icon and a text (heart, elevation).
+void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color, const char *txt);
 // Label along the arc at an end (0 or 100); trims that end of *s to make room.
 void comp_end_label(GContext *ctx, Slot *s, int end, const char *txt);
-void comp_icon(GContext *ctx, const Slot *s, const char *icon, GColor color);
+// Gabbro trims the left end of *s for the icon; call it before the label.
+void comp_icon(GContext *ctx, Slot *s, const char *icon, GColor color);

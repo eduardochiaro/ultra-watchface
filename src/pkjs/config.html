@@ -174,9 +174,10 @@
 	// The #defines at the top of ultra-watchface.c, complications.h and center.c
 	var GEO = {
 		emery: { w: 200, h: 228, DIAL_R: 94, NUM_R_BIG: 77, NUM_R: 69, NUM_BIG: 14, NUM_SMALL: 9, INNER_R: 54,
-			COMP_R: 108, COMP_T: 6, SUB_D: 31, SUB_R: 16, TEXT: 8, ICON: 18, THUMB: 14, scale: 1.3 },
-		gabbro: { w: 260, h: 260, DIAL_R: 88, NUM_R_BIG: 69, NUM_R: 72, NUM_BIG: 16, NUM_SMALL: 10, INNER_R: 51,
-			COMP_R: 118, COMP_T: 6, SUB_D: 29, SUB_R: 14, TEXT: 11, ICON: 12, THUMB: -17, scale: 1.1, round: true }
+			COMP_R: 108, COMP_T: 6, SUB_D: 31, SUB_R: 16, SUB_TEXT: 8, SUB_SMALL: 6, SUB_LOW: 10, TEXT: 8, ICON: 18, THUMB: 14, scale: 1.3 },
+		// round: no corners, so nothing sits beside the corner arcs; icons and values lead the bars
+		gabbro: { w: 260, h: 260, DIAL_R: 102, NUM_R_BIG: 81, NUM_R: 84, NUM_BIG: 18, NUM_SMALL: 12, INNER_R: 59,
+			COMP_R: 118, COMP_T: 6, SUB_D: 35, SUB_R: 17, SUB_TEXT: 9, SUB_SMALL: 7, SUB_LOW: 11, TEXT: 11, ICON: 12, scale: 1.1, round: true }
 	};
 	var g = GEO[state.platform] || GEO.emery;
 	var C = { black: "#000000", white: "#FFFFFF", dg: "#555555", lg: "#AAAAAA", track: "#000055", green: "#00FF00",
@@ -252,8 +253,8 @@
 				(edge ? ' stroke="' + T(edge) + '" stroke-width="1.5"' : "") + "/>");
 		}
 		// Font icon glyphs: the 24px box fills `s`, centered on p
-		function icon(name, p, s, c) {
-			out.push('<path d="' + ICONS[name] + '" transform="translate(' + f(p[0] - s / 2) + " " + f(p[1] - s / 2) + ") scale(" + f(s / 24) + ')" fill="' + T(c) + '"/>');
+		function icon(name, p, s, c, rot) {
+			out.push('<path d="' + ICONS[name] + '" transform="' + (rot ? "rotate(" + f(rot) + " " + f(p[0]) + " " + f(p[1]) + ") " : "") + 'translate(' + f(p[0] - s / 2) + " " + f(p[1] - s / 2) + ") scale(" + f(s / 24) + ')" fill="' + T(c) + '"/>');
 		}
 		function text(s, p, cap, c, rot) {
 			out.push('<text x="' + f(p[0]) + '" y="' + f(p[1]) + '" font-size="' + f(cap / 0.7) + '" fill="' + T(c) +
@@ -292,17 +293,40 @@
 		function bar(s0, pct, c, label, ic) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
 			pct = Math.max(0, Math.min(100, pct));
+			if (ic) compIcon(s, ic, c);
 			endLabel(s, left, label);
 			sarc(s, 0, 100, C.track);
 			if (pct > 0) sarc(s, left, left ? 100 - pct : pct, c);
-			if (ic) compIcon(s0, ic, c);
 		}
-		// comp_icon()
-		function compIcon(s, ic, c) { icon(ic, g.round ? P(at(s, 50), s.r + s.t / 2 + 4 + g.ICON / 2) : corner(s, 4 + g.ICON / 2), g.ICON, c); }
+		// comp_icon(): toward the corner; round: along the arc at its left end, which is trimmed
+		function compIcon(s, ic, c) {
+			if (!g.round) return icon(ic, corner(s, 4 + g.ICON / 2), g.ICON, c);
+			var end = leftEnd(s), a = past(s, end, -g.ICON / 2);
+			icon(ic, P(a, s.r), g.ICON, c, Math.cos(rad(a)) >= 0 ? a : a + 180);
+			trim(s, end, g.ICON + 4);
+		}
+		// comp_icon_text: no bar, text on the arc's middle, red icon toward the corner; round: "ICON 72 BPM" centered
+		function iconText(s, ic, label) {
+			if (g.round) {
+				var left = leftEnd(s);
+				trim(s, left, (45 * Math.PI / 180 * s.r - g.ICON - 4 - label.length * g.TEXT / 0.7 * 0.6) / 2);
+				compIcon(s, ic, C.red);
+				return endLabel(s, left, label);
+			}
+			along(label, at(s, 50), s.r, g.TEXT + 2, C.white);
+			compIcon(s, ic, C.red);
+		}
+		// comp_value_gauge: caption on the end, value by the middle; round: both lead the bar
+		function valueGauge(s, pct, c, caption, value) {
+			if (g.round) return bar(s, pct, c, caption + " " + value);
+			bar(s, pct, c, caption);
+			along(value, at(s, 50), s.r + g.THUMB, g.TEXT + 2, C.white);
+		}
 		// comp_temp_draw: min on the left end, max on the right, thumb at now, label centered
 		function tempGauge(s0) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, lo = leftEnd(s);
 			var t = temp(weather.TEMP), min = temp(weather.TEMP_MIN), max = temp(weather.TEMP_MAX);
+			if (g.round) return along(t + "°", at(s, 50), s.r, g.TEXT + 2, C.white);  // no gauge, just now
 			var pct = max > min ? Math.max(0, Math.min(100, Math.round((t - min) * 100 / (max - min)))) : 50;
 			if (lo) pct = 100 - pct;
 			endLabel(s, lo, String(min));
@@ -314,6 +338,7 @@
 
 		// comp_battery_draw: full bar, label centered outside
 		function battery(s) {
+			if (g.round) return bar(s, BATTERY, BATTERY <= 20 ? C.red : C.accent, BATTERY + "%");
 			var left = leftEnd(s);
 			sarc(s, 0, 100, C.track);
 			sarc(s, left, left ? 100 - BATTERY : BATTERY, BATTERY <= 20 ? C.red : C.accent);
@@ -321,13 +346,16 @@
 		}
 		// comp_calendar_draw: weekday outside, yesterday/today/tomorrow boxes
 		function calendar(s0) {
-			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: g.TEXT + 5 }, left = leftEnd(s);
-			along(DAYS[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
-			var today = ink(C.accent);
+			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
+			// round: the weekday leads the boxes, which share what is left of the arc
+			if (g.round) endLabel(s, left, DAYS[now.getDay()]);
+			else along(DAYS[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
+			s.t = g.TEXT + 5;
+			var today = ink(C.accent), step = g.round ? 34 : 22, half = g.round ? 14 : 9;
 			[-1, 0, 1].forEach(function (d) {
-				var p = 50 + (left ? -d : d) * 22;
+				var p = 50 + (left ? -d : d) * step;
 				// ponytail: square ends; the watch rounds the corners by 2px
-				out.push('<path d="' + arc(s.r, at(s, p - 9), at(s, p + 9)) + '" fill="none" stroke="' + T(d ? C.dg : C.accent) + '" stroke-width="' + s.t + '"/>');
+				out.push('<path d="' + arc(s.r, at(s, p - half), at(s, p + half)) + '" fill="none" stroke="' + T(d ? C.dg : C.accent) + '" stroke-width="' + s.t + '"/>');
 				along(String(new Date(now.getFullYear(), now.getMonth(), now.getDate() + d).getDate()), at(s, p), s.r, g.TEXT, d ? C.lg : today);
 			});
 		}
@@ -345,20 +373,11 @@
 			if (id === 6) calendar(s);
 			if (id === 13) bar(s, HUM, C.cyan, HUM >= 0 ? HUM + "%" : "--", "drop");
 			if (id === 14) along(settings["TEXT_" + k.slice(5)], at(s, 50), s.r, g.TEXT + 2, C.white);
-			if (id === 8) {
-				along(BPM + " BPM", at(s, 50), s.r, g.TEXT + 2, C.white);
-				compIcon(s, "heart", C.red);
-			}
+			if (id === 8) iconText(s, "heart", BPM + " BPM");
 			if (id === 9) bar(s, stepPct(), C.accent, distance() + (settings.UNITS === 1 ? "mi" : "km"), "runner");
-			if (id === 7) {
-				bar(s, AQI >= 0 ? Math.trunc(AQI * 100 / 300) : 0, AQI_COLOR, "AQI");
-				along(AQI >= 0 ? String(AQI) : "--", at(s, 50), s.r + g.THUMB, g.TEXT + 2, C.white);
-			}
-			if (id === 11) {
-				bar(s, UV >= 0 ? Math.trunc(UV * 100 / 11) : 0, UV_COLOR, "UV");
-				along(UV >= 0 ? String(UV) : "--", at(s, 50), s.r + g.THUMB, g.TEXT + 2, C.white);
-			}
-			if (id === 10) bar(s, 100, C.red, elevation() + (settings.UNITS === 1 ? "ft" : "m"), "arrow");
+			if (id === 7) valueGauge(s, AQI >= 0 ? Math.trunc(AQI * 100 / 300) : 0, AQI_COLOR, "AQI", AQI >= 0 ? String(AQI) : "--");
+			if (id === 11) valueGauge(s, UV >= 0 ? Math.trunc(UV * 100 / 11) : 0, UV_COLOR, "UV", UV >= 0 ? String(UV) : "--");
+			if (id === 10) iconText(s, "arrow", elevation() + (settings.UNITS === 1 ? "ft" : "m"));
 		}
 
 		// draw_dial
@@ -389,6 +408,7 @@
 			if (pct > 0) subArc(c, -120, -120 + 2.4 * pct, col);
 		}
 		function thumb(c, pct, fill) { disc(Q(c, -120 + 2.4 * clamp(pct), g.SUB_R), 2, fill, C.black); }
+		var ST = g.SUB_TEXT, SS = g.SUB_SMALL, SL = g.SUB_LOW;
 		var SUBDIAL = {
 			// center_custom_draw: up to 4 characters, as big as fits across the ring
 			14: function (c, t) {
@@ -399,40 +419,40 @@
 				var t = temp(weather.TEMP), tmin = temp(weather.TEMP_MIN), tmax = temp(weather.TEMP_MAX);
 				subArc(c, -120, 120, C.accent);
 				thumb(c, tmax > tmin ? (t - tmin) * 100 / (tmax - tmin) : 50, C.white);
-				text(String(tmin), [c[0] - 7, c[1] + 10], 6, C.lg, 0);
-				text(String(tmax), [c[0] + 7, c[1] + 10], 6, C.lg, 0);
-				text(t + "°", [c[0], c[1] - 1], 8, C.white, 0);
+				text(String(tmin), [c[0] - 7, c[1] + SL], SS, C.lg, 0);
+				text(String(tmax), [c[0] + 7, c[1] + SL], SS, C.lg, 0);
+				text(t + "°", [c[0], c[1] - 1], ST, C.white, 0);
 			},
 			4: function (c) {
 				gauge(c, weather.RAIN, C.picton);
 				thumb(c, weather.RAIN, C.celeste);
-				text(String(weather.RAIN), [c[0], c[1] - 1], 10, C.white, 0);
-				icon("umbrella", [c[0] - 2, c[1] + 10], 9, C.white);
-				text("%", [c[0] + 5, c[1] + 12], 4, C.white, 0);
+				text(String(weather.RAIN), [c[0], c[1] - 1], ST + 2, C.white, 0);
+				icon("umbrella", [c[0] - 2, c[1] + SL], 9, C.white);
+				text("%", [c[0] + 5, c[1] + SL + 2], SS - 2, C.white, 0);
 			},
 			13: function (c) {
 				gauge(c, HUM, C.cyan);
-				text(HUM >= 0 ? String(HUM) : "--", [c[0], c[1] - 1], 10, C.white, 0);
-				icon("drop", [c[0] - 2, c[1] + 10], 9, C.cyan);
-				text("%", [c[0] + 5, c[1] + 12], 4, C.white, 0);
+				text(HUM >= 0 ? String(HUM) : "--", [c[0], c[1] - 1], ST + 2, C.white, 0);
+				icon("drop", [c[0] - 2, c[1] + SL], 9, C.cyan);
+				text("%", [c[0] + 5, c[1] + SL + 2], SS - 2, C.white, 0);
 			},
 			// US AQI in its EPA band color, 0..300 around the ring
 			7: function (c) {
 				gauge(c, AQI * 100 / 300, AQI_COLOR);
-				text(AQI >= 0 ? String(AQI) : "--", [c[0], c[1] - 1], 8, AQI_COLOR, 0);
-				text("AQI", [c[0], c[1] + 10], 6, C.white, 0);
+				text(AQI >= 0 ? String(AQI) : "--", [c[0], c[1] - 1], ST, AQI_COLOR, 0);
+				text("AQI", [c[0], c[1] + SL], SS, C.white, 0);
 			},
 			// conditions() in center.c, icons in ICON_SUN.. order
 			12: function (c) {
 				var name = ["sun", "moon", "sun_cloud", "moon_cloud", "cloud", "fog", "rain", "snow", "storm"][weather.CONDITION];
 				var col = scheme === SCHEME_ACCENT ? C.accent : C.white;
 				if (name) icon(name, c, Math.trunc(7 * g.SUB_R / 4), col);
-				else text("--", c, 8, col, 0);
+				else text("--", c, ST, col, 0);
 			},
 			11: function (c) {
 				gauge(c, UV * 100 / 11, UV_COLOR);
-				text(UV >= 0 ? String(UV) : "--", [c[0], c[1] - 1], 8, UV_COLOR, 0);
-				text("UV", [c[0], c[1] + 10], 6, C.white, 0);
+				text(UV >= 0 ? String(UV) : "--", [c[0], c[1] - 1], ST, UV_COLOR, 0);
+				text("UV", [c[0], c[1] + SL], SS, C.white, 0);
 			},
 			// Tear-off page: red header above a flat cut, black on white below in any scheme
 			6: function (c) {
@@ -440,32 +460,32 @@
 				if (lightScheme(scheme)) disc(c, dr + 1, C.lg);
 				disc(c, dr, "!" + C.white);
 				out.push('<path d="M' + f(c[0] - hw) + " " + (c[1] + cut) + "A" + dr + " " + dr + " 0 0 1 " + f(c[0] + hw) + " " + (c[1] + cut) + 'Z" fill="' + T(C.red) + '"/>');
-				text(DAYS[now.getDay()], [c[0], c[1] + Math.trunc((cut - dr) / 2)], 5, ink(C.red), 0);
-				text(String(now.getDate()), [c[0], c[1] + Math.trunc((cut + dr) / 2)], 10, "!" + C.black, 0);
+				text(DAYS[now.getDay()], [c[0], c[1] + Math.trunc((cut - dr) / 2)], SS - 1, ink(C.red), 0);
+				text(String(now.getDate()), [c[0], c[1] + Math.trunc((cut + dr) / 2)], ST + 2, "!" + C.black, 0);
 			},
 			3: function (c) {
 				gauge(c, BATTERY, BATTERY <= 20 ? C.red : C.green);
-				text(String(BATTERY), [c[0], c[1] - 1], 9, C.white, 0);
-				icon("bolt", [c[0], c[1] + 11], 12, C.white);
+				text(String(BATTERY), [c[0], c[1] - 1], ST + 1, C.white, 0);
+				icon("bolt", [c[0], c[1] + SL + 1], 12, C.white);
 			},
 			8: function (c) {
-				text("BPM", [c[0], c[1] - g.SUB_R + 5], 5, C.melon, 0);
+				text("BPM", [c[0], c[1] - g.SUB_R + 5], SS - 1, C.melon, 0);
 				icon("heart", c, g.SUB_R + 4, C.red);
-				text(String(BPM), [c[0], c[1] + Math.trunc(g.SUB_R / 2) + 1], 8, C.white, 0);
+				text(String(BPM), [c[0], c[1] + Math.trunc(g.SUB_R / 2) + 1], ST, C.white, 0);
 			},
 			9: function (c) {
 				gauge(c, stepPct(), C.accent);
-				text(settings.UNITS === 1 ? "MI" : "KM", [c[0], c[1] - 7], 5, C.white, 0);
-				text(distance(), [c[0], c[1] + 2], 9, C.white, 0);
-				icon("runner", [c[0], c[1] + 12], 10, C.accent);
+				text(settings.UNITS === 1 ? "MI" : "KM", [c[0], c[1] - 7], SS - 1, C.white, 0);
+				text(distance(), [c[0], c[1] + 2], ST + 1, C.white, 0);
+				icon("runner", [c[0], c[1] + SL + 2], 10, C.accent);
 			},
 			10: function (c) {
 				var unit = settings.UNITS === 1 ? "FT" : "M", ux = c[0] + 3, ay = c[1] - 11;
-				var ax = ux - Math.trunc(unit.length * 6 / 0.7 * 0.6 / 2) - 5;
+				var ax = ux - Math.trunc(unit.length * SS / 0.7 * 0.6 / 2) - 5;
 				icon("arrow", [ax, ay], 11, C.red);
-				text(unit, [ux, ay], 6, C.white, 0);
+				text(unit, [ux, ay], SS, C.white, 0);
 				out.push('<rect x="' + (c[0] - g.SUB_R + 1) + '" y="' + (c[1] - 5) + '" width="' + (2 * g.SUB_R - 2) + '" height="12" rx="4" fill="' + T(C.red) + '"/>');
-				text(elevation(), [c[0], c[1] + 1], 8, ink(C.red), 0);
+				text(elevation(), [c[0], c[1] + 1], ST, ink(C.red), 0);
 				[[10, C.candy], [7, C.rose], [4, C.rose]].forEach(function (b, i) {
 					out.push('<rect x="' + (c[0] - b[0]) + '" y="' + (c[1] + 10 + 3 * i) + '" width="' + 2 * b[0] + '" height="2" fill="' + T(b[1]) + '"/>');
 				});

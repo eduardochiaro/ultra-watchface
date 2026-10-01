@@ -74,6 +74,10 @@ static int32_t px_angle(const Slot *s, int px) {
   return px * (TRIG_MAX_ANGLE * 10 / 63) / s->radius;
 }
 
+int slot_len(const Slot *s) {
+  return abs(s->a1 - s->a0) * s->radius / (TRIG_MAX_ANGLE * 10 / 63);
+}
+
 GPoint slot_past(const Slot *s, int end, int px) {
   int32_t from = end ? s->a0 : s->a1, at = end ? s->a1 : s->a0;
   int32_t step = px_angle(s, px);

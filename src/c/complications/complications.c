@@ -26,10 +26,40 @@ void comp_fill_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, GColor 
   pct = clamp_i32(pct, 0, 100);
   int left = slot_left_end(s);
   Slot b = *s;
+  if (icon) comp_icon(ctx, &b, icon, fill);
   comp_end_label(ctx, &b, left, label);
   slot_arc(ctx, &b, 0, 100, track);
   if (pct > 0) slot_arc(ctx, &b, left, left ? 100 - pct : pct, fill);
-  if (icon) comp_icon(ctx, s, icon, fill);
+}
+
+// Bar captioned at its end, the value curved by its middle. Gabbro has no room
+// beside the arc: caption and value both lead the bar, "AQI 42 BAR".
+void comp_value_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, const char *caption,
+                      const char *value) {
+#if defined(PBL_PLATFORM_GABBRO)
+  char buf[16];
+  snprintf(buf, sizeof(buf), "%s %s", caption, value);
+  comp_fill_gauge(ctx, s, pct, fill, COMP_TRACK, buf, NULL);
+#else
+  comp_fill_gauge(ctx, s, pct, fill, COMP_TRACK, caption, NULL);
+  text_draw_along(ctx, value, slot_point(s, 50, COMP_THUMB), s->center, COMP_TEXT + 2, GColorWhite);
+#endif
+}
+
+// No bar: the text curved along the arc's middle, the icon toward the corner.
+// Gabbro: "ICON 72 BPM" centered on the arc.
+void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color, const char *txt) {
+  Slot b = *s;
+#if defined(PBL_PLATFORM_GABBRO)
+  int left = slot_left_end(&b);
+  int w = text_width(ctx, icon, COMP_ICON) + COMP_GAP + text_width(ctx, txt, COMP_TEXT);
+  slot_trim(&b, left, (slot_len(&b) - w) / 2);
+  comp_icon(ctx, &b, icon, color);
+  comp_end_label(ctx, &b, left, txt);
+#else
+  text_draw_along(ctx, txt, slot_point(s, 50, 0), s->center, COMP_TEXT + 2, GColorWhite);
+  comp_icon(ctx, &b, icon, color);
+#endif
 }
 
 // Label laid along the arc at an end; the arc is trimmed to make room so
@@ -40,13 +70,14 @@ void comp_end_label(GContext *ctx, Slot *s, int end, const char *txt) {
   slot_trim(s, end, w + COMP_GAP + s->thickness / 2);
 }
 
-// Just past the arc, toward the screen corner; round screens have none, so
-// at the arc's middle there.
-void comp_icon(GContext *ctx, const Slot *s, const char *icon, GColor color) {
-#if defined(PBL_ROUND)
-  GPoint p = slot_point(s, 50, s->thickness / 2 + COMP_GAP + COMP_ICON / 2);
+// Just past the arc, toward the screen corner. Gabbro has no corners: the icon
+// goes along the arc at its left end, which is trimmed like for a label.
+void comp_icon(GContext *ctx, Slot *s, const char *icon, GColor color) {
+#if defined(PBL_PLATFORM_GABBRO)
+  int end = slot_left_end(s), w = text_width(ctx, icon, COMP_ICON);
+  text_draw_along(ctx, icon, slot_past(s, end, -w / 2), s->center, COMP_ICON, color);
+  slot_trim(s, end, w + COMP_GAP);
 #else
-  GPoint p = slot_corner(s, COMP_GAP + COMP_ICON / 2);
+  text_draw(ctx, icon, slot_corner(s, COMP_GAP + COMP_ICON / 2), COMP_ICON, color);
 #endif
-  text_draw(ctx, icon, p, COMP_ICON, color);
 }

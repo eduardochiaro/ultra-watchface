@@ -9,13 +9,13 @@ static int heart_bpm(void) {
 #endif
 }
 
-// No bar: "72 BPM" curved along the arc's middle, the heart toward the corner.
+// No bar: "72 BPM" curved along the arc's middle, the heart toward the corner
+// (gabbro: leading the text).
 void comp_heart_draw(GContext *ctx, const Slot *s) {
   int bpm = heart_bpm();
   char buf[16] = "-- BPM";
   if (bpm > 0) snprintf(buf, sizeof(buf), "%d BPM", bpm);
-  text_draw_along(ctx, buf, slot_point(s, 50, 0), s->center, COMP_TEXT + 2, GColorWhite);
-  comp_icon(ctx, s, ICON_HEART, GColorRed);
+  comp_icon_text(ctx, s, ICON_HEART, GColorRed, buf);
 }
 
 // No ring: a heart, the caption above, the reading over its tip.

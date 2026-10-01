@@ -1,23 +1,37 @@
 #include "complications.h"
 
 // Yesterday, today and tomorrow as boxes along the arc, left to right, with
-// the weekday outside. Today is in the accent, the others gray.
+// the weekday outside. Today is in the accent, the others gray. Gabbro has no
+// room beside the arc: the weekday leads the boxes, "WED 30 1 2".
 static const char *const DAYS[] = { "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT" };
+
+// Box centers apart and half a box, in % of the arc the boxes get.
+#if defined(PBL_PLATFORM_GABBRO)
+#define BOX_STEP 34
+#define BOX_HALF 14
+#else
+#define BOX_STEP 22
+#define BOX_HALF 9
+#endif
 
 void comp_calendar_draw(GContext *ctx, const Slot *slot) {
   time_t now = time(NULL);
-  text_draw_along(ctx, DAYS[localtime(&now)->tm_wday], slot_point(slot, 50, COMP_THUMB + 2),
-                  slot->center, COMP_TEXT + 2, GColorWhite);
+  const char *wday = DAYS[localtime(&now)->tm_wday];
   Slot b = *slot;
-  b.thickness = COMP_TEXT + 5;
   int left = slot_left_end(&b);
+#if defined(PBL_PLATFORM_GABBRO)
+  comp_end_label(ctx, &b, left, wday);
+#else
+  text_draw_along(ctx, wday, slot_point(slot, 50, COMP_THUMB + 2), slot->center, COMP_TEXT + 2, GColorWhite);
+#endif
+  b.thickness = COMP_TEXT + 5;
   GColor ink = ink_on(GColorChromeYellow);  // today's digits
   for (int d = -1; d <= 1; d++) {
     time_t day = now + d * SECONDS_PER_DAY;
     char buf[3];
     snprintf(buf, sizeof(buf), "%d", localtime(&day)->tm_mday);
-    int pct = 50 + (left ? -d : d) * 22;
-    slot_box(ctx, &b, pct - 9, pct + 9, 2, d ? GColorDarkGray : GColorChromeYellow);
+    int pct = 50 + (left ? -d : d) * BOX_STEP;
+    slot_box(ctx, &b, pct - BOX_HALF, pct + BOX_HALF, 2, d ? GColorDarkGray : GColorChromeYellow);
     text_draw_along(ctx, buf, slot_point(&b, pct, 0), b.center, COMP_TEXT, d ? GColorLightGray : ink);
   }
 }
