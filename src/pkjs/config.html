@@ -80,6 +80,8 @@
 	.switch[aria-checked="true"] i { background: var(--accent); }
 	.switch[aria-checked="true"] i::after { transform: translateX(22px); }
 
+	.corner input { min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--ground); color: var(--ink); font: inherit; font-weight: 700; }
+
 	#save { min-height: 52px; border: 0; border-radius: 16px; background: var(--accent); color: #141414; font-size: 16px; font-weight: 800; }
 </style>
 </head>
@@ -165,7 +167,7 @@
 
 	// Last weather sent to the watch, else a sample. Health and battery live on
 	// the watch only, so the preview always samples them.
-	var weather = state.weather || { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, ELEVATION: 290, imperial: false };
+	var weather = state.weather || { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, imperial: false };
 	var STEPS = 6240, BATTERY = 82, BPM = 72, WALKED_M = 3900;
 	var DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
@@ -179,7 +181,7 @@
 	var g = GEO[state.platform] || GEO.emery;
 	var C = { black: "#000000", white: "#FFFFFF", dg: "#555555", lg: "#AAAAAA", track: "#000055", green: "#00FF00",
 		accent: "#FFAA00", picton: "#55AAFF", red: "#FF0000", celeste: "#AAFFFF", melon: "#FFAAAA",
-		candy: "#AA0000", rose: "#550000" };
+		candy: "#AA0000", rose: "#550000", cyan: "#00FFFF" };
 
 	function $(id) { return document.getElementById(id); }
 
@@ -226,6 +228,11 @@
 	var AQI = weather.AQI === undefined ? -1 : weather.AQI;
 	var AQI_COLOR = AQI < 0 ? "#FFFFFF" : [[50, "#00FF00"], [100, "#FFFF00"], [150, "#FF5500"], [200, "#FF0000"], [300, "#AA00FF"], [Infinity, "#550000"]]
 		.filter(function (b) { return AQI <= b[0]; })[0][1];
+	var HUM = weather.HUMIDITY === undefined ? -1 : weather.HUMIDITY;
+	// uv_color() in uv.c
+	var UV = weather.UV === undefined ? -1 : weather.UV;
+	var UV_COLOR = UV < 0 ? "#FFFFFF" : [[2, "#00FF00"], [5, "#FFFF00"], [7, "#FF5500"], [10, "#FF0000"], [Infinity, "#AA00FF"]]
+		.filter(function (b) { return UV <= b[0]; })[0][1];
 	function elevation() {
 		var m = weather.ELEVATION === undefined ? 0 : weather.ELEVATION;
 		return String(settings.UNITS === 1 ? Math.trunc(m * 3281 / 1000) : m);
@@ -288,8 +295,10 @@
 			endLabel(s, left, label);
 			sarc(s, 0, 100, C.track);
 			if (pct > 0) sarc(s, left, left ? 100 - pct : pct, c);
-			if (ic) icon(ic, g.round ? P(at(s0, 50), s0.r + s0.t / 2 + 4 + g.ICON / 2) : corner(s0, 4 + g.ICON / 2), g.ICON, c);
+			if (ic) compIcon(s0, ic, c);
 		}
+		// comp_icon()
+		function compIcon(s, ic, c) { icon(ic, g.round ? P(at(s, 50), s.r + s.t / 2 + 4 + g.ICON / 2) : corner(s, 4 + g.ICON / 2), g.ICON, c); }
 		// comp_temp_draw: min on the left end, max on the right, thumb at now, label centered
 		function tempGauge(s0) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, lo = leftEnd(s);
@@ -334,11 +343,20 @@
 			if (id === 3) battery(s);
 			if (id === 4) bar(s, weather.RAIN, C.picton, weather.RAIN + "%", "umbrella");
 			if (id === 6) calendar(s);
-			if (id === 8) bar(s, Math.trunc((BPM - 40) * 100 / 140), C.red, String(BPM), "heart");
+			if (id === 13) bar(s, HUM, C.cyan, HUM >= 0 ? HUM + "%" : "--", "drop");
+			if (id === 14) along(settings["TEXT_" + k.slice(5)], at(s, 50), s.r, g.TEXT + 2, C.white);
+			if (id === 8) {
+				along(BPM + " BPM", at(s, 50), s.r, g.TEXT + 2, C.white);
+				compIcon(s, "heart", C.red);
+			}
 			if (id === 9) bar(s, stepPct(), C.accent, distance() + (settings.UNITS === 1 ? "mi" : "km"), "runner");
 			if (id === 7) {
-				bar(s, AQI >= 0 ? Math.trunc(AQI * 100 / 300) : 0, AQI_COLOR, AQI >= 0 ? String(AQI) : "--");
-				along("AQI", at(s, 50), s.r + g.THUMB, g.TEXT + 2, AQI_COLOR);
+				bar(s, AQI >= 0 ? Math.trunc(AQI * 100 / 300) : 0, AQI_COLOR, "AQI");
+				along(AQI >= 0 ? String(AQI) : "--", at(s, 50), s.r + g.THUMB, g.TEXT + 2, C.white);
+			}
+			if (id === 11) {
+				bar(s, UV >= 0 ? Math.trunc(UV * 100 / 11) : 0, UV_COLOR, "UV");
+				along(UV >= 0 ? String(UV) : "--", at(s, 50), s.r + g.THUMB, g.TEXT + 2, C.white);
 			}
 			if (id === 10) bar(s, 100, C.red, elevation() + (settings.UNITS === 1 ? "ft" : "m"), "arrow");
 		}
@@ -372,6 +390,11 @@
 		}
 		function thumb(c, pct, fill) { disc(Q(c, -120 + 2.4 * clamp(pct), g.SUB_R), 2, fill, C.black); }
 		var SUBDIAL = {
+			// center_custom_draw: up to 4 characters, as big as fits across the ring
+			14: function (c, t) {
+				var max = Math.trunc((g.SUB_R + 2) * 4 / 5);
+				if (t) text(t, c, Math.min(max, 2 * g.SUB_R * 0.7 / (t.length * 0.6)), C.white, 0);
+			},
 			2: function (c) {
 				var t = temp(weather.TEMP), tmin = temp(weather.TEMP_MIN), tmax = temp(weather.TEMP_MAX);
 				subArc(c, -120, 120, C.accent);
@@ -387,11 +410,29 @@
 				icon("umbrella", [c[0] - 2, c[1] + 10], 9, C.white);
 				text("%", [c[0] + 5, c[1] + 12], 4, C.white, 0);
 			},
+			13: function (c) {
+				gauge(c, HUM, C.cyan);
+				text(HUM >= 0 ? String(HUM) : "--", [c[0], c[1] - 1], 10, C.white, 0);
+				icon("drop", [c[0] - 2, c[1] + 10], 9, C.cyan);
+				text("%", [c[0] + 5, c[1] + 12], 4, C.white, 0);
+			},
 			// US AQI in its EPA band color, 0..300 around the ring
 			7: function (c) {
 				gauge(c, AQI * 100 / 300, AQI_COLOR);
 				text(AQI >= 0 ? String(AQI) : "--", [c[0], c[1] - 1], 8, AQI_COLOR, 0);
 				text("AQI", [c[0], c[1] + 10], 6, C.white, 0);
+			},
+			// conditions() in center.c, icons in ICON_SUN.. order
+			12: function (c) {
+				var name = ["sun", "moon", "sun_cloud", "moon_cloud", "cloud", "fog", "rain", "snow", "storm"][weather.CONDITION];
+				var col = scheme === SCHEME_ACCENT ? C.accent : C.white;
+				if (name) icon(name, c, Math.trunc(7 * g.SUB_R / 4), col);
+				else text("--", c, 8, col, 0);
+			},
+			11: function (c) {
+				gauge(c, UV * 100 / 11, UV_COLOR);
+				text(UV >= 0 ? String(UV) : "--", [c[0], c[1] - 1], 8, UV_COLOR, 0);
+				text("UV", [c[0], c[1] + 10], 6, C.white, 0);
 			},
 			// Tear-off page: red header above a flat cut, black on white below in any scheme
 			6: function (c) {
@@ -408,7 +449,6 @@
 				icon("bolt", [c[0], c[1] + 11], 12, C.white);
 			},
 			8: function (c) {
-				disc(c, g.SUB_R + 1, C.rose);
 				text("BPM", [c[0], c[1] - g.SUB_R + 5], 5, C.melon, 0);
 				icon("heart", c, g.SUB_R + 4, C.red);
 				text(String(BPM), [c[0], c[1] + Math.trunc(g.SUB_R / 2) + 1], 8, C.white, 0);
@@ -432,7 +472,7 @@
 			}
 		};
 		var SUBDIAL_AT = { CENTER_T: [cx, cy - g.SUB_D], CENTER_L: [cx - g.SUB_D, cy], CENTER_R: [cx + g.SUB_D, cy], CENTER_B: [cx, cy + g.SUB_D] };
-		for (var pos in SUBDIAL_AT) if (SUBDIAL[settings[pos]]) SUBDIAL[settings[pos]](SUBDIAL_AT[pos]);
+		for (var pos in SUBDIAL_AT) if (SUBDIAL[settings[pos]]) SUBDIAL[settings[pos]](SUBDIAL_AT[pos], settings["TEXT_" + pos.slice(7)]);
 
 		// draw_hands
 		var ha = (now.getHours() % 12) * 30 + now.getMinutes() / 2, ma = now.getMinutes() * 6, sa = now.getSeconds() * 6;
@@ -469,6 +509,7 @@
 		$("goal").value = settings.STEP_GOAL;
 		$("goal-text").textContent = settings.STEP_GOAL.toLocaleString("en-US") + " steps";
 		$("seconds").setAttribute("aria-checked", !!settings.SECONDS);
+		[].forEach.call(document.querySelectorAll("[data-text]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== 14; });
 	}
 
 	// Built once; render() flips state and redraws the preview and scheme swatches
@@ -476,10 +517,12 @@
 	$("caption").textContent = state.weather ? "Health and battery are sample values" : "Sample data";
 	function pickers(places, options) {
 		return places.map(function (c) {
+			var t = "TEXT_" + c.key.split("_")[1];
 			return '<label class="card corner"><span>' + c.label + '</span><select data-slot="' + c.key + '">' +
 				options.map(function (o) {
 					return '<option value="' + o.value + '"' + (settings[c.key] === o.value ? " selected" : "") + ">" + o.label + "</option>";
-				}).join("") + "</select></label>";
+				}).join("") + '</select><input type="text" data-text="' + t + '" data-slot-key="' + c.key + '" value="' + settings[t] +
+				'" maxlength="' + (t.length === 6 ? 4 : 12) + '" autocomplete="off" placeholder="Text" aria-label="' + c.label + ' text"></label>';
 		}).join("");
 	}
 	$("corners").innerHTML = pickers(CORNERS, COMPLICATIONS);
@@ -496,6 +539,13 @@
 
 	document.addEventListener("change", function (e) {
 		if (e.target.dataset.slot) settings[e.target.dataset.slot] = +e.target.value;
+		render();
+	});
+	document.addEventListener("input", function (e) {
+		var k = e.target.dataset.text;
+		if (!k) return;
+		settings[k] = cleanText(k, e.target.value);
+		if (e.target.value !== settings[k]) e.target.value = settings[k];
 		render();
 	});
 	$("goal").addEventListener("input", function (e) {

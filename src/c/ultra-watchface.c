@@ -136,7 +136,9 @@ static void draw_face(GContext *ctx, GRect b, GPoint c) {
       .a0 = DEG(SIDE[i]),
       .a1 = DEG(SIDE[i] + DIR[i] * COMP_SPAN),
     };
-    complication_draw(g_settings.slots[i], ctx, &s);
+    // Text needs its slot's string; the rest draw from what they measure.
+    if (g_settings.slots[i] == COMP_CUSTOM) comp_custom_draw(ctx, &s, g_settings.slot_text[i]);
+    else complication_draw(g_settings.slots[i], ctx, &s);
   }
 
   draw_dial(ctx, c);
@@ -184,16 +186,26 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     const uint32_t slot_keys[SLOT_POS_COUNT] = {
       MESSAGE_KEY_SLOT_TL, MESSAGE_KEY_SLOT_TR, MESSAGE_KEY_SLOT_BR, MESSAGE_KEY_SLOT_BL,
     };
+    const uint32_t slot_text_keys[SLOT_POS_COUNT] = {
+      MESSAGE_KEY_TEXT_TL, MESSAGE_KEY_TEXT_TR, MESSAGE_KEY_TEXT_BR, MESSAGE_KEY_TEXT_BL,
+    };
     for (int i = 0; i < SLOT_POS_COUNT; i++) {
       Tuple *t = dict_find(iter, slot_keys[i]);
       if (t) g_settings.slots[i] = clamp_i32(tuple_int(t), 0, COMP_COUNT - 1);
+      if ((t = dict_find(iter, slot_text_keys[i])) && t->type == TUPLE_CSTRING)
+        strncpy(g_settings.slot_text[i], t->value->cstring, sizeof(g_settings.slot_text[i]) - 1);
     }
     const uint32_t center_keys[CENTER_POS_COUNT] = {
       MESSAGE_KEY_CENTER_T, MESSAGE_KEY_CENTER_L, MESSAGE_KEY_CENTER_R, MESSAGE_KEY_CENTER_B,
     };
+    const uint32_t center_text_keys[CENTER_POS_COUNT] = {
+      MESSAGE_KEY_TEXT_T, MESSAGE_KEY_TEXT_L, MESSAGE_KEY_TEXT_R, MESSAGE_KEY_TEXT_B,
+    };
     for (int i = 0; i < CENTER_POS_COUNT; i++) {
       Tuple *t = dict_find(iter, center_keys[i]);
       if (t) g_settings.center[i] = clamp_i32(tuple_int(t), 0, COMP_COUNT - 1);
+      if ((t = dict_find(iter, center_text_keys[i])) && t->type == TUPLE_CSTRING)
+        strncpy(g_settings.center_text[i], t->value->cstring, sizeof(g_settings.center_text[i]) - 1);
     }
     Tuple *t;
     if ((t = dict_find(iter, MESSAGE_KEY_SECONDS))) g_settings.seconds = tuple_int(t);
@@ -239,7 +251,7 @@ int main(void) {
 
   subscribe_ticks();
   app_message_register_inbox_received(inbox_received);
-  app_message_open(256, 64);
+  app_message_open(512, 64);  // settings with all 8 texts: ~290 bytes
 
   app_event_loop();
   tick_timer_service_unsubscribe();

@@ -12,6 +12,8 @@ static const ComplicationDraw DRAW[COMP_COUNT] = {
   [COMP_DISTANCE] = comp_distance_draw,
   [COMP_AQI]     = comp_aqi_draw,
   [COMP_ELEVATION] = comp_elevation_draw,
+  [COMP_UV]      = comp_uv_draw,
+  [COMP_HUMIDITY] = comp_humidity_draw,
 };
 
 void complication_draw(ComplicationId id, GContext *ctx, const Slot *s) {

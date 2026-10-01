@@ -19,6 +19,9 @@ typedef struct {
   // Appended. imperial lands on older saves' trailing pad byte, which was 0.
   bool imperial;                   // distance and elevation units
   uint8_t center[CENTER_POS_COUNT]; // ComplicationId per subdial
+  // COMP_CUSTOM text per corner and subdial; font glyphs only (config.js cleans it).
+  char slot_text[SLOT_POS_COUNT][13];
+  char center_text[CENTER_POS_COUNT][5];  // a monogram: 4 at most
 } Settings;
 
 extern Settings g_settings;

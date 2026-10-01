@@ -22,6 +22,10 @@ typedef enum {
   COMP_HEART,
   COMP_DISTANCE,
   COMP_ELEVATION,
+  COMP_UV,
+  COMP_WEATHER,   // subdial only
+  COMP_HUMIDITY,
+  COMP_CUSTOM,    // the user's text
   COMP_COUNT
 } ComplicationId;
 
@@ -50,18 +54,45 @@ void comp_heart_draw(GContext *ctx, const Slot *s);
 void comp_distance_draw(GContext *ctx, const Slot *s);
 void comp_aqi_draw(GContext *ctx, const Slot *s);
 void comp_elevation_draw(GContext *ctx, const Slot *s);
+void comp_uv_draw(GContext *ctx, const Slot *s);
+void comp_humidity_draw(GContext *ctx, const Slot *s);
+void comp_custom_draw(GContext *ctx, const Slot *s, const char *txt);  // not in the tables: needs its text
 
-int heart_bpm(void);  // 0 = no reading
-// Walked today, "3.9" in km or mi, and the step goal's progress in %.
-void distance_text(char *buf, size_t n);
-int step_pct(void);
-GColor aqi_color(int v);  // EPA band of a US AQI; white for unknown (<0)
-// Ground elevation in the unit setting, no unit; false and "--" before any weather.
-bool elevation_text(char *buf, size_t n);
+int step_pct(void);  // today's steps toward the goal, in %
 
 // The four subdials inside the dial ring, around center `c`, as picked in
-// g_settings.center. Each id has its own subdial design, not the corner one.
+// g_settings.center. Each id has its own subdial design, not the corner one:
+// center_<name>_draw, next to comp_<name>_draw in <name>.c.
 void center_draw(GContext *ctx, GPoint c);
+
+// Subdial layout (tune per screen).
+#if defined(PBL_PLATFORM_GABBRO)
+#define SUB_D      29   // subdial center from the face center
+#define SUB_R      14   // ring centerline
+#else
+#define SUB_D      31
+#define SUB_R      16
+#endif
+#define SUB_T      3
+#define SUB_TEXT   8    // value
+#define SUB_SMALL  6    // caption under it
+#define SUB_LOW    10   // caption's y below the subdial center, in the ring's gap
+
+// Ring open at the bottom, filling clockwise from 8 o'clock.
+Slot center_ring(GPoint c);
+void center_gauge(GContext *ctx, GPoint c, int pct, GColor fill);
+
+void center_temp_draw(GContext *ctx, GPoint c);
+void center_battery_draw(GContext *ctx, GPoint c);
+void center_rain_draw(GContext *ctx, GPoint c);
+void center_calendar_draw(GContext *ctx, GPoint c);
+void center_aqi_draw(GContext *ctx, GPoint c);
+void center_heart_draw(GContext *ctx, GPoint c);
+void center_distance_draw(GContext *ctx, GPoint c);
+void center_elevation_draw(GContext *ctx, GPoint c);
+void center_uv_draw(GContext *ctx, GPoint c);
+void center_humidity_draw(GContext *ctx, GPoint c);
+void center_custom_draw(GContext *ctx, GPoint c, const char *txt);
 
 // Corner layout: the slot is the whole complication. Gauges put a label at
 // both ends, bars one on the left; labels eat into the arc, not past it.

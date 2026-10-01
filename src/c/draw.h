@@ -42,6 +42,17 @@ void slot_dot(GContext *ctx, const Slot *s, int pct, int r, GColor fill, GColor 
 #define ICON_BOLT     "\uE002"
 #define ICON_UMBRELLA "\uE003"
 #define ICON_ARROW    "\uE004"
+// Weather conditions, in the order of CONDITION in src/pkjs/weather.js.
+#define ICON_SUN        "\uE005"
+#define ICON_MOON       "\uE006"
+#define ICON_SUN_CLOUD  "\uE007"
+#define ICON_MOON_CLOUD "\uE008"
+#define ICON_CLOUD      "\uE009"
+#define ICON_FOG        "\uE00A"
+#define ICON_RAIN       "\uE00B"
+#define ICON_SNOW       "\uE00C"
+#define ICON_STORM      "\uE00D"
+#define ICON_DROP     "\uE00E"
 
 // Text centered on `c` (cap height `size` px). Text and icons are clamped so
 // they stay on screen.

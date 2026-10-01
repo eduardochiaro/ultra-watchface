@@ -27,3 +27,24 @@ void comp_temp_draw(GContext *ctx, const Slot *slot) {
   // Centered, not on the thumb: near min/max it would run off the arc end.
   text_draw_along(ctx, buf, slot_point(s, 50, COMP_THUMB), s->center, COMP_TEXT + 2, GColorWhite);
 }
+
+// Today's range in one color, a thumb at now, min and max under the value.
+void center_temp_draw(GContext *ctx, GPoint c) {
+  Slot s = center_ring(c);
+  const Weather *w = &g_weather;
+  char buf[12] = "--";
+  if (!w->valid) {
+    slot_arc(ctx, &s, 0, 100, COMP_TRACK);
+  } else {
+    int span = w->temp_max - w->temp_min;
+    slot_arc(ctx, &s, 0, 100, GColorChromeYellow);
+    slot_dot(ctx, &s, span > 0 ? clamp_i32((w->temp - w->temp_min) * 100 / span, 0, 100) : 50,
+             SUB_T / 2 + 1, GColorWhite, GColorBlack);
+    snprintf(buf, sizeof(buf), "%d", w->temp_min);
+    text_draw(ctx, buf, GPoint(c.x - 7, c.y + SUB_LOW), SUB_SMALL, GColorLightGray);
+    snprintf(buf, sizeof(buf), "%d", w->temp_max);
+    text_draw(ctx, buf, GPoint(c.x + 7, c.y + SUB_LOW), SUB_SMALL, GColorLightGray);
+    snprintf(buf, sizeof(buf), "%d°", w->temp);
+  }
+  text_draw(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT, GColorWhite);
+}

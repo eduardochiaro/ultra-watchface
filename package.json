@@ -33,6 +33,9 @@
       "TEMP_MAX",
       "RAIN",
       "AQI",
+      "UV",
+      "HUMIDITY",
+      "CONDITION",
       "ELEVATION",
       "SLOT_TL",
       "SLOT_TR",
@@ -47,7 +50,15 @@
       "SCHEME",
       "BG_COLOR",
       "ACCENT_COLOR",
-      "UNITS"
+      "UNITS",
+      "TEXT_TL",
+      "TEXT_TR",
+      "TEXT_BR",
+      "TEXT_BL",
+      "TEXT_T",
+      "TEXT_L",
+      "TEXT_R",
+      "TEXT_B"
     ],
     "resources": {
       "media": [

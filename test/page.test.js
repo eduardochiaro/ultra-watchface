@@ -8,7 +8,11 @@ var config = require('../src/pkjs/config');
 // Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
 assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 2, CENTER_L: 4, CENTER_R: 7, CENTER_B: 6,
-  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8 });
+  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8,
+  TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: '', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
+// Text: only glyphs the watch font has, 12 max
+var texts = config.withDefaults({ TEXT_TL: 'Héllo <b>&"x" 12:30 and more', TEXT_B: 'Hello' });
+assert.deepStrictEqual([texts.TEXT_TL, texts.TEXT_B], ['Hllo bx 12:3', 'Hell']);
 
 execSync('node scripts/inline-config.mjs');
 delete require.cache[require.resolve('../src/pkjs/page')];
@@ -57,7 +61,7 @@ assert.strictEqual(sent.SCHEME, 1);
 assert.strictEqual(sent.SLOT_BR, 6);
 
 // Accent scheme on a light background: black text, accent fills, bg for black
-state = { settings: { SCHEME: 4, BG_COLOR: 0xFF, ACCENT_COLOR: 0xF0 }, platform: 'emery' };
+state = { settings: { SCHEME: 4, BG_COLOR: 0xFF, ACCENT_COLOR: 0xF0, SLOT_TL: 8, CENTER_T: 8, SLOT_TR: 14, CENTER_B: 14, CENTER_L: 14, TEXT_TR: 'Hello <i>', TEXT_B: 'Hello', TEXT_L: 'EC' }, platform: 'emery' };
 var page2 = require('../src/pkjs/page').replace('var STATE = null; //$$STATE$$', 'var STATE = ' + JSON.stringify(state) + ';');
 els = {};
 var ctx2 = { document: document, location: { search: '', href: '' }, URLSearchParams: URLSearchParams, setInterval: function () {}, Math: Math };
@@ -68,23 +72,36 @@ assert.ok(svg.indexOf('<rect width="200" height="228" fill="#ffffff"') > 0, 'cus
 assert.ok(svg.indexOf('stroke="#ff0000"') > 0, 'accent fills');
 assert.ok(svg.indexOf('fill="#000000" transform="rotate(0') > 0, 'numerals black on light bg');
 assert.strictEqual(els.colors.hidden, false);
+assert.ok(/font-size="14.29" fill="#000000"[^>]*>72 BPM<\/text>/.test(svg), 'heart corner: curved text, no bar');
+var heartIcon = require('fs').readFileSync(__dirname + '/../resources/icons/heart.svg', 'utf8').match(/ d="([^"]+)"/)[1];
+assert.ok(svg.indexOf('>Hello i</text>') > 0 && svg.indexOf('>Hell</text>') > 0 && svg.indexOf('>EC</text>') > 0, 'text per place, cleaned');
+assert.ok(els.corners.innerHTML.indexOf('data-text="TEXT_TR" data-slot-key="SLOT_TR" value="Hello i" maxlength="12"') > 0, 'corner text field');
+assert.ok(svg.split(heartIcon).length - 1 === 2, 'heart icon in corner and subdial');
 
 // New subdials and corners, imperial
-state = { settings: { SLOT_TL: 8, SLOT_TR: 9, SLOT_BL: 7, SLOT_BR: 10, CENTER_T: 8, CENTER_L: 9, CENTER_R: 10, CENTER_B: 3, UNITS: 1 },
-  weather: { TEMP: 70, TEMP_MIN: 60, TEMP_MAX: 75, RAIN: 10, AQI: 20, ELEVATION: 100, imperial: true }, platform: 'emery' };
+state = { settings: { SLOT_TL: 13, SLOT_TR: 11, SLOT_BL: 7, SLOT_BR: 10, CENTER_T: 11, CENTER_L: 9, CENTER_R: 12, CENTER_B: 3, UNITS: 1 },
+  weather: { TEMP: 70, TEMP_MIN: 60, TEMP_MAX: 75, RAIN: 10, AQI: 20, UV: 7, HUMIDITY: 55, CONDITION: 6, ELEVATION: 100, imperial: true }, platform: 'emery' };
 var page3 = require('../src/pkjs/page').replace('var STATE = null; //$$STATE$$', 'var STATE = ' + JSON.stringify(state) + ';');
 els = {};
 var ctx3 = { document: document, location: { search: '', href: '' }, URLSearchParams: URLSearchParams, setInterval: function () {}, Math: Math };
 vm.createContext(ctx3);
 page3.match(/<script>([\s\S]*?)<\/script>/g).forEach(function (s) { vm.runInContext(s.replace(/<\/?script>/g, ''), ctx3); });
 svg = els.screen.innerHTML;
-assert.ok(svg.indexOf('>BPM</text>') > 0 && svg.indexOf('>72</text>') > 0, 'heart subdial');
+assert.ok(svg.indexOf('>55%</text>') > 0 && svg.indexOf('stroke="#00ffff" stroke-width="6"') > 0, 'humidity corner');
 assert.ok(svg.indexOf('>MI</text>') > 0 && svg.indexOf('>2.4</text>') > 0, 'distance subdial');
-assert.ok(svg.indexOf('>2.4mi</text>') > 0, 'distance corner');
-assert.ok(svg.indexOf('>FT</text>') > 0 && svg.indexOf('>328</text>') > 0, 'elevation subdial');
+assert.strictEqual(svg.split('>UV</text>').length - 1, 2, 'UV corner and subdial');
+// Orange is UV's alone here; width 6 is the corner bar (subdial rings are 3).
+assert.ok(svg.indexOf('stroke="#ff5500" stroke-width="6"') > 0, 'UV corner bar in its band color');
+assert.ok(/font-size="14.29" fill="#ffffff"[^>]*>7<\/text>/.test(svg), 'UV corner value, curved, white');
+var rainIcon = require('fs').readFileSync(__dirname + '/../resources/icons/rain.svg', 'utf8').match(/ d="([^"]+)"/)[1];
+assert.ok(svg.indexOf(rainIcon) > 0 && svg.indexOf('>FT</text>') < 0, 'weather subdial');
 assert.ok(svg.indexOf('>82</text>') > 0, 'battery subdial');
 assert.strictEqual(svg.split('>AQI</text>').length - 1, 1, 'AQI word in the corner, no AQI subdial');
 assert.ok(svg.indexOf('>20</text>') > 0 && svg.indexOf('>328ft</text>') > 0, 'AQI and elevation corners');
-assert.ok(els.centers.innerHTML.indexOf('value="10" selected') > 0, 'center pickers');
+assert.ok(els.centers.innerHTML.indexOf('value="12" selected') > 0, 'center pickers');
+
+var condition = require('../src/pkjs/weather').condition;
+assert.deepStrictEqual([[0, true], [0, false], [2, false], [3, true], [48, true], [61, true], [81, true], [73, true], [86, true], [95, true], [7, true]]
+  .map(function (a) { return condition(a[0], a[1]); }), [0, 1, 3, 4, 5, 6, 6, 7, 7, 8, -1], 'WMO codes');
 
 console.log('ok');

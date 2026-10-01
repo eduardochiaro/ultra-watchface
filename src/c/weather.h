@@ -8,6 +8,9 @@ typedef struct {
   int16_t temp, temp_min, temp_max;
   int16_t rain;              // today's max precipitation probability, %
   int16_t aqi;               // US AQI now, -1 = unknown
+  int16_t uv;                // UV index now, -1 = unknown
+  int16_t humidity;          // relative humidity now, %, -1 = unknown
+  int16_t condition;         // ICON_SUN.. order (weather.js CONDITION), -1 = unknown
   int16_t elevation;         // ground at the phone's position, m
 } Weather;
 

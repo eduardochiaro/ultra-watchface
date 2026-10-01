@@ -7,7 +7,7 @@ var WEATHER_KEY = 'ultra-weather';  // last message sent, for the settings previ
 function buildUrl(lat, lon, imperial) {
   return 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
     '&longitude=' + lon +
-    '&current=temperature_2m' +
+    '&current=temperature_2m,relative_humidity_2m,uv_index,weather_code,is_day' +
     '&daily=temperature_2m_min,temperature_2m_max,precipitation_probability_max' +
     '&forecast_days=1&timezone=auto' +
     (imperial ? '&temperature_unit=fahrenheit' : '');
@@ -16,6 +16,18 @@ function buildUrl(lat, lon, imperial) {
 function aqiUrl(lat, lon) {
   return 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + lat +
     '&longitude=' + lon + '&current=us_aqi';
+}
+
+// WMO weather code -> icon index on the watch (ICON_SUN.. in draw.h), -1 = unknown.
+function condition(code, day) {
+  if (code === 0) return day ? 0 : 1;               // clear
+  if (code === 1 || code === 2) return day ? 2 : 3; // partly cloudy
+  if (code === 3) return 4;                          // overcast
+  if (code === 45 || code === 48) return 5;          // fog
+  if (code >= 95) return 8;                          // thunderstorm
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 7;  // snow
+  if (code >= 51 && code <= 82) return 6;            // drizzle, rain, showers
+  return -1;
 }
 
 // aqi: Open-Meteo air-quality response, or null. -1 = unknown.
@@ -28,6 +40,9 @@ function buildMessage(data, aqi) {
     TEMP_MAX: Math.round(d.temperature_2m_max[0]),
     RAIN: Math.round(d.precipitation_probability_max[0] || 0),
     AQI: typeof a === 'number' ? Math.round(a) : -1,
+    CONDITION: condition(data.current.weather_code, data.current.is_day === 1),
+    HUMIDITY: typeof data.current.relative_humidity_2m === 'number' ? Math.round(data.current.relative_humidity_2m) : -1,
+    UV: typeof data.current.uv_index === 'number' ? Math.round(data.current.uv_index) : -1,
     ELEVATION: Math.round(data.elevation || 0)  // metres either way: the watch converts
   };
 }
@@ -83,4 +98,5 @@ function getWeather(skipSame) {
 
 module.exports = getWeather;
 module.exports.buildMessage = buildMessage;
+module.exports.condition = condition;
 module.exports.WEATHER_KEY = WEATHER_KEY;
