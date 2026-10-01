@@ -4,7 +4,7 @@ var getWeather = require('./weather');
 
 Pebble.addEventListener('ready', function() {
   getWeather();
-  setInterval(getWeather, 30 * 60 * 1000);
+  setInterval(function() { getWeather(true); }, 30 * 60 * 1000);
 });
 
 // The page is handed over whole, with the saved settings, the last weather

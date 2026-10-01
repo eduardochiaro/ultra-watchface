@@ -7,7 +7,7 @@ typedef struct {
   bool valid;
   int16_t temp, temp_min, temp_max;
   int16_t rain;              // today's max precipitation probability, %
-  int16_t sunrise, sunset;   // today, minutes since local midnight
+  int16_t aqi;               // US AQI now, -1 = unknown
 } Weather;
 
 extern Weather g_weather;

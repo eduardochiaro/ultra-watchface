@@ -7,7 +7,7 @@ static const ComplicationDraw DRAW[COMP_COUNT] = {
   [COMP_TEMP]    = comp_temp_draw,
   [COMP_BATTERY] = comp_battery_draw,
   [COMP_RAIN]    = comp_rain_draw,
-  [COMP_SUN]     = comp_sun_draw,
+  [COMP_CALENDAR] = comp_calendar_draw,
 };
 
 void complication_draw(ComplicationId id, GContext *ctx, const Slot *s) {

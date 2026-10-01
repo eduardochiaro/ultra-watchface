@@ -7,16 +7,17 @@ var config = require('../src/pkjs/config');
 
 // Message: ints, and UNITS stays on the phone
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
-assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, SCHEME: 3, STEP_GOAL: 10000, SECONDS: 0 });
+assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, SCHEME: 3, STEP_GOAL: 10000, SECONDS: 0,
+  BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8 });
 
 execSync('node scripts/inline-config.mjs');
 delete require.cache[require.resolve('../src/pkjs/page')];
 var page = require('../src/pkjs/page');
-var state = { settings: { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 0, SCHEME: 1, SECONDS: 1 }, platform: 'gabbro' };
+var state = { settings: { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 6, SCHEME: 1, SECONDS: 1 }, platform: 'gabbro' };
 page = page.replace('var STATE = null; //$$STATE$$', 'var STATE = ' + JSON.stringify(state) + ';');
 
 function el() {
-  return { innerHTML: '', textContent: '', value: '', attrs: {}, dataset: {}, classList: { add: function () {} },
+  return { innerHTML: '', textContent: '', value: '', attrs: {}, dataset: {}, style: {}, classList: { add: function () {} },
     children: [], setAttribute: function (k, v) { this.attrs[k] = String(v); }, addEventListener: function () {} };
 }
 var els = {};
@@ -26,7 +27,8 @@ var document = {
     if (!els[id]) { els[id] = el(); if (id === 'schemes' || id === 'units') els[id].children = [el(), el(), el(), el()].slice(0, id === 'units' ? 2 : 4); }
     return els[id];
   },
-  addEventListener: function (type, fn) { if (type === 'click') clicks.push(fn); }
+  addEventListener: function (type, fn) { if (type === 'click') clicks.push(fn); },
+  querySelectorAll: function () { return []; }
 };
 var ctx = { document: document, location: { search: '', href: '' }, URLSearchParams: URLSearchParams, setInterval: function () {}, Math: Math };
 var scripts = page.match(/<script>([\s\S]*?)<\/script>/g).map(function (s) { return s.replace(/<\/?script>/g, ''); });
@@ -39,9 +41,12 @@ assert.ok(svg.indexOf('fill="#ffffff"') > 0, 'white scheme background');
 assert.ok(svg.indexOf('>6240</text>') > 0, 'steps label');
 assert.ok(svg.indexOf('>24</text>') > 0, 'temp max label');
 assert.ok(svg.indexOf('>82%</text>') > 0, 'battery label');
-assert.ok(svg.indexOf('>30%</text>') < 0, 'rain slot is None');
+assert.ok(svg.indexOf('>30%</text>') > 0, 'rain subdial');
+assert.ok(svg.indexOf('>42</text>') > 0 && svg.indexOf('>AQI</text>') > 0, 'AQI subdial');
+assert.ok(/>(SUN|MON|TUE|WED|THU|FRI|SAT)<\/text>/.test(svg), 'calendar weekday');
 assert.ok(svg.indexOf('stroke="#ffaa00" stroke-width="2"') > 0, 'seconds hand');
-assert.strictEqual(els.schemes.children[1].attrs['aria-pressed'], 'true');
+assert.ok(els.schemes.innerHTML.indexOf('data-scheme="1" aria-pressed="true"') > 0);
+assert.strictEqual(els.colors.hidden, true);
 assert.strictEqual(els.seconds.attrs['aria-checked'], 'true');
 
 // Save navigates with the settings as payload
@@ -49,6 +54,19 @@ var save = el(); save.id = 'save';
 clicks[0]({ target: { closest: function () { return save; } } });
 var sent = JSON.parse(decodeURIComponent(ctx.location.href.split('#')[1]));
 assert.strictEqual(sent.SCHEME, 1);
-assert.strictEqual(sent.SLOT_BR, 0);
+assert.strictEqual(sent.SLOT_BR, 6);
+
+// Accent scheme on a light background: black text, accent fills, bg for black
+state = { settings: { SCHEME: 4, BG_COLOR: 0xFF, ACCENT_COLOR: 0xF0 }, platform: 'emery' };
+var page2 = require('../src/pkjs/page').replace('var STATE = null; //$$STATE$$', 'var STATE = ' + JSON.stringify(state) + ';');
+els = {};
+var ctx2 = { document: document, location: { search: '', href: '' }, URLSearchParams: URLSearchParams, setInterval: function () {}, Math: Math };
+vm.createContext(ctx2);
+page2.match(/<script>([\s\S]*?)<\/script>/g).forEach(function (s) { vm.runInContext(s.replace(/<\/?script>/g, ''), ctx2); });
+svg = els.screen.innerHTML;
+assert.ok(svg.indexOf('<rect width="200" height="228" fill="#ffffff"') > 0, 'custom background');
+assert.ok(svg.indexOf('stroke="#ff0000"') > 0, 'accent fills');
+assert.ok(svg.indexOf('fill="#000000" transform="rotate(0') > 0, 'numerals black on light bg');
+assert.strictEqual(els.colors.hidden, false);
 
 console.log('ok');

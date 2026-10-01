@@ -32,8 +32,7 @@
       "TEMP_MIN",
       "TEMP_MAX",
       "RAIN",
-      "SUNRISE",
-      "SUNSET",
+      "AQI",
       "SLOT_TL",
       "SLOT_TR",
       "SLOT_BR",
@@ -41,6 +40,8 @@
       "SECONDS",
       "STEP_GOAL",
       "SCHEME",
+      "BG_COLOR",
+      "ACCENT_COLOR",
       "UNITS"
     ],
     "resources": {

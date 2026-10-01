@@ -25,6 +25,10 @@ void slot_trim(Slot *s, int end, int px);
 // The end (0 or 100) further left on screen.
 int slot_left_end(const Slot *s);
 void slot_arc(GContext *ctx, const Slot *s, int from_pct, int to_pct, GColor color);
+// Arc segment with square ends, corners rounded by `r` px.
+void slot_box(GContext *ctx, const Slot *s, int from_pct, int to_pct, int r, GColor color);
+// Antialiased disc, flat below `cut` px from the center (cut = r: whole disc).
+void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color);
 void slot_dot(GContext *ctx, const Slot *s, int pct, int r, GColor fill, GColor ring);
 
 // ponytail: placeholder until real icons land; swap for a gdraw_command_image.
@@ -40,6 +44,14 @@ int text_width(GContext *ctx, const char *txt, int size);
 
 // Maps a color from the black scheme (what all drawing code is written in) to
 // the active scheme. The draw helpers apply it; direct graphics_* calls must too.
+// Accent scheme: black is the background, grays go dark or light to contrast
+// with it, bright colors become the accent and dark ones a gray track.
 GColor theme(GColor c);
+// Whether the scheme's background is light (grays are inverted).
+bool theme_light(void);
+// A color theme() leaves alone, for things that keep their real-world look.
+// ponytail: marked by alpha 2; nothing here draws translucent.
+GColor fixed(GColor c);
+bool color_light(GColor c);
 
 int32_t clamp_i32(int32_t v, int32_t lo, int32_t hi);

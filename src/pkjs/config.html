@@ -54,7 +54,16 @@
 	.swatch { flex-shrink: 0; display: flex; align-items: center; justify-content: center; gap: 3px; width: 36px; height: 36px; border-radius: 50%; }
 	.swatch i { width: 6px; height: 6px; border-radius: 50%; }
 
+	.colors[hidden] { display: none; }
+	.colors { margin-top: 10px; }
+	details summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; list-style: none; cursor: pointer; font-size: 15px; font-weight: 700; }
+	details summary::-webkit-details-marker { display: none; }
+	.chip { width: 44px; height: 32px; border-radius: 10px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.18); }
+	.palette { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 6px; padding-top: 12px; }
+	.palette button { aspect-ratio: 1; min-height: 32px; padding: 0; border: 0; border-radius: 8px; box-shadow: inset 0 0 0 1px rgba(255,255,255,.12); }
+	.palette button[aria-pressed="true"] { outline: 3px solid var(--ink); outline-offset: 2px; }
 	.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; }
+	details.row { display: block; padding: 6px 16px; }
 	.row + .row { border-top: 1px solid var(--line); }
 	.row b, .row label { font-size: 15px; font-weight: 700; }
 	.row small { display: block; font-size: 13px; color: var(--soft); }
@@ -94,6 +103,16 @@
 	<section>
 		<h2>Color scheme</h2>
 		<div class="grid" id="schemes" role="group" aria-label="Color scheme"></div>
+		<div class="card colors" id="colors" hidden>
+			<details class="row" id="bg-row">
+				<summary>Background color<span class="chip" id="bg-chip"></span></summary>
+				<div class="palette" data-color="BG_COLOR" role="group" aria-label="Background color"></div>
+			</details>
+			<details class="row">
+				<summary>Accent<span class="chip" id="accent-chip"></span></summary>
+				<div class="palette" data-color="ACCENT_COLOR" role="group" aria-label="Accent color"></div>
+			</details>
+		</div>
 	</section>
 
 	<section>
@@ -141,33 +160,49 @@
 
 	// Last weather sent to the watch, else a sample. Steps and battery live on
 	// the watch only, so the preview always samples them.
-	var weather = state.weather || { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, SUNRISE: 420, SUNSET: 1140, imperial: false };
+	var weather = state.weather || { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, imperial: false };
 	var STEPS = 6240, BATTERY = 82;
+	var DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
 
-	// The #defines at the top of ultra-watchface.c and complications.h
+	// The #defines at the top of ultra-watchface.c, complications.h and center.c
 	var GEO = {
 		emery: { w: 200, h: 228, DIAL_R: 94, NUM_R_BIG: 77, NUM_R: 69, NUM_BIG: 14, NUM_SMALL: 9, INNER_R: 54,
-			COMP_R: 108, COMP_T: 6, SUN_R: 32, SUN_T: 7, TEXT: 8, ICON: 10, THUMB: 14, scale: 1.3 },
+			COMP_R: 108, COMP_T: 6, SUB_D: 31, SUB_R: 16, TEXT: 8, ICON: 10, THUMB: 14, scale: 1.3 },
 		gabbro: { w: 260, h: 260, DIAL_R: 88, NUM_R_BIG: 69, NUM_R: 72, NUM_BIG: 16, NUM_SMALL: 10, INNER_R: 51,
-			COMP_R: 118, COMP_T: 6, SUN_R: 30, SUN_T: 7, TEXT: 11, ICON: 12, THUMB: -17, scale: 1.1, round: true }
+			COMP_R: 118, COMP_T: 6, SUB_D: 29, SUB_R: 14, TEXT: 11, ICON: 12, THUMB: -17, scale: 1.1, round: true }
 	};
 	var g = GEO[state.platform] || GEO.emery;
 	var C = { black: "#000000", white: "#FFFFFF", dg: "#555555", lg: "#AAAAAA", track: "#000055", green: "#00FF00",
-		accent: "#FFAA00", picton: "#55AAFF", red: "#FF0000", pastel: "#FFFFAA", rajah: "#FFAA55" };
+		accent: "#FFAA00", picton: "#55AAFF", red: "#FF0000" };
 
 	function $(id) { return document.getElementById(id); }
 
-	// theme() in draw.c: mono turns colors into white/dark gray, light flips grays
+	// GColor8 argb <-> channels 0..3 <-> css hex
+	function chans(argb) { return [(argb >> 4) & 3, (argb >> 2) & 3, argb & 3]; }
+	function css(v) { return "#" + v.map(function (c) { return (c * 85).toString(16).padStart(2, "0"); }).join(""); }
+	function hexChans(hex) { return [1, 3, 5].map(function (i) { return Math.round(parseInt(hex.substr(i, 2), 16) / 85); }); }
+	function light(v) { return v[0] * 299 + v[1] * 587 + v[2] * 114 > 1500; }  // color_light()
+	function isLight(argb) { return light(chans(argb)); }
+
+	// theme_light() / theme() in draw.c
+	function lightScheme(scheme) { return scheme === SCHEME_ACCENT ? isLight(settings.BG_COLOR) : !!(scheme & 1); }
 	function theme(hex, scheme) {
-		var v = [1, 3, 5].map(function (i) { return Math.round(parseInt(hex.substr(i, 2), 16) / 85); });
+		if (hex[0] === "!") return hex.slice(1);  // fixed()
+		var v = hexChans(hex);
 		var gray = v[0] === v[1] && v[1] === v[2];
-		if ((scheme & 2) && !gray) {
-			var m = v[0] >= 2 || v[1] >= 2 || v[2] >= 2 ? 3 : 1;  // fills vs tracks
-			v = [m, m, m];
+		var bright = v[0] >= 2 || v[1] >= 2 || v[2] >= 2;  // fills vs tracks
+		var light = lightScheme(scheme);
+		if (scheme === SCHEME_ACCENT) {
+			if (!gray && bright) return css(chans(settings.ACCENT_COLOR));
+			if (gray && v[0] === 0) return css(chans(settings.BG_COLOR));
+			if (!gray) v = [1, 1, 1];
+			gray = true;
+		} else if ((scheme & 2) && !gray) {
+			v = bright ? [3, 3, 3] : [1, 1, 1];
 			gray = true;
 		}
-		if ((scheme & 1) && gray) v = [3 - v[0], 3 - v[0], 3 - v[0]];
-		return "#" + v.map(function (c) { return (c * 85).toString(16).padStart(2, "0"); }).join("");
+		if (light && gray) v = [3 - v[0], 3 - v[0], 3 - v[0]];
+		return css(v);
 	}
 
 	// Weather is stored in the unit it was fetched in
@@ -225,7 +260,7 @@
 			if (pct > 0) sarc(s, left, left ? 100 - pct : pct, c);
 			block(P(at(s0, 50), s0.r + s0.t / 2 + 4 + g.ICON / 2), g.ICON, c);
 		}
-		// comp_temp_draw: min on the left end, max on the right, thumb at now
+		// comp_temp_draw: min on the left end, max on the right, thumb at now, label centered
 		function tempGauge(s0) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, lo = leftEnd(s);
 			var t = temp(weather.TEMP), min = temp(weather.TEMP_MIN), max = temp(weather.TEMP_MAX);
@@ -235,7 +270,27 @@
 			endLabel(s, 100 - lo, String(max));
 			sarc(s, 0, 100, C.accent);
 			dot(s, pct, s.t / 2 + 2);
-			along(t + "°", at(s, pct), s.r + g.THUMB, g.TEXT + 2, C.white);
+			along(t + "°", at(s, 50), s.r + g.THUMB, g.TEXT + 2, C.white);
+		}
+
+		// comp_battery_draw: full bar, label centered outside
+		function battery(s) {
+			var left = leftEnd(s);
+			sarc(s, 0, 100, C.track);
+			sarc(s, left, left ? 100 - BATTERY : BATTERY, BATTERY <= 20 ? C.red : C.accent);
+			along(BATTERY + "%", at(s, 50), s.r + g.THUMB, g.TEXT + 2, C.white);
+		}
+		// comp_calendar_draw: weekday outside, yesterday/today/tomorrow boxes
+		function calendar(s0) {
+			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: g.TEXT + 5 }, left = leftEnd(s);
+			along(DAYS[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
+			var ink = light(hexChans(T(C.accent))) === lightScheme(scheme) ? C.white : C.black;
+			[-1, 0, 1].forEach(function (d) {
+				var p = 50 + (left ? -d : d) * 22;
+				// ponytail: square ends; the watch rounds the corners by 2px
+				out.push('<path d="' + arc(s.r, at(s, p - 9), at(s, p + 9)) + '" fill="none" stroke="' + T(d ? C.dg : C.accent) + '" stroke-width="' + s.t + '"/>');
+				along(String(new Date(now.getFullYear(), now.getMonth(), now.getDate() + d).getDate()), at(s, p), s.r, g.TEXT, d ? C.lg : ink);
+			});
 		}
 
 		// Corners: outer end pinned at 10/2/4/8 o'clock, 45° toward 12/6
@@ -246,8 +301,9 @@
 			var id = settings[k];
 			if (id === 1) bar(s, Math.round(STEPS * 100 / settings.STEP_GOAL), C.green, String(STEPS));
 			if (id === 2) tempGauge(s);
-			if (id === 3) bar(s, BATTERY, BATTERY <= 20 ? C.red : C.accent, BATTERY + "%");
+			if (id === 3) battery(s);
 			if (id === 4) bar(s, weather.RAIN, C.picton, weather.RAIN + "%");
+			if (id === 6) calendar(s);
 		}
 
 		// draw_dial
@@ -260,30 +316,53 @@
 			var big = h % 3 === 0;
 			if (big) stroke(seg(P(h * 30, g.DIAL_R + 1), P(h * 30, g.DIAL_R - 5)), C.accent, 3);
 			text(String(h), P(h * 30, big ? g.NUM_R_BIG : g.NUM_R), big ? g.NUM_BIG : g.NUM_SMALL,
-				big || (scheme & 1) ? C.white : C.lg, 0);
+				big || lightScheme(scheme) ? C.white : C.lg, 0);
 		}
 		ring(g.DIAL_R, C.lg, 2);
 		ring(g.DIAL_R + 4, C.dg, 1);
 
-		// comp_sun_draw: 9 o'clock over the top to 3 o'clock, sunrise to sunset
-		var min = now.getHours() * 60 + now.getMinutes();
-		var day = weather.SUNSET > weather.SUNRISE ? (min - weather.SUNRISE) * 100 / (weather.SUNSET - weather.SUNRISE) : 0;
-		var sp = Math.max(0, Math.min(100, Math.round(day)));
-		var sun = { a0: -90, a1: 90, r: g.SUN_R, t: g.SUN_T };
-		sarc(sun, 0, 100, C.track);
-		[[40, C.picton], [70, C.pastel], [100, C.rajah]].reduce(function (from, band) {
-			var to = Math.min(band[0], sp);
-			if (from < to) sarc(sun, from, to, band[1]);
-			return to;
-		}, 0);
-		dot(sun, sp, sun.t / 2 + 3);
-		var badge = sun.t + 3;
-		[0, 100].forEach(function (p) {
-			var c = P(at(sun, p), sun.r);
-			c[1] += badge + 2;
-			disc(c, badge, C.black, C.dg);
-			block(c, badge, C.white);
-		});
+		// center_draw: four subdials, rings open at the bottom from -120° to 120°
+		function Q(c, a, r) { return [c[0] + r * Math.sin(rad(a)), c[1] - r * Math.cos(rad(a))]; }
+		function subArc(c, a, b, col) {
+			var p = Q(c, a, g.SUB_R), q = Q(c, b, g.SUB_R);
+			stroke("M" + f(p[0]) + " " + f(p[1]) + "A" + g.SUB_R + " " + g.SUB_R + " 0 " + (b - a > 180 ? 1 : 0) + " 1 " + f(q[0]) + " " + f(q[1]), col, 3);
+		}
+		function gauge(c, pct, col) {
+			subArc(c, -120, 120, C.track);
+			pct = Math.max(0, Math.min(100, pct));
+			if (pct > 0) subArc(c, -120, -120 + 2.4 * pct, col);
+		}
+		var tc = [cx, cy - g.SUB_D], rc = [cx - g.SUB_D, cy], ac = [cx + g.SUB_D, cy], dc = [cx, cy + g.SUB_D];
+		var t = temp(weather.TEMP), tmin = temp(weather.TEMP_MIN), tmax = temp(weather.TEMP_MAX);
+		subArc(tc, -120, 120, C.accent);
+		disc(Q(tc, -120 + 2.4 * (tmax > tmin ? Math.max(0, Math.min(100, (t - tmin) * 100 / (tmax - tmin))) : 50), g.SUB_R), 2, C.white, C.black);
+		text(String(tmin), [tc[0] - 7, tc[1] + 10], 6, C.lg, 0);
+		text(String(tmax), [tc[0] + 7, tc[1] + 10], 6, C.lg, 0);
+		text(t + "°", [tc[0], tc[1] - 1], 8, C.white, 0);
+
+		gauge(rc, weather.RAIN, C.picton);
+		text(weather.RAIN + "%", [rc[0], rc[1] - 1], 8, C.white, 0);
+		var u = [rc[0], rc[1] + 9];
+		out.push('<path d="M' + (u[0] - 4) + " " + (u[1] + 1) + "A4 4 0 0 1 " + (u[0] + 4) + " " + (u[1] + 1) + 'Z" fill="' + T(C.white) + '"/>');
+		stroke(seg([u[0], u[1] + 1], [u[0], u[1] + 4]), C.white, 1);
+
+		// US AQI in its EPA band color, 0..300 around the ring
+		var aqi = weather.AQI === undefined ? -1 : weather.AQI;
+		var band = [[50, "#00FF00"], [100, "#FFFF00"], [150, "#FF5500"], [200, "#FF0000"], [300, "#AA00FF"], [Infinity, "#550000"]]
+			.filter(function (b) { return aqi <= b[0]; })[0][1];
+		var acol = aqi >= 0 ? band : C.white;
+		gauge(ac, aqi * 100 / 300, acol);
+		text(aqi >= 0 ? String(aqi) : "--", [ac[0], ac[1] - 1], 8, acol, 0);
+		text("AQI", [ac[0], ac[1] + 10], 6, C.white, 0);
+
+		// Tear-off page: red header above a flat cut, black on white below in any scheme
+		var dr = g.SUB_R + 1, cut = Math.trunc(-dr / 3), hw = f(Math.sqrt(dr * dr - cut * cut));
+		if (lightScheme(scheme)) disc(dc, dr + 1, C.lg);
+		disc(dc, dr, "!" + C.white);
+		out.push('<path d="M' + f(dc[0] - hw) + " " + (dc[1] + cut) + "A" + dr + " " + dr + " 0 0 1 " + f(dc[0] + hw) + " " + (dc[1] + cut) + 'Z" fill="' + T(C.red) + '"/>');
+		var dink = light(hexChans(T(C.red))) === lightScheme(scheme) ? C.white : C.black;
+		text(DAYS[now.getDay()], [dc[0], dc[1] + Math.trunc((cut - dr) / 2)], 5, dink, 0);
+		text(String(now.getDate()), [dc[0], dc[1] + Math.trunc((cut + dr) / 2)], 10, "!" + C.black, 0);
 
 		// draw_hands
 		var ha = (now.getHours() % 12) * 30 + now.getMinutes() / 2, ma = now.getMinutes() * 6, sa = now.getSeconds() * 6;
@@ -304,14 +383,25 @@
 
 	function render() {
 		preview();
-		[].forEach.call($("schemes").children, function (b, i) { b.setAttribute("aria-pressed", settings.SCHEME === i); });
+		$("schemes").innerHTML = SCHEMES.map(function (label, i) {
+			var dots = [C.green, C.accent, C.picton].map(function (c) { return '<i style="background:' + theme(c, i) + '"></i>'; }).join("");
+			return '<button type="button" class="scheme" data-scheme="' + i + '" aria-pressed="' + (settings.SCHEME === i) +
+				'"><span class="swatch" style="background:' + theme(C.black, i) + ";box-shadow:inset 0 0 0 2px " + theme(C.lg, i) +
+				',0 0 0 1px #33363b">' + dots + "</span>" + label + "</button>";
+		}).join("");
+		$("colors").hidden = settings.SCHEME !== SCHEME_ACCENT;
+		$("bg-chip").style.background = css(chans(settings.BG_COLOR));
+		$("accent-chip").style.background = css(chans(settings.ACCENT_COLOR));
+		[].forEach.call(document.querySelectorAll(".palette button"), function (b) {
+			b.setAttribute("aria-pressed", settings[b.parentNode.dataset.color] === +b.dataset.argb);
+		});
 		[].forEach.call($("units").children, function (b, i) { b.setAttribute("aria-pressed", settings.UNITS === i); });
 		$("goal").value = settings.STEP_GOAL;
 		$("goal-text").textContent = settings.STEP_GOAL.toLocaleString("en-US") + " steps";
 		$("seconds").setAttribute("aria-checked", !!settings.SECONDS);
 	}
 
-	// Built once; render() only flips state
+	// Built once; render() flips state and redraws the preview and scheme swatches
 	if (g.round) $("bezel").classList.add("round");
 	$("caption").textContent = state.weather ? "Steps and battery are sample values" : "Sample data";
 	$("corners").innerHTML = CORNERS.map(function (c) {
@@ -320,11 +410,15 @@
 				return '<option value="' + o.value + '"' + (settings[c.key] === o.value ? " selected" : "") + ">" + o.label + "</option>";
 			}).join("") + "</select></label>";
 	}).join("");
-	$("schemes").innerHTML = SCHEMES.map(function (label, i) {
-		var dots = [C.green, C.accent, C.picton].map(function (c) { return '<i style="background:' + theme(c, i) + '"></i>'; }).join("");
-		return '<button type="button" class="scheme" data-scheme="' + i + '"><span class="swatch" style="background:' + theme(C.black, i) +
-			";box-shadow:inset 0 0 0 2px " + theme(C.lg, i) + ',0 0 0 1px #33363b">' + dots + "</span>" + label + "</button>";
-	}).join("");
+	// The watch's 64 colors, a row per red/green pair
+	var PALETTE = [];
+	for (var a = 0xC0; a <= 0xFF; a++) PALETTE.push(a);
+	[].forEach.call(document.querySelectorAll(".palette"), function (p) {
+		p.innerHTML = PALETTE.map(function (argb) {
+			var hex = css(chans(argb));
+			return '<button type="button" data-argb="' + argb + '" aria-label="' + hex + '" style="background:' + hex + '"></button>';
+		}).join("");
+	});
 
 	document.addEventListener("change", function (e) {
 		if (e.target.dataset.slot) settings[e.target.dataset.slot] = +e.target.value;
@@ -338,6 +432,7 @@
 		var b = e.target.closest("button");
 		if (!b) return;
 		if (b.dataset.scheme) settings.SCHEME = +b.dataset.scheme;
+		else if (b.dataset.argb) settings[b.parentNode.dataset.color] = +b.dataset.argb;
 		else if (b.dataset.units) settings.UNITS = +b.dataset.units;
 		else if (b.id === "seconds") settings.SECONDS = settings.SECONDS ? 0 : 1;
 		else if (b.id === "save") {

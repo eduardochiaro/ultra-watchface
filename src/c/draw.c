@@ -16,13 +16,34 @@ void draw_deinit(void) {
   ffont_destroy(s_font);
 }
 
+bool color_light(GColor c) {
+  return c.r * 299 + c.g * 587 + c.b * 114 > 1500;  // luma, channels 0..3
+}
+
+bool theme_light(void) {
+  if (g_settings.scheme != SCHEME_ACCENT) return g_settings.scheme & SCHEME_LIGHT;
+  return color_light((GColor){ .argb = g_settings.bg });
+}
+
+GColor fixed(GColor c) {
+  c.a = 2;
+  return c;
+}
+
 GColor theme(GColor c) {
+  if (c.a == 2) { c.a = 3; return c; }  // fixed()
   bool gray = c.r == c.g && c.g == c.b;
-  if ((g_settings.scheme & SCHEME_MONO) && !gray) {
-    c = (c.r >= 2 || c.g >= 2 || c.b >= 2) ? GColorWhite : GColorDarkGray;  // fills vs tracks
+  bool bright = c.r >= 2 || c.g >= 2 || c.b >= 2;  // fills vs tracks
+  if (g_settings.scheme == SCHEME_ACCENT) {
+    if (!gray && bright) return (GColor){ .argb = g_settings.accent };
+    if (gray && c.r == 0) return (GColor){ .argb = g_settings.bg };
+    if (!gray) c = GColorDarkGray;
+    gray = true;
+  } else if ((g_settings.scheme & SCHEME_MONO) && !gray) {
+    c = bright ? GColorWhite : GColorDarkGray;
     gray = true;
   }
-  if ((g_settings.scheme & SCHEME_LIGHT) && gray) c.r = c.g = c.b = 3 - c.r;
+  if (theme_light() && gray) c.r = c.g = c.b = 3 - c.r;
   return c;
 }
 
@@ -75,6 +96,56 @@ void slot_arc(GContext *ctx, const Slot *s, int from_pct, int to_pct, GColor col
   int cap = (s->thickness - 1) / 2;
   graphics_fill_circle(ctx, polar(s->center, a, s->radius), cap);
   graphics_fill_circle(ctx, polar(s->center, b, s->radius), cap);
+}
+
+// Subpixel polar, for fctx paths.
+static FPoint fpolar(GPoint c, int32_t angle, int r) {
+  return FPoint(INT_TO_FIXED(c.x) + sin_lookup(angle) * INT_TO_FIXED(r) / TRIG_MAX_RATIO,
+                INT_TO_FIXED(c.y) - cos_lookup(angle) * INT_TO_FIXED(r) / TRIG_MAX_RATIO);
+}
+
+// One antialiased fctx path: the four sides, each corner a curve pulled
+// toward the sharp corner. Sides are straight chords.
+// ponytail: chords sag <0.3px at box widths; sample the arcs if boxes grow.
+void slot_box(GContext *ctx, const Slot *s, int from_pct, int to_pct, int r, GColor color) {
+  int32_t a = slot_angle(s, from_pct), b = slot_angle(s, to_pct);
+  if (a > b) { int32_t t = a; a = b; b = t; }
+  int outer = s->radius + s->thickness / 2, inner = outer - s->thickness;
+  int32_t io = r * (TRIG_MAX_ANGLE * 10 / 63) / outer, ii = r * (TRIG_MAX_ANGLE * 10 / 63) / inner;
+  GPoint c = s->center;
+  FContext f;
+  fctx_init_context(&f, ctx);
+  fctx_set_fill_color(&f, theme(color));
+  fctx_begin_fill(&f);
+  fctx_move_to(&f, fpolar(c, a + io, outer));
+  fctx_line_to(&f, fpolar(c, b - io, outer));
+  fctx_curve_to(&f, fpolar(c, b, outer), fpolar(c, b, outer), fpolar(c, b, outer - r));
+  fctx_line_to(&f, fpolar(c, b, inner + r));
+  fctx_curve_to(&f, fpolar(c, b, inner), fpolar(c, b, inner), fpolar(c, b - ii, inner));
+  fctx_line_to(&f, fpolar(c, a + ii, inner));
+  fctx_curve_to(&f, fpolar(c, a, inner), fpolar(c, a, inner), fpolar(c, a, inner + r));
+  fctx_line_to(&f, fpolar(c, a, outer - r));
+  fctx_curve_to(&f, fpolar(c, a, outer), fpolar(c, a, outer), fpolar(c, a + io, outer));
+  fctx_close_path(&f);
+  fctx_end_fill(&f);
+  fctx_deinit_context(&f);
+}
+
+// Polygon of 10° chords, the points below the cut pulled up onto it.
+void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color) {
+  fixed_t max_y = INT_TO_FIXED(c.y + cut);
+  FContext f;
+  fctx_init_context(&f, ctx);
+  fctx_set_fill_color(&f, theme(color));
+  fctx_begin_fill(&f);
+  for (int i = 0; i < 36; i++) {
+    FPoint p = fpolar(c, i * TRIG_MAX_ANGLE / 36, r);
+    if (p.y > max_y) p.y = max_y;
+    if (i) fctx_line_to(&f, p); else fctx_move_to(&f, p);
+  }
+  fctx_close_path(&f);
+  fctx_end_fill(&f);
+  fctx_deinit_context(&f);
 }
 
 void slot_dot(GContext *ctx, const Slot *s, int pct, int r, GColor fill, GColor ring) {

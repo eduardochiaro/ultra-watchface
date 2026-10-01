@@ -11,11 +11,9 @@
 #define NUM_R      72   // the other numerals
 #define NUM_BIG    16
 #define NUM_SMALL  10
-#define INNER_R    51   // ring around the sun gauge
+#define INNER_R    51   // ring around the subdials
 #define COMP_R     118
 #define COMP_T     6
-#define SUN_R      30
-#define SUN_T      7
 #else                              // emery 200x228: dial fills the width, arcs in the corners
 #define DIAL_R     94
 #define NUM_R_BIG  77
@@ -25,8 +23,6 @@
 #define INNER_R    54
 #define COMP_R     108
 #define COMP_T     6
-#define SUN_R      32
-#define SUN_T      7
 #endif
 
 #define COMP_SPAN  45   // degrees per corner complication, labels included
@@ -34,15 +30,22 @@
 #define DEG(d)     DEG_TO_TRIGANGLE(d)
 
 #define PK_SETTINGS 10
+#define CACHE_HEADROOM 40000  // bytes left for fctx after the seconds cache
 
 Settings g_settings = {
   .slots = { COMP_STEPS, COMP_TEMP, COMP_RAIN, COMP_BATTERY },
   .seconds = false,
   .step_goal = 10000,
+  .bg = GColorBlackARGB8,
+  .accent = GColorChromeYellowARGB8,
 };
 
 static Window *s_window;
 static Layer *s_layer;
+// Seconds mode: the face minus the hands, drawn once a minute and copied in
+// every second. Text is the costly part to draw. NULL = no memory, draw it all.
+static GBitmap *s_cache;
+static int s_cache_min = -1;  // -1 = stale
 
 static GPoint polar(GPoint c, int32_t angle, int r) {
   return GPoint(c.x + sin_lookup(angle) * r / TRIG_MAX_RATIO,
@@ -75,7 +78,7 @@ static void draw_dial(GContext *ctx, GPoint c) {
     snprintf(buf, sizeof(buf), "%d", h);
     text_draw(ctx, buf, polar(c, a, big ? NUM_R_BIG : NUM_R), big ? NUM_BIG : NUM_SMALL,
               // Dark gray is too faint on white; the palette has nothing between it and black.
-              big || (g_settings.scheme & SCHEME_LIGHT) ? GColorWhite : GColorLightGray);
+              big || theme_light() ? GColorWhite : GColorLightGray);
   }
   graphics_context_set_stroke_color(ctx, theme(GColorLightGray));
   graphics_context_set_stroke_width(ctx, 2);
@@ -101,10 +104,24 @@ static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
   graphics_fill_circle(ctx, c, 2);
 }
 
-static void update_proc(Layer *layer, GContext *ctx) {
-  GRect b = layer_get_bounds(layer);
-  GPoint c = grect_center_point(&b);
-  graphics_context_set_antialiased(ctx, true);
+static void save_cache(GContext *ctx) {
+  GBitmap *fb = graphics_capture_frame_buffer(ctx);
+  if (!fb) return;
+  GRect r = gbitmap_get_bounds(fb);
+  // fctx allocates while drawing text: leave it room. Emery keeps ~48KB with
+  // the cache; gabbro's 67KB cache would leave ~26KB and crash it.
+  // ponytail: gabbro gets no cache; cache only the corners if it needs one.
+  if (!s_cache && (int)heap_bytes_free() > r.size.w * r.size.h + CACHE_HEADROOM)
+    s_cache = gbitmap_create_blank(r.size, gbitmap_get_format(fb));
+  // 8-bit formats: a byte per pixel. Rows are clipped on round screens.
+  for (int y = 0; s_cache && y < r.size.h; y++) {
+    GBitmapDataRowInfo src = gbitmap_get_data_row_info(fb, y), dst = gbitmap_get_data_row_info(s_cache, y);
+    memcpy(dst.data + src.min_x, src.data + src.min_x, src.max_x - src.min_x + 1);
+  }
+  graphics_release_frame_buffer(ctx, fb);
+}
+
+static void draw_face(GContext *ctx, GRect b, GPoint c) {
   graphics_context_set_fill_color(ctx, theme(GColorBlack));
   graphics_fill_rect(ctx, b, 0, GCornerNone);
 
@@ -122,13 +139,25 @@ static void update_proc(Layer *layer, GContext *ctx) {
   }
 
   draw_dial(ctx, c);
+  center_draw(ctx, c);
+}
 
-  Slot sun = { .center = c, .radius = SUN_R, .thickness = SUN_T,
-               .a0 = DEG(-90), .a1 = DEG(90) };
-  complication_draw(COMP_SUN, ctx, &sun);
-
+static void update_proc(Layer *layer, GContext *ctx) {
+  GRect b = layer_get_bounds(layer);
+  GPoint c = grect_center_point(&b);
+  graphics_context_set_antialiased(ctx, true);
   time_t now = time(NULL);
-  draw_hands(ctx, c, localtime(&now));
+  struct tm t = *localtime(&now);  // copied: complications call localtime too
+  if (s_cache && s_cache_min == t.tm_min) {
+    graphics_draw_bitmap_in_rect(ctx, s_cache, b);
+  } else {
+    draw_face(ctx, b, c);
+    if (g_settings.seconds) {
+      save_cache(ctx);
+      s_cache_min = t.tm_min;
+    }
+  }
+  draw_hands(ctx, c, &t);
 }
 
 static void tick_handler(struct tm *t, TimeUnits changed) {
@@ -136,6 +165,11 @@ static void tick_handler(struct tm *t, TimeUnits changed) {
 }
 
 static void subscribe_ticks(void) {
+  s_cache_min = -1;
+  if (!g_settings.seconds && s_cache) {
+    gbitmap_destroy(s_cache);
+    s_cache = NULL;
+  }
   tick_timer_service_subscribe(g_settings.seconds ? SECOND_UNIT : MINUTE_UNIT, tick_handler);
 }
 
@@ -156,10 +190,13 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     Tuple *t;
     if ((t = dict_find(iter, MESSAGE_KEY_SECONDS))) g_settings.seconds = tuple_int(t);
     if ((t = dict_find(iter, MESSAGE_KEY_STEP_GOAL))) g_settings.step_goal = tuple_int(t);
-    if ((t = dict_find(iter, MESSAGE_KEY_SCHEME))) g_settings.scheme = clamp_i32(tuple_int(t), 0, 3);
+    if ((t = dict_find(iter, MESSAGE_KEY_SCHEME))) g_settings.scheme = clamp_i32(tuple_int(t), 0, 4);
+    if ((t = dict_find(iter, MESSAGE_KEY_BG_COLOR))) g_settings.bg = tuple_int(t) | 0xC0;  // opaque
+    if ((t = dict_find(iter, MESSAGE_KEY_ACCENT_COLOR))) g_settings.accent = tuple_int(t) | 0xC0;
     persist_write_data(PK_SETTINGS, &g_settings, sizeof(g_settings));
     subscribe_ticks();
   }
+  s_cache_min = -1;
   layer_mark_dirty(s_layer);
 }
 
@@ -174,6 +211,8 @@ static void window_load(Window *window) {
 
 static void window_unload(Window *window) {
   layer_destroy(s_layer);
+  if (s_cache) gbitmap_destroy(s_cache);
+  s_cache = NULL;
   draw_deinit();
 }
 

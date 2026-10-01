@@ -1,8 +1,8 @@
 #include "complications.h"
 #include "../weather.h"
 
-// Gauge: today's range with a thumb at the current temperature. Min on the
-// left end, max on the right.
+// Gauge: today's range with a thumb at the current temperature, labelled at
+// the arc's middle. Min on the left end, max on the right.
 void comp_temp_draw(GContext *ctx, const Slot *slot) {
   Slot b = *slot, *s = &b;
   const Weather *w = &g_weather;
@@ -24,5 +24,6 @@ void comp_temp_draw(GContext *ctx, const Slot *slot) {
   slot_arc(ctx, s, 0, 100, GColorChromeYellow);
   slot_dot(ctx, s, pct, s->thickness / 2 + 2, GColorWhite, GColorBlack);
   snprintf(buf, sizeof(buf), "%d°", w->temp);
-  text_draw_along(ctx, buf, slot_point(s, pct, COMP_THUMB), s->center, COMP_TEXT + 2, GColorWhite);
+  // Centered, not on the thumb: near min/max it would run off the arc end.
+  text_draw_along(ctx, buf, slot_point(s, 50, COMP_THUMB), s->center, COMP_TEXT + 2, GColorWhite);
 }

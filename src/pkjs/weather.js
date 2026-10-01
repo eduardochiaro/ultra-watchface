@@ -8,26 +8,26 @@ function buildUrl(lat, lon, imperial) {
   return 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
     '&longitude=' + lon +
     '&current=temperature_2m' +
-    '&daily=temperature_2m_min,temperature_2m_max,precipitation_probability_max,sunrise,sunset' +
+    '&daily=temperature_2m_min,temperature_2m_max,precipitation_probability_max' +
     '&forecast_days=1&timezone=auto' +
     (imperial ? '&temperature_unit=fahrenheit' : '');
 }
 
-// "2026-09-30T06:52" (local, timezone=auto) -> minutes since midnight.
-function minutes(iso) {
-  if (!iso) { return 0; }   // polar day / night
-  return parseInt(iso.slice(11, 13), 10) * 60 + parseInt(iso.slice(14, 16), 10);
+function aqiUrl(lat, lon) {
+  return 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + lat +
+    '&longitude=' + lon + '&current=us_aqi';
 }
 
-function buildMessage(data) {
+// aqi: Open-Meteo air-quality response, or null. -1 = unknown.
+function buildMessage(data, aqi) {
   var d = data.daily;
+  var a = aqi && aqi.current && aqi.current.us_aqi;
   return {
     TEMP: Math.round(data.current.temperature_2m),
     TEMP_MIN: Math.round(d.temperature_2m_min[0]),
     TEMP_MAX: Math.round(d.temperature_2m_max[0]),
     RAIN: Math.round(d.precipitation_probability_max[0] || 0),
-    SUNRISE: minutes(d.sunrise[0]),
-    SUNSET: minutes(d.sunset[0])
+    AQI: typeof a === 'number' ? Math.round(a) : -1
   };
 }
 
@@ -44,19 +44,19 @@ function fetchJson(url, ok, fail) {
   xhr.send();
 }
 
-function getWeather() {
+// skipSame: only send when it differs from the last message, so the watch
+// isn't woken over Bluetooth (and doesn't rewrite flash) for nothing. Only
+// the timer passes it: a fresh start may have lost the watch's copy.
+function getWeather(skipSame) {
   var imperial = savedSettings().UNITS === 1;
 
   navigator.geolocation.getCurrentPosition(function(pos) {
-    fetchJson(buildUrl(pos.coords.latitude, pos.coords.longitude, imperial), function(data) {
-      var msg = buildMessage(data);
-      msg.imperial = imperial;
-      localStorage.setItem(WEATHER_KEY, JSON.stringify(msg));
-      delete msg.imperial;
-      Pebble.sendAppMessage(msg, function() {
-        console.log('Weather sent');
-      }, function(err) {
-        console.log('Weather send failed: ' + JSON.stringify(err));
+    var lat = pos.coords.latitude, lon = pos.coords.longitude;
+    fetchJson(buildUrl(lat, lon, imperial), function(data) {
+      // Air quality is a separate API; weather still goes out without it.
+      fetchJson(aqiUrl(lat, lon), function(aqi) { send(data, aqi); }, function(err) {
+        console.log('AQI fetch failed: ' + err);
+        send(data, null);
       });
     }, function(err) {
       console.log('Weather fetch failed: ' + err);
@@ -64,6 +64,20 @@ function getWeather() {
   }, function(err) {
     console.log('Location failed: ' + err.message);
   }, { timeout: 15000, maximumAge: 30 * 60 * 1000 });
+
+  function send(data, aqi) {
+    var msg = buildMessage(data, aqi);
+    msg.imperial = imperial;
+    var json = JSON.stringify(msg);
+    if (skipSame === true && json === localStorage.getItem(WEATHER_KEY)) { return; }
+    localStorage.setItem(WEATHER_KEY, json);
+    delete msg.imperial;
+    Pebble.sendAppMessage(msg, function() {
+      console.log('Weather sent');
+    }, function(err) {
+      console.log('Weather send failed: ' + JSON.stringify(err));
+    });
+  }
 }
 
 module.exports = getWeather;
