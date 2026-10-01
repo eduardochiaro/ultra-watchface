@@ -22,6 +22,9 @@ GPoint slot_point(const Slot *s, int pct, int dr);
 GPoint slot_past(const Slot *s, int end, int px);
 // Pull an end `px` pixels in toward the other end.
 void slot_trim(Slot *s, int end, int px);
+// `px` past the arc's outer edge on the line to the screen corner nearest its
+// middle. Rect screens only.
+GPoint slot_corner(const Slot *s, int px);
 // The end (0 or 100) further left on screen.
 int slot_left_end(const Slot *s);
 void slot_arc(GContext *ctx, const Slot *s, int from_pct, int to_pct, GColor color);
@@ -31,8 +34,14 @@ void slot_box(GContext *ctx, const Slot *s, int from_pct, int to_pct, int r, GCo
 void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color);
 void slot_dot(GContext *ctx, const Slot *s, int pct, int r, GColor fill, GColor ring);
 
-// ponytail: placeholder until real icons land; swap for a gdraw_command_image.
-void icon_block(GContext *ctx, GPoint c, int size, GColor color);
+// Icons are font glyphs (resources/icons, U+E000 on): draw them with
+// text_draw, `size` being the square they fill. Same order as ICONS in
+// scripts/gen-svg-font.js.
+#define ICON_HEART    "\uE000"
+#define ICON_RUNNER   "\uE001"
+#define ICON_BOLT     "\uE002"
+#define ICON_UMBRELLA "\uE003"
+#define ICON_ARROW    "\uE004"
 
 // Text centered on `c` (cap height `size` px). Text and icons are clamped so
 // they stay on screen.
@@ -53,5 +62,7 @@ bool theme_light(void);
 // ponytail: marked by alpha 2; nothing here draws translucent.
 GColor fixed(GColor c);
 bool color_light(GColor c);
+// White or black, whichever reads on `fill` once both are themed.
+GColor ink_on(GColor fill);
 
 int32_t clamp_i32(int32_t v, int32_t lo, int32_t hi);

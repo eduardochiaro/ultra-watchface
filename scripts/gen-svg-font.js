@@ -5,9 +5,17 @@
 // opentype.js emits y-down screen coordinates, so we negate y. Coordinates are
 // kept in raw font units (em = unitsPerEm) which the fctx compiler rescales.
 //
+// Icons from resources/icons/<name>.svg (24x24, one path) are added at U+E000
+// on in ICONS order: their box scaled to the cap height, so an icon drawn at
+// cap height N is N px square. Keep ICONS in sync with ICON_* in src/c/draw.h.
+//
 // Usage: node scripts/gen-svg-font.js <in.ttf> <out.svg> <font-id> [chars]
 const fs = require('fs');
+const path = require('path');
 const opentype = require('opentype.js');
+const parsePath = require('svg-path-parser');
+
+const ICONS = ['heart', 'runner', 'bolt', 'umbrella', 'arrow'];
 
 const [, , inPath, outPath, fontId, charsArg] = process.argv;
 if (!inPath || !outPath || !fontId) {
@@ -65,6 +73,41 @@ for (const ch of chars) {
   const d = pathData(g, dx);
   glyphs.push(`    <glyph unicode="${esc(ch)}" horiz-adv-x="${adv}" d="${d}"/>`);
 }
+
+// 24-unit y-down icon path -> font units, y-up, box on the baseline. The y flip
+// mirrors arcs, so their rotation and sweep flip too.
+function iconPath(d) {
+  const s = capHeight / 24;
+  const X = (v) => Math.round(v * s), Y = (v) => Math.round((24 - v) * s);
+  const at = { x: 0, y: 0 }, start = { x: 0, y: 0 };
+  return parsePath(d).map((c) => {
+    if (c.relative) {  // to absolute, against the pen
+      for (const k of ['x', 'x1', 'x2']) if (k in c) c[k] += at.x;
+      for (const k of ['y', 'y1', 'y2']) if (k in c) c[k] += at.y;
+    }
+    c.code = c.code.toUpperCase();
+    if (c.code === 'Z') Object.assign(at, start);
+    else Object.assign(at, { x: 'x' in c ? c.x : at.x, y: 'y' in c ? c.y : at.y });
+    if (c.code === 'M') Object.assign(start, at);
+    switch (c.code) {
+      case 'M': case 'L': case 'T': return `${c.code}${X(c.x)} ${Y(c.y)}`;
+      case 'H': return `H${X(c.x)}`;
+      case 'V': return `V${Y(c.y)}`;
+      case 'C': return `C${X(c.x1)} ${Y(c.y1)} ${X(c.x2)} ${Y(c.y2)} ${X(c.x)} ${Y(c.y)}`;
+      case 'S': return `S${X(c.x2)} ${Y(c.y2)} ${X(c.x)} ${Y(c.y)}`;
+      case 'Q': return `Q${X(c.x1)} ${Y(c.y1)} ${X(c.x)} ${Y(c.y)}`;
+      case 'A': return `A${Math.round(c.rx * s)} ${Math.round(c.ry * s)} ${-c.xAxisRotation} ${c.largeArc ? 1 : 0} ${c.sweep ? 0 : 1} ${X(c.x)} ${Y(c.y)}`;
+      case 'Z': return 'Z';
+    }
+    throw new Error(`unsupported path command ${c.code}`);
+  }).join('');
+}
+
+const iconDir = path.join(__dirname, '../resources/icons');
+ICONS.forEach((name, i) => {
+  const d = fs.readFileSync(path.join(iconDir, `${name}.svg`), 'utf8').match(/ d="([^"]+)"/)[1];
+  glyphs.push(`    <glyph unicode="&#x${(0xE000 + i).toString(16)};" glyph-name="${name}" horiz-adv-x="${capHeight}" d="${iconPath(d)}"/>`);
+});
 
 const svg = `<?xml version="1.0" standalone="no"?>
 <svg xmlns="http://www.w3.org/2000/svg">

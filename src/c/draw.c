@@ -25,6 +25,11 @@ bool theme_light(void) {
   return color_light((GColor){ .argb = g_settings.bg });
 }
 
+GColor ink_on(GColor fill) {
+  // theme(Black) is light iff the scheme is: match it on a fill that isn't.
+  return color_light(theme(fill)) == theme_light() ? GColorWhite : GColorBlack;
+}
+
 GColor fixed(GColor c) {
   c.a = 2;
   return c;
@@ -80,28 +85,54 @@ void slot_trim(Slot *s, int end, int px) {
   *at += *at < other ? px_angle(s, px) : -px_angle(s, px);
 }
 
+static int isqrt(int n) {
+  int x = 0;
+  while ((x + 1) * (x + 1) <= n) x++;
+  return x;
+}
+
+GPoint slot_corner(const Slot *s, int px) {
+  GPoint m = slot_point(s, 50, 0);
+  GPoint k = GPoint(m.x < s->center.x ? 0 : s_screen.w, m.y < s->center.y ? 0 : s_screen.h);
+  int dx = k.x - s->center.x, dy = k.y - s->center.y;
+  int r = s->radius + s->thickness / 2 + px, d = isqrt(dx * dx + dy * dy);
+  return GPoint(s->center.x + dx * r / d, s->center.y + dy * r / d);
+}
+
 int slot_left_end(const Slot *s) {
   return slot_point(s, 100, 0).x < slot_point(s, 0, 0).x ? 100 : 0;
 }
 
-// Arc with round caps. from/to may come in either order.
+// Subpixel polar, for fctx paths.
+static FPoint fpolar_f(FPoint c, int32_t angle, fixed_t r) {
+  return FPoint(c.x + sin_lookup(angle) * r / TRIG_MAX_RATIO, c.y - cos_lookup(angle) * r / TRIG_MAX_RATIO);
+}
+
+static FPoint fpolar(GPoint c, int32_t angle, int r) {
+  return fpolar_f(FPointI(c.x, c.y), angle, INT_TO_FIXED(r));
+}
+
+// Arc with half-circle caps, one antialiased fctx path: outer edge, cap at b,
+// inner edge back, cap at a. Edges are ~4px chords. from/to in either order.
 void slot_arc(GContext *ctx, const Slot *s, int from_pct, int to_pct, GColor color) {
   int32_t a = slot_angle(s, from_pct), b = slot_angle(s, to_pct);
   if (a > b) { int32_t t = a; a = b; b = t; }
-  int outer = s->radius + s->thickness / 2;
-  GRect box = GRect(s->center.x - outer, s->center.y - outer, outer * 2, outer * 2);
-  graphics_context_set_fill_color(ctx, theme(color));
-  if (b > a) graphics_fill_radial(ctx, box, GOvalScaleModeFitCircle, s->thickness, a, b);
-  // fill_circle(r) is 2r+1 wide; keep caps no wider than the arc.
-  int cap = (s->thickness - 1) / 2;
-  graphics_fill_circle(ctx, polar(s->center, a, s->radius), cap);
-  graphics_fill_circle(ctx, polar(s->center, b, s->radius), cap);
-}
-
-// Subpixel polar, for fctx paths.
-static FPoint fpolar(GPoint c, int32_t angle, int r) {
-  return FPoint(INT_TO_FIXED(c.x) + sin_lookup(angle) * INT_TO_FIXED(r) / TRIG_MAX_RATIO,
-                INT_TO_FIXED(c.y) - cos_lookup(angle) * INT_TO_FIXED(r) / TRIG_MAX_RATIO);
+  FPoint c = FPointI(s->center.x, s->center.y);
+  fixed_t r = INT_TO_FIXED(s->radius), h = INT_TO_FIXED(s->thickness) / 2;
+  int n = 1 + (b - a) * (s->radius + s->thickness) * 3 / (TRIG_MAX_ANGLE * 2);  // 2πR/4
+  const int32_t STEP = TRIG_MAX_ANGLE / 12;  // 30° around a cap
+  FContext f;
+  fctx_init_context(&f, ctx);
+  fctx_set_fill_color(&f, theme(color));
+  fctx_begin_fill(&f);
+  fctx_move_to(&f, fpolar_f(c, a, r + h));
+  for (int i = 1; i <= n; i++) fctx_line_to(&f, fpolar_f(c, a + (b - a) * i / n, r + h));
+  for (int k = 1; k <= 6; k++) fctx_line_to(&f, fpolar_f(fpolar_f(c, b, r), b + k * STEP, h));
+  for (int i = n - 1; i >= 0; i--) fctx_line_to(&f, fpolar_f(c, a + (b - a) * i / n, r - h));
+  for (int k = 7; k < 12; k++) fctx_line_to(&f, fpolar_f(fpolar_f(c, a, r), a + k * STEP, h));
+  fctx_close_path(&f);
+  fctx_end_fill(&f);
+  fctx_deinit_context(&f);
 }
 
 // One antialiased fctx path: the four sides, each corner a curve pulled
@@ -175,12 +206,6 @@ static GPoint clamp_to_screen(GPoint c, int hw, int hh) {
 #endif
 }
 
-void icon_block(GContext *ctx, GPoint c, int size, GColor color) {
-  c = clamp_to_screen(c, size / 2, size / 2);
-  graphics_context_set_fill_color(ctx, theme(color));
-  graphics_fill_rect(ctx, GRect(c.x - size / 2, c.y - size / 2, size, size), 2, GCornersAll);
-}
-
 static void draw_text(GContext *ctx, const char *txt, GPoint c, int size, GColor color,
                       int32_t rot) {
   if (!s_font) return;
@@ -201,12 +226,6 @@ static void draw_text(GContext *ctx, const char *txt, GPoint c, int size, GColor
 
 void text_draw(GContext *ctx, const char *txt, GPoint c, int size, GColor color) {
   draw_text(ctx, txt, c, size, color, 0);
-}
-
-static int isqrt(int n) {
-  int x = 0;
-  while ((x + 1) * (x + 1) <= n) x++;
-  return x;
 }
 
 // Curved text centered on `c`, on the circle through it around `center`: each

@@ -11,6 +11,23 @@ var COMPLICATIONS = [
   { label: 'Battery', value: 3 },
   { label: 'Chance of rain', value: 4 },
   { label: 'Calendar', value: 6 },
+  { label: 'Heart rate', value: 8 },
+  { label: 'Distance', value: 9 },
+  { label: 'Air quality', value: 7 },
+  { label: 'Elevation', value: 10 },
+  { label: 'None', value: 0 }
+];
+
+// Subdials have their own designs, so their own list.
+var CENTER_COMPLICATIONS = [
+  { label: 'Temperature', value: 2 },
+  { label: 'Chance of rain', value: 4 },
+  { label: 'Air quality', value: 7 },
+  { label: 'Calendar', value: 6 },
+  { label: 'Battery', value: 3 },
+  { label: 'Heart rate', value: 8 },
+  { label: 'Distance', value: 9 },
+  { label: 'Elevation', value: 10 },
   { label: 'None', value: 0 }
 ];
 
@@ -21,14 +38,21 @@ var CORNERS = [
   { key: 'SLOT_BR', label: 'Bottom right' }
 ];
 
+var CENTERS = [
+  { key: 'CENTER_T', label: 'Top' },
+  { key: 'CENTER_L', label: 'Left' },
+  { key: 'CENTER_R', label: 'Right' },
+  { key: 'CENTER_B', label: 'Bottom' }
+];
+
 // Index = SCHEME value, see SCHEME_LIGHT / SCHEME_MONO / SCHEME_ACCENT in src/c/settings.h
 var SCHEMES = ['Black', 'White', 'White on black', 'Black on white', 'Accent'];
 var SCHEME_ACCENT = 4;
 
-// Mirrors g_settings in C. UNITS never reaches the watch: weather.js asks
-// Open-Meteo for the chosen unit. Colors are GColor8 argb (0xC0 = black,
+// Mirrors g_settings in C. weather.js asks Open-Meteo for the chosen
+// temperature unit; the watch converts distance and elevation. Colors are GColor8 argb (0xC0 = black,
 // 0xF8 = chrome yellow).
-var DEFAULTS = { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, SCHEME: 0, UNITS: 0, STEP_GOAL: 10000, SECONDS: 0,
+var DEFAULTS = { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 2, CENTER_L: 4, CENTER_R: 7, CENTER_B: 6, SCHEME: 0, UNITS: 0, STEP_GOAL: 10000, SECONDS: 0,
   BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8 };
 
 function withDefaults(saved) {
@@ -47,13 +71,14 @@ function savedSettings() {
 
 function toMessage(settings) {
   var msg = {};
-  for (var k in DEFAULTS) if (k !== 'UNITS') msg[k] = Number(settings[k]);
+  for (var k in DEFAULTS) msg[k] = Number(settings[k]);
   return msg;
 }
 
 if (typeof module === 'object') {
   module.exports = {
-    SETTINGS_KEY: SETTINGS_KEY, COMPLICATIONS: COMPLICATIONS, CORNERS: CORNERS, SCHEMES: SCHEMES, SCHEME_ACCENT: SCHEME_ACCENT,
+    SETTINGS_KEY: SETTINGS_KEY, COMPLICATIONS: COMPLICATIONS, CENTER_COMPLICATIONS: CENTER_COMPLICATIONS,
+    CORNERS: CORNERS, CENTERS: CENTERS, SCHEMES: SCHEMES, SCHEME_ACCENT: SCHEME_ACCENT,
     DEFAULTS: DEFAULTS, withDefaults: withDefaults, savedSettings: savedSettings, toMessage: toMessage
   };
 }

@@ -1,4 +1,5 @@
 #include "complications.h"
+#include "../settings.h"
 #include "../weather.h"
 
 #if defined(PBL_PLATFORM_GABBRO)
@@ -46,39 +47,28 @@ static void temp(GContext *ctx, GPoint c) {
   text_draw(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT, GColorWhite);
 }
 
-// Canopy and stem.
-static void umbrella(GContext *ctx, GPoint c) {
-  graphics_context_set_fill_color(ctx, theme(GColorWhite));
-  graphics_fill_radial(ctx, GRect(c.x - 4, c.y - 3, 9, 9), GOvalScaleModeFitCircle, 5,
-                       DEG_TO_TRIGANGLE(-90), DEG_TO_TRIGANGLE(90));
-  graphics_context_set_stroke_color(ctx, theme(GColorWhite));
-  graphics_context_set_stroke_width(ctx, 1);
-  graphics_draw_line(ctx, GPoint(c.x, c.y + 1), GPoint(c.x, c.y + 4));
-}
-
+// A thumb at the fill's end; the % sits by the umbrella, not the value.
 static void rain(GContext *ctx, GPoint c) {
   char buf[8] = "--";
-  if (g_weather.valid) snprintf(buf, sizeof(buf), "%d%%", g_weather.rain);
-  gauge(ctx, c, g_weather.valid ? g_weather.rain : 0, GColorPictonBlue);
-  text_draw(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT, GColorWhite);
-  umbrella(ctx, GPoint(c.x, c.y + SUB_LOW - 1));
+  if (g_weather.valid) {
+    Slot s = ring(c);
+    gauge(ctx, c, g_weather.rain, GColorPictonBlue);
+    slot_dot(ctx, &s, clamp_i32(g_weather.rain, 0, 100), SUB_T / 2 + 1, GColorCeleste, GColorBlack);
+    snprintf(buf, sizeof(buf), "%d", g_weather.rain);
+  } else {
+    gauge(ctx, c, 0, GColorPictonBlue);
+  }
+  text_draw(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT + 2, GColorWhite);
+  text_draw(ctx, ICON_UMBRELLA, GPoint(c.x - 2, c.y + SUB_LOW), 9, GColorWhite);
+  text_draw(ctx, "%", GPoint(c.x + 5, c.y + SUB_LOW + 2), SUB_SMALL - 2, GColorWhite);
 }
 
 // US AQI, 0..300 around the ring in the color of its EPA band.
 static void aqi(GContext *ctx, GPoint c) {
-  static const struct { int16_t to; uint8_t argb; } BANDS[] = {
-    { 50, GColorGreenARGB8 }, { 100, GColorYellowARGB8 }, { 150, GColorOrangeARGB8 },
-    { 200, GColorRedARGB8 }, { 300, GColorPurpleARGB8 }, { INT16_MAX, GColorBulgarianRoseARGB8 },
-  };
   int v = g_weather.valid ? g_weather.aqi : -1;
-  GColor color = GColorWhite;
+  GColor color = aqi_color(v);
   char buf[8] = "--";
-  if (v >= 0) {
-    unsigned i = 0;
-    while (v > BANDS[i].to) i++;
-    color = (GColor){ .argb = BANDS[i].argb };
-    snprintf(buf, sizeof(buf), "%d", v);
-  }
+  if (v >= 0) snprintf(buf, sizeof(buf), "%d", v);
   gauge(ctx, c, v * 100 / 300, color);
   text_draw(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT, color);
   text_draw(ctx, "AQI", GPoint(c.x, c.y + SUB_LOW), SUB_SMALL, GColorWhite);
@@ -94,17 +84,77 @@ static void date(GContext *ctx, GPoint c) {
   if (theme_light()) disc_fill(ctx, c, r + 1, r + 1, GColorLightGray);  // edge on white
   disc_fill(ctx, c, r, r, fixed(GColorWhite));
   disc_fill(ctx, c, r, cut, GColorRed);
-  // Contrast with the header: theme(Black) is light iff the scheme is.
-  GColor ink = color_light(theme(GColorRed)) == theme_light() ? GColorWhite : GColorBlack;
-  text_draw(ctx, DAYS[t->tm_wday], GPoint(c.x, c.y + (cut - r) / 2), SUB_SMALL - 1, ink);
+  text_draw(ctx, DAYS[t->tm_wday], GPoint(c.x, c.y + (cut - r) / 2), SUB_SMALL - 1, ink_on(GColorRed));
   char buf[3];
   snprintf(buf, sizeof(buf), "%d", t->tm_mday);
   text_draw(ctx, buf, GPoint(c.x, c.y + (cut + r) / 2), SUB_TEXT + 2, fixed(GColorBlack));
 }
 
+// Charge around the ring, a bolt below: yellow while charging.
+static void battery(GContext *ctx, GPoint c) {
+  BatteryChargeState b = battery_state_service_peek();
+  char buf[8];
+  snprintf(buf, sizeof(buf), "%d", b.charge_percent);
+  gauge(ctx, c, b.charge_percent, b.charge_percent <= 20 ? GColorRed : GColorGreen);
+  text_draw(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT + 1, GColorWhite);
+  text_draw(ctx, ICON_BOLT, GPoint(c.x, c.y + SUB_LOW + 1), 12, b.is_charging ? GColorChromeYellow : GColorWhite);
+}
+
+// No ring: a heart on a dark red glow, the caption above, the reading over its tip.
+static void heart(GContext *ctx, GPoint c) {
+  int bpm = heart_bpm();
+  char buf[12] = "--";
+  if (bpm > 0) snprintf(buf, sizeof(buf), "%d", bpm);
+  disc_fill(ctx, c, SUB_R + 1, SUB_R + 1, GColorBulgarianRose);
+  text_draw(ctx, "BPM", GPoint(c.x, c.y - SUB_R + 5), SUB_SMALL - 1, GColorMelon);
+  text_draw(ctx, ICON_HEART, c, SUB_R + 4, GColorRed);
+  text_draw(ctx, buf, GPoint(c.x, c.y + SUB_R / 2 + 1), SUB_TEXT, GColorWhite);
+}
+
+// Step goal around the ring (see comp_distance_draw), runner in the gap.
+static void distance(GContext *ctx, GPoint c) {
+  char buf[12];
+  distance_text(buf, sizeof(buf));
+  gauge(ctx, c, step_pct(), GColorChromeYellow);
+  text_draw(ctx, g_settings.imperial ? "MI" : "KM", GPoint(c.x, c.y - 7), SUB_SMALL - 1, GColorWhite);
+  text_draw(ctx, buf, GPoint(c.x, c.y + 2), SUB_TEXT + 1, GColorWhite);
+  text_draw(ctx, ICON_RUNNER, GPoint(c.x, c.y + SUB_LOW + 2), 10, GColorChromeYellow);
+}
+
+// Ground height where the phone is: arrow and unit above a red pill holding
+// the number, bars fading below.
+static void elevation(GContext *ctx, GPoint c) {
+  char buf[12];
+  elevation_text(buf, sizeof(buf));
+  const char *unit = g_settings.imperial ? "FT" : "M";
+  int ux = c.x + 3, ax = ux - text_width(ctx, unit, SUB_SMALL) / 2 - 5, ay = c.y - 11;
+  text_draw(ctx, ICON_ARROW, GPoint(ax, ay), 11, GColorRed);
+  text_draw(ctx, unit, GPoint(ux, ay), SUB_SMALL, GColorWhite);
+  graphics_context_set_fill_color(ctx, theme(GColorRed));
+  graphics_fill_rect(ctx, GRect(c.x - SUB_R + 1, c.y - 5, 2 * SUB_R - 2, 12), 4, GCornersAll);
+  text_draw(ctx, buf, GPoint(c.x, c.y + 1), SUB_TEXT, ink_on(GColorRed));
+  static const struct { int8_t hw; uint8_t argb; } BARS[] = {
+    { 10, GColorDarkCandyAppleRedARGB8 }, { 7, GColorBulgarianRoseARGB8 }, { 4, GColorBulgarianRoseARGB8 },
+  };
+  for (unsigned i = 0; i < ARRAY_LENGTH(BARS); i++) {
+    graphics_context_set_fill_color(ctx, theme((GColor){ .argb = BARS[i].argb }));
+    graphics_fill_rect(ctx, GRect(c.x - BARS[i].hw, c.y + 10 + 3 * i, 2 * BARS[i].hw, 2), 0, GCornerNone);
+  }
+}
+
+typedef void (*Subdial)(GContext *ctx, GPoint c);
+
+static const Subdial SUBDIAL[COMP_COUNT] = {
+  [COMP_TEMP] = temp, [COMP_RAIN] = rain, [COMP_AQI] = aqi, [COMP_CALENDAR] = date,
+  [COMP_BATTERY] = battery, [COMP_HEART] = heart, [COMP_DISTANCE] = distance, [COMP_ELEVATION] = elevation,
+};
+
 void center_draw(GContext *ctx, GPoint c) {
-  temp(ctx, GPoint(c.x, c.y - SUB_D));
-  rain(ctx, GPoint(c.x - SUB_D, c.y));
-  aqi(ctx, GPoint(c.x + SUB_D, c.y));
-  date(ctx, GPoint(c.x, c.y + SUB_D));
+  const GPoint at[CENTER_POS_COUNT] = {
+    GPoint(c.x, c.y - SUB_D), GPoint(c.x - SUB_D, c.y), GPoint(c.x + SUB_D, c.y), GPoint(c.x, c.y + SUB_D),
+  };
+  for (int i = 0; i < CENTER_POS_COUNT; i++) {
+    uint8_t id = g_settings.center[i];
+    if (id < COMP_COUNT && SUBDIAL[id]) SUBDIAL[id](ctx, at[i]);
+  }
 }

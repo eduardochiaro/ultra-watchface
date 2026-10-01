@@ -5,10 +5,10 @@ var vm = require('vm');
 var execSync = require('child_process').execSync;
 var config = require('../src/pkjs/config');
 
-// Message: ints, and UNITS stays on the phone
+// Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
-assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, SCHEME: 3, STEP_GOAL: 10000, SECONDS: 0,
-  BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8 });
+assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 2, CENTER_L: 4, CENTER_R: 7, CENTER_B: 6,
+  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8 });
 
 execSync('node scripts/inline-config.mjs');
 delete require.cache[require.resolve('../src/pkjs/page')];
@@ -41,7 +41,7 @@ assert.ok(svg.indexOf('fill="#ffffff"') > 0, 'white scheme background');
 assert.ok(svg.indexOf('>6240</text>') > 0, 'steps label');
 assert.ok(svg.indexOf('>24</text>') > 0, 'temp max label');
 assert.ok(svg.indexOf('>82%</text>') > 0, 'battery label');
-assert.ok(svg.indexOf('>30%</text>') > 0, 'rain subdial');
+assert.ok(svg.indexOf('>30</text>') > 0, 'rain subdial');
 assert.ok(svg.indexOf('>42</text>') > 0 && svg.indexOf('>AQI</text>') > 0, 'AQI subdial');
 assert.ok(/>(SUN|MON|TUE|WED|THU|FRI|SAT)<\/text>/.test(svg), 'calendar weekday');
 assert.ok(svg.indexOf('stroke="#ffaa00" stroke-width="2"') > 0, 'seconds hand');
@@ -68,5 +68,23 @@ assert.ok(svg.indexOf('<rect width="200" height="228" fill="#ffffff"') > 0, 'cus
 assert.ok(svg.indexOf('stroke="#ff0000"') > 0, 'accent fills');
 assert.ok(svg.indexOf('fill="#000000" transform="rotate(0') > 0, 'numerals black on light bg');
 assert.strictEqual(els.colors.hidden, false);
+
+// New subdials and corners, imperial
+state = { settings: { SLOT_TL: 8, SLOT_TR: 9, SLOT_BL: 7, SLOT_BR: 10, CENTER_T: 8, CENTER_L: 9, CENTER_R: 10, CENTER_B: 3, UNITS: 1 },
+  weather: { TEMP: 70, TEMP_MIN: 60, TEMP_MAX: 75, RAIN: 10, AQI: 20, ELEVATION: 100, imperial: true }, platform: 'emery' };
+var page3 = require('../src/pkjs/page').replace('var STATE = null; //$$STATE$$', 'var STATE = ' + JSON.stringify(state) + ';');
+els = {};
+var ctx3 = { document: document, location: { search: '', href: '' }, URLSearchParams: URLSearchParams, setInterval: function () {}, Math: Math };
+vm.createContext(ctx3);
+page3.match(/<script>([\s\S]*?)<\/script>/g).forEach(function (s) { vm.runInContext(s.replace(/<\/?script>/g, ''), ctx3); });
+svg = els.screen.innerHTML;
+assert.ok(svg.indexOf('>BPM</text>') > 0 && svg.indexOf('>72</text>') > 0, 'heart subdial');
+assert.ok(svg.indexOf('>MI</text>') > 0 && svg.indexOf('>2.4</text>') > 0, 'distance subdial');
+assert.ok(svg.indexOf('>2.4mi</text>') > 0, 'distance corner');
+assert.ok(svg.indexOf('>FT</text>') > 0 && svg.indexOf('>328</text>') > 0, 'elevation subdial');
+assert.ok(svg.indexOf('>82</text>') > 0, 'battery subdial');
+assert.strictEqual(svg.split('>AQI</text>').length - 1, 1, 'AQI word in the corner, no AQI subdial');
+assert.ok(svg.indexOf('>20</text>') > 0 && svg.indexOf('>328ft</text>') > 0, 'AQI and elevation corners');
+assert.ok(els.centers.innerHTML.indexOf('value="10" selected') > 0, 'center pickers');
 
 console.log('ok');

@@ -27,7 +27,8 @@ function buildMessage(data, aqi) {
     TEMP_MIN: Math.round(d.temperature_2m_min[0]),
     TEMP_MAX: Math.round(d.temperature_2m_max[0]),
     RAIN: Math.round(d.precipitation_probability_max[0] || 0),
-    AQI: typeof a === 'number' ? Math.round(a) : -1
+    AQI: typeof a === 'number' ? Math.round(a) : -1,
+    ELEVATION: Math.round(data.elevation || 0)  // metres either way: the watch converts
   };
 }
 

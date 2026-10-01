@@ -11,8 +11,7 @@ void comp_calendar_draw(GContext *ctx, const Slot *slot) {
   Slot b = *slot;
   b.thickness = COMP_TEXT + 5;
   int left = slot_left_end(&b);
-  // Today's digits contrast with the accent: theme(Black) is light iff the scheme is.
-  GColor ink = color_light(theme(GColorChromeYellow)) == theme_light() ? GColorWhite : GColorBlack;
+  GColor ink = ink_on(GColorChromeYellow);  // today's digits
   for (int d = -1; d <= 1; d++) {
     time_t day = now + d * SECONDS_PER_DAY;
     char buf[3];

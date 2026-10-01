@@ -1,6 +1,6 @@
 #include "weather.h"
 
-#define PK_WEATHER 21  // bumped when Weather changes shape
+#define PK_WEATHER 22  // bumped when Weather changes shape
 
 Weather g_weather;
 
@@ -17,6 +17,7 @@ bool weather_handle_message(DictionaryIterator *iter) {
     { MESSAGE_KEY_TEMP_MAX, &g_weather.temp_max },
     { MESSAGE_KEY_RAIN,     &g_weather.rain },
     { MESSAGE_KEY_AQI,      &g_weather.aqi },
+    { MESSAGE_KEY_ELEVATION, &g_weather.elevation },
   };
   for (unsigned i = 0; i < ARRAY_LENGTH(fields); i++) {
     Tuple *f = dict_find(iter, fields[i].key);

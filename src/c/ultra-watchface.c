@@ -38,6 +38,7 @@ Settings g_settings = {
   .step_goal = 10000,
   .bg = GColorBlackARGB8,
   .accent = GColorChromeYellowARGB8,
+  .center = { COMP_TEMP, COMP_RAIN, COMP_AQI, COMP_CALENDAR },
 };
 
 static Window *s_window;
@@ -187,8 +188,16 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
       Tuple *t = dict_find(iter, slot_keys[i]);
       if (t) g_settings.slots[i] = clamp_i32(tuple_int(t), 0, COMP_COUNT - 1);
     }
+    const uint32_t center_keys[CENTER_POS_COUNT] = {
+      MESSAGE_KEY_CENTER_T, MESSAGE_KEY_CENTER_L, MESSAGE_KEY_CENTER_R, MESSAGE_KEY_CENTER_B,
+    };
+    for (int i = 0; i < CENTER_POS_COUNT; i++) {
+      Tuple *t = dict_find(iter, center_keys[i]);
+      if (t) g_settings.center[i] = clamp_i32(tuple_int(t), 0, COMP_COUNT - 1);
+    }
     Tuple *t;
     if ((t = dict_find(iter, MESSAGE_KEY_SECONDS))) g_settings.seconds = tuple_int(t);
+    if ((t = dict_find(iter, MESSAGE_KEY_UNITS))) g_settings.imperial = tuple_int(t);
     if ((t = dict_find(iter, MESSAGE_KEY_STEP_GOAL))) g_settings.step_goal = tuple_int(t);
     if ((t = dict_find(iter, MESSAGE_KEY_SCHEME))) g_settings.scheme = clamp_i32(tuple_int(t), 0, 4);
     if ((t = dict_find(iter, MESSAGE_KEY_BG_COLOR))) g_settings.bg = tuple_int(t) | 0xC0;  // opaque
