@@ -21,8 +21,9 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 ![Gabbro 4](assets/gabbro_4.png)
 
 ## Store
-[Rebble App Store](https://apps.rebble.io/en_US/application/)
-[Pebble App Store](https://apps.repebble.com/)
+[Rebble App Store](https://apps.rebble.io/en_US/application/6abf59c037b3780009304810)
+
+[Pebble App Store](https://apps.repebble.com/6abf59c037b3780009304810)
 
 ### Settings
 | Setting | What it does |
