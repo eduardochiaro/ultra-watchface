@@ -204,7 +204,7 @@
 
 	// Last weather sent to the watch, else a sample. Health and battery live on
 	// the watch only, so the preview always samples them.
-	var weather = state.weather || { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, SUNRISE: 390, SUNSET: 1195, imperial: false };
+	var weather = state.weather || { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, SUNRISE: 390, SUNSET: 1195, WIND: 14, WIND_DIR: 315, imperial: false };
 	var STEPS = 6240, BATTERY = 82, BPM = 72, WALKED_M = 3900;
 	// Custom API complication i as the watch draws it: the last message sent for
 	// it (api.js), else a sample.
@@ -286,6 +286,12 @@
 	function sunTime(m) { return Math.trunc(m / 60) + ":" + ("0" + m % 60).slice(-2); }
 	// beats() in beat.c
 	function beats(now) { return "." + ("00" + Math.floor((now.getTime() / 1000 + 3600) % 86400 / 86.4)).slice(-3); }
+	// wind_speed(), wind_from() in wind.c
+	function wind() {
+		var v = weather.WIND;
+		return v === undefined || v < 0 ? -1 : settings.UNITS === 1 ? Math.trunc(v * 1000 / 1609) : v;
+	}
+	function windFrom() { return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.trunc((weather.WIND_DIR * 2 + 45) / 90) % 8]; }
 	function elevation() {
 		var m = weather.ELEVATION === undefined ? 0 : weather.ELEVATION;
 		return String(settings.UNITS === 1 ? Math.trunc(m * 3281 / 1000) : m);
@@ -460,6 +466,7 @@
 			if (id === 9) bar(s, stepPct(), C.accent, distance() + (settings.UNITS === 1 ? "mi" : "km"), "runner");
 			if (id === 7) valueGauge(s, AQI >= 0 ? Math.trunc(AQI * 100 / 300) : 0, AQI_COLOR, "AQI", AQI >= 0 ? String(AQI) : "--");
 			if (id === 11) valueGauge(s, UV >= 0 ? Math.trunc(UV * 100 / 11) : 0, UV_COLOR, "UV", UV >= 0 ? String(UV) : "--");
+			if (id === 25) iconText(s, "wind", wind() >= 0 ? wind() + (settings.UNITS === 1 ? "mph" : "km/h") + " " + windFrom() : "--", C.picton);
 			if (id === 10) iconText(s, "arrow", elevation() + (settings.UNITS === 1 ? "ft" : "m"), C.red);
 			// comp_beat_draw: like the heart, a big @ for an icon
 			if (id === 24) {
@@ -594,10 +601,16 @@
 				fit(SUN ? sunTime(day ? down : up) : "--", [c[0], c[1] - 1], ST, INNER, C.white);
 				icon(day ? "down" : "up", [c[0], c[1] + SL], SS + 1, C.accent);
 			},
-			// center_beat_draw: a big @, the beats under it
+			// center_beat_draw: the beats, a small @ under them
 			24: function (c) {
-				text("@", [c[0], c[1] - 5], g.SUB_R - 2, C.red, 0);
-				text(beats(now), [c[0], c[1] + g.SUB_R - 4], ST, C.white, 0);
+				text(beats(now), [c[0], c[1] - 3], ST + 2, C.white, 0);
+				text("@", [c[0], c[1] + SL], SS + 1, C.red, 0);
+			},
+			// center_wind_draw: speed over direction, the icon below
+			25: function (c) {
+				text(wind() >= 0 ? String(wind()) : "--", [c[0], c[1] - 7], ST + 1, C.white, 0);
+				if (wind() >= 0) text(windFrom(), [c[0], c[1] + 2], SS, C.picton, 0);
+				icon("wind", [c[0], c[1] + SL + 2], 10, C.picton);
 			},
 			10: function (c) {
 				var unit = settings.UNITS === 1 ? "FT" : "M", ux = c[0] + 3, ay = c[1] - 11;

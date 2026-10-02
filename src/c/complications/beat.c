@@ -20,10 +20,10 @@ void comp_beat_draw(GContext *ctx, const Slot *s) {
 #endif
 }
 
-// No ring: a big @, the beats under it.
+// No ring: the beats, a small @ under them.
 void center_beat_draw(GContext *ctx, GPoint c) {
   char buf[8];
   snprintf(buf, sizeof(buf), ".%03d", beats());
-  text_draw(ctx, "@", GPoint(c.x, c.y - 5), SUB_R - 2, GColorRed);
-  text_draw(ctx, buf, GPoint(c.x, c.y + SUB_R - 4), SUB_TEXT, GColorWhite);
+  text_draw(ctx, buf, GPoint(c.x, c.y - 3), SUB_TEXT + 2, GColorWhite);
+  text_draw(ctx, "@", GPoint(c.x, c.y + SUB_LOW), SUB_SMALL + 1, GColorRed);
 }

@@ -1,10 +1,10 @@
 #include "weather.h"
 
 // Bumped when Weather changes shape. Fields added at the end don't count: a
-// shorter saved copy leaves them 0.
+// shorter saved copy leaves them as initialized below.
 #define PK_WEATHER 25
 
-Weather g_weather;
+Weather g_weather = { .wind = -1 };
 
 void weather_init(void) {
   persist_read_data(PK_WEATHER, &g_weather, sizeof(g_weather));
@@ -25,6 +25,8 @@ bool weather_handle_message(DictionaryIterator *iter) {
     { MESSAGE_KEY_ELEVATION, &g_weather.elevation },
     { MESSAGE_KEY_SUNRISE,  &g_weather.sunrise },
     { MESSAGE_KEY_SUNSET,   &g_weather.sunset },
+    { MESSAGE_KEY_WIND,     &g_weather.wind },
+    { MESSAGE_KEY_WIND_DIR, &g_weather.wind_dir },
   };
   for (unsigned i = 0; i < ARRAY_LENGTH(fields); i++) {
     Tuple *f = dict_find(iter, fields[i].key);

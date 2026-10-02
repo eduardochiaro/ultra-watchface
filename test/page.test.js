@@ -151,4 +151,16 @@ ctx = load({ settings: { SLOT_TL: 24, CENTER_T: 24 }, platform: 'emery' });
 svg = screen();
 assert.ok(svg.split('>@</text>').length - 1 === 2 && svg.split(/>\.\d{3}<\/text>/).length - 1 === 2, '.beat corner and subdial');
 
+// Wind: km/h on the wire, the page converts; speed and direction in the corner, two rows in the subdial
+weather = require('../src/pkjs/weather').buildMessage({ current: { wind_speed_10m: 13.6, wind_direction_10m: 338 }, daily: { temperature_2m_min: [1],
+  temperature_2m_max: [2], precipitation_probability_max: [3] } }, null);
+assert.deepStrictEqual([weather.WIND, weather.WIND_DIR], [14, 338]);
+ctx = load({ settings: { SLOT_TL: 25, CENTER_T: 25 }, weather: weather, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('>14km/h N</text>') > 0 && svg.indexOf('>14</text>') > 0 && svg.split(ctx.ICONS.wind).length - 1 === 2, 'wind corner and subdial');
+ctx = load({ settings: { SLOT_TL: 25, UNITS: 1 }, weather: weather, platform: 'gabbro' });
+assert.ok(screen().indexOf('>8mph N</text>') > 0, 'wind in mph');
+ctx = load({ settings: { SLOT_TL: 25 }, weather: { TEMP: 1 }, platform: 'emery' });
+assert.ok(screen().indexOf('>--</text>') > 0, 'weather saved before wind has none');
+
 console.log('ok');

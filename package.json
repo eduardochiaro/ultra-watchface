@@ -68,7 +68,9 @@
       "API_MIN",
       "API_MAX",
       "SUNRISE",
-      "SUNSET"
+      "SUNSET",
+      "WIND",
+      "WIND_DIR"
     ],
     "resources": {
       "media": [

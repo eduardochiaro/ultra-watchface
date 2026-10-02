@@ -2,7 +2,7 @@
 
 An analog watchface for Pebble with eight complications you choose yourself. Four gauges curve around the corners, four subdials sit inside the dial, and every one is yours to swap.
 
-- **Eight slots, your pick.** Steps, distance, heart rate, battery, calendar, temperature, rain, humidity, air quality, UV index, elevation, sunrise and sunset, .beat time, current weather, your own text, or a value from any JSON API.
+- **Eight slots, your pick.** Steps, distance, heart rate, battery, calendar, temperature, rain, humidity, wind, air quality, UV index, elevation, sunrise and sunset, .beat time, current weather, your own text, or a value from any JSON API.
 - **Five color schemes.** Black, White, two monochromes, or Accent: any background and accent from the watch's 64 colors.
 - **Live preview.** The settings page draws the face as you change it.
 - **No account, no API key.** Weather and air quality come from [Open-Meteo](https://open-meteo.com), refreshed every 30 minutes.
@@ -33,7 +33,7 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 | Text | Pick **Text** in any slot to show your own label: up to 12 characters in a corner, 4 in a subdial. |
 | Custom complications | Show a value from any JSON API. Create up to 8, then pick them in any corner or subdial. See below. |
 | Color scheme | Black, White, White on black, Black on white, or Accent. Accent adds a background and an accent color picker. |
-| Units | °C and km, or °F and miles. |
+| Units | °C, km and km/h, or °F, miles and mph. |
 | Daily step goal | 1,000 to 30,000 steps. Fills the steps and distance gauges. |
 | Seconds hand | Off by default. Uses more battery. |
 
@@ -64,7 +64,7 @@ Limits:
 - Two complications on the same URL make two requests.
 
 ### Good to know
-- Weather, rain, humidity, air quality, UV, elevation and sunrise/sunset need location access for the Pebble app and a connection to your phone.
+- Weather, rain, humidity, wind, air quality, UV, elevation and sunrise/sunset need location access for the Pebble app and a connection to your phone.
 - Steps, distance and heart rate come from Pebble Health, so it has to be turned on. Heart rate needs a watch with a sensor.
 
 ## Development

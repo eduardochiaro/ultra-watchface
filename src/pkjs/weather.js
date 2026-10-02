@@ -8,7 +8,7 @@ var WEATHER_KEY = 'ultra-weather';  // last message sent, for the settings previ
 function buildUrl(lat, lon, imperial) {
   return 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
     '&longitude=' + lon +
-    '&current=temperature_2m,relative_humidity_2m,uv_index,weather_code,is_day' +
+    '&current=temperature_2m,relative_humidity_2m,uv_index,weather_code,is_day,wind_speed_10m,wind_direction_10m' +
     '&daily=temperature_2m_min,temperature_2m_max,precipitation_probability_max,sunrise,sunset' +
     '&forecast_days=1&timezone=auto' +
     (imperial ? '&temperature_unit=fahrenheit' : '');
@@ -52,7 +52,9 @@ function buildMessage(data, aqi) {
     UV: typeof data.current.uv_index === 'number' ? Math.round(data.current.uv_index) : -1,
     ELEVATION: Math.round(data.elevation || 0),  // metres either way: the watch converts
     SUNRISE: minutes(d.sunrise && d.sunrise[0]),
-    SUNSET: minutes(d.sunset && d.sunset[0])
+    SUNSET: minutes(d.sunset && d.sunset[0]),
+    WIND: typeof data.current.wind_speed_10m === 'number' ? Math.round(data.current.wind_speed_10m) : -1,  // km/h either way
+    WIND_DIR: Math.round(data.current.wind_direction_10m || 0) % 360
   };
 }
 

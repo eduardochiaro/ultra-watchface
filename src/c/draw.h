@@ -58,6 +58,7 @@ void slot_dot(GContext *ctx, const Slot *s, int pct, int r, GColor fill, GColor 
 // Text-sized, inside a label: sunrise and sunset.
 #define ICON_UP       "\uE00F"
 #define ICON_DOWN     "\uE010"
+#define ICON_WIND     "\uE011"
 
 // Text centered on `c` (cap height `size` px). Text and icons are clamped so
 // they stay on screen.

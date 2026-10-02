@@ -32,6 +32,7 @@ typedef enum {
   COMP_API_LAST = COMP_API + API_MAX - 1,
   COMP_SUN,       // sunrise and sunset
   COMP_BEAT,      // Swatch .beat time
+  COMP_WIND,
   COMP_COUNT
 } ComplicationId;
 
@@ -63,6 +64,7 @@ void comp_uv_draw(GContext *ctx, const Slot *s);
 void comp_humidity_draw(GContext *ctx, const Slot *s);
 void comp_sun_draw(GContext *ctx, const Slot *s);
 void comp_beat_draw(GContext *ctx, const Slot *s);
+void comp_wind_draw(GContext *ctx, const Slot *s);
 void comp_custom_draw(GContext *ctx, const Slot *s, const char *txt);  // not in the tables: needs its text
 void comp_api_draw(GContext *ctx, const Slot *s, int i);  // i: 0..API_MAX-1
 
@@ -110,6 +112,7 @@ void center_uv_draw(GContext *ctx, GPoint c);
 void center_humidity_draw(GContext *ctx, GPoint c);
 void center_sun_draw(GContext *ctx, GPoint c);
 void center_beat_draw(GContext *ctx, GPoint c);
+void center_wind_draw(GContext *ctx, GPoint c);
 void center_custom_draw(GContext *ctx, GPoint c, const char *txt);
 void center_api_draw(GContext *ctx, GPoint c, int i);
 // Text centered on c, `size` at most, shrunk to fit `width`.
@@ -136,7 +139,7 @@ void center_range_draw(GContext *ctx, GPoint c, int pct, const char *min, const 
 typedef struct { int16_t to; uint8_t argb; } Band;
 void comp_band_draw(GContext *ctx, const Slot *s, int v, int max, const Band *bands, const char *caption);
 void center_band_draw(GContext *ctx, GPoint c, int v, int max, const Band *bands, const char *caption);
-// No bar: an icon and a text (heart, elevation).
+// No bar: an icon and a text (heart, elevation, wind).
 void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color, const char *txt);
 // Label along the arc at an end (0 or 100); trims that end of *s to make room.
 void comp_end_label(GContext *ctx, Slot *s, int end, const char *txt);

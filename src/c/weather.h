@@ -13,6 +13,8 @@ typedef struct {
   int16_t condition;         // ICON_SUN.. order (weather.js CONDITION), -1 = unknown
   int16_t elevation;         // ground at the phone's position, m
   int16_t sunrise, sunset;   // today's, minutes after local midnight; equal = unknown
+  int16_t wind;              // speed now, km/h (the watch converts), -1 = unknown
+  int16_t wind_dir;          // where it blows from, degrees clockwise from north
 } Weather;
 
 extern Weather g_weather;
