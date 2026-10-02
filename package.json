@@ -11,6 +11,7 @@
     "emulator": "npm run build && pebble install --emulator",
     "phone": "npm run build && pebble install --phone",
     "config": "pebble emu-app-config --emulator",
+    "screenshot": "bash scripts/screenshot.sh",
     "logs": "pebble logs",
     "test": "node test/page.test.js",
     "font": "node scripts/gen-svg-font.js resources/fonts/Nunito-Bold.ttf resources/fonts/nunito.svg nunito \" %,-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\u00b0\" && fctx-compiler resources/fonts/nunito.svg && mv resources/nunito.ffont resources/fonts/nunito.ffont"
