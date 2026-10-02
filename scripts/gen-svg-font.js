@@ -9,7 +9,7 @@
 // on in ICONS order: their box scaled to the cap height, so an icon drawn at
 // cap height N is N px square. Keep ICONS in sync with ICON_* in src/c/draw.h.
 //
-// Usage: node scripts/gen-svg-font.js <in.ttf> <out.svg> <font-id> [chars]
+// Usage: node scripts/gen-svg-font.js <in.ttf> <out.svg> <font-id> <chars>
 const fs = require('fs');
 const path = require('path');
 const opentype = require('opentype.js');
@@ -18,34 +18,24 @@ const parsePath = require('svg-path-parser');
 const ICONS = ['heart', 'runner', 'bolt', 'umbrella', 'arrow',
   'sun', 'moon', 'sun_cloud', 'moon_cloud', 'cloud', 'fog', 'rain', 'snow', 'storm', 'drop'];
 
-const [, , inPath, outPath, fontId, charsArg] = process.argv;
-if (!inPath || !outPath || !fontId) {
-  console.error('usage: gen-svg-font.js <in.ttf> <out.svg> <font-id> [chars]');
+const [, , inPath, outPath, fontId, chars] = process.argv;
+if (!inPath || !outPath || !fontId || !chars) {
+  console.error('usage: gen-svg-font.js <in.ttf> <out.svg> <font-id> <chars>');
   process.exit(1);
 }
-
-// Default glyph set: digits + upper/lowercase letters (covers day/month/DoW
-// names and the AM/PM marker). A space glyph is included for advance widths.
-const chars = charsArg ||
-  ' 0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz';
-
-// Per-glyph advance overrides (in font units), e.g. { '.': 250 } to tighten a
-// glyph's cell. Nunito is proportional, so none are needed.
-const ADV_OVERRIDE = {};
 
 const font = opentype.parse(fs.readFileSync(inPath));
 const em = font.unitsPerEm;
 const os2 = font.tables.os2 || {};
 const capHeight = os2.sCapHeight || Math.round(em * 0.7);
 
-function pathData(glyph, dx = 0) {
-  // getPath at fontSize == em keeps coordinates in font units (scale 1). dx
-  // shifts every point horizontally (used to recenter a narrowed glyph).
+function pathData(glyph) {
+  // getPath at fontSize == em keeps coordinates in font units (scale 1).
   const p = glyph.getPath(0, 0, em);
   let d = '';
   for (const c of p.commands) {
     const ny = (v) => -Math.round(v);
-    const nx = (v) => Math.round(v) + dx;
+    const nx = Math.round;
     switch (c.type) {
       case 'M': d += `M${nx(c.x)} ${ny(c.y)}`; break;
       case 'L': d += `L${nx(c.x)} ${ny(c.y)}`; break;
@@ -66,13 +56,8 @@ const glyphs = [];
 for (const ch of chars) {
   const g = font.charToGlyph(ch);
   if (!g || g.index === 0) continue;            // skip .notdef
-  const adv0 = Math.round(g.advanceWidth || em / 2);
-  const adv = ADV_OVERRIDE[ch] != null ? ADV_OVERRIDE[ch] : adv0;
-  // Recenter the ink in the resized cell so a narrowed glyph stays centered
-  // (mono glyphs are drawn centered on adv/2).
-  const dx = Math.round((adv - adv0) / 2);
-  const d = pathData(g, dx);
-  glyphs.push(`    <glyph unicode="${esc(ch)}" horiz-adv-x="${adv}" d="${d}"/>`);
+  const adv = Math.round(g.advanceWidth || em / 2);
+  glyphs.push(`    <glyph unicode="${esc(ch)}" horiz-adv-x="${adv}" d="${pathData(g)}"/>`);
 }
 
 // 24-unit y-down icon path -> font units, y-up, box on the baseline. The y flip

@@ -49,11 +49,6 @@ static Layer *s_layer;
 static GBitmap *s_cache;
 static int s_cache_min = -1;  // -1 = stale
 
-static GPoint polar(GPoint c, int32_t angle, int r) {
-  return GPoint(c.x + sin_lookup(angle) * r / TRIG_MAX_RATIO,
-                c.y - cos_lookup(angle) * r / TRIG_MAX_RATIO);
-}
-
 static void line(GContext *ctx, GPoint a, GPoint b, int width, GColor color) {
   graphics_context_set_stroke_color(ctx, theme(color));
   graphics_context_set_stroke_width(ctx, width);
@@ -177,44 +172,34 @@ static void subscribe_ticks(void) {
   tick_timer_service_subscribe(g_settings.seconds ? SECOND_UNIT : MINUTE_UNIT, tick_handler);
 }
 
-// The settings page sends ints; older saves sent selects as strings.
-static int32_t tuple_int(Tuple *t) {
-  return t->type == TUPLE_CSTRING ? atoi(t->value->cstring) : t->value->int32;
-}
+// Every corner and subdial: its complication and its COMP_CUSTOM text.
+#define PLACE(key, text_key, id, text) \
+  { MESSAGE_KEY_##key, MESSAGE_KEY_##text_key, &g_settings.id, g_settings.text, sizeof(g_settings.text) }
 
 static void inbox_received(DictionaryIterator *iter, void *context) {
   if (!weather_handle_message(iter)) {
-    const uint32_t slot_keys[SLOT_POS_COUNT] = {
-      MESSAGE_KEY_SLOT_TL, MESSAGE_KEY_SLOT_TR, MESSAGE_KEY_SLOT_BR, MESSAGE_KEY_SLOT_BL,
+    const struct { uint32_t key, text_key; uint8_t *id; char *text; size_t size; } places[] = {
+      PLACE(SLOT_TL, TEXT_TL, slots[SLOT_POS_TL], slot_text[SLOT_POS_TL]),
+      PLACE(SLOT_TR, TEXT_TR, slots[SLOT_POS_TR], slot_text[SLOT_POS_TR]),
+      PLACE(SLOT_BR, TEXT_BR, slots[SLOT_POS_BR], slot_text[SLOT_POS_BR]),
+      PLACE(SLOT_BL, TEXT_BL, slots[SLOT_POS_BL], slot_text[SLOT_POS_BL]),
+      PLACE(CENTER_T, TEXT_T, center[CENTER_POS_T], center_text[CENTER_POS_T]),
+      PLACE(CENTER_L, TEXT_L, center[CENTER_POS_L], center_text[CENTER_POS_L]),
+      PLACE(CENTER_R, TEXT_R, center[CENTER_POS_R], center_text[CENTER_POS_R]),
+      PLACE(CENTER_B, TEXT_B, center[CENTER_POS_B], center_text[CENTER_POS_B]),
     };
-    const uint32_t slot_text_keys[SLOT_POS_COUNT] = {
-      MESSAGE_KEY_TEXT_TL, MESSAGE_KEY_TEXT_TR, MESSAGE_KEY_TEXT_BR, MESSAGE_KEY_TEXT_BL,
-    };
-    for (int i = 0; i < SLOT_POS_COUNT; i++) {
-      Tuple *t = dict_find(iter, slot_keys[i]);
-      if (t) g_settings.slots[i] = clamp_i32(tuple_int(t), 0, COMP_COUNT - 1);
-      if ((t = dict_find(iter, slot_text_keys[i])) && t->type == TUPLE_CSTRING)
-        strncpy(g_settings.slot_text[i], t->value->cstring, sizeof(g_settings.slot_text[i]) - 1);
-    }
-    const uint32_t center_keys[CENTER_POS_COUNT] = {
-      MESSAGE_KEY_CENTER_T, MESSAGE_KEY_CENTER_L, MESSAGE_KEY_CENTER_R, MESSAGE_KEY_CENTER_B,
-    };
-    const uint32_t center_text_keys[CENTER_POS_COUNT] = {
-      MESSAGE_KEY_TEXT_T, MESSAGE_KEY_TEXT_L, MESSAGE_KEY_TEXT_R, MESSAGE_KEY_TEXT_B,
-    };
-    for (int i = 0; i < CENTER_POS_COUNT; i++) {
-      Tuple *t = dict_find(iter, center_keys[i]);
-      if (t) g_settings.center[i] = clamp_i32(tuple_int(t), 0, COMP_COUNT - 1);
-      if ((t = dict_find(iter, center_text_keys[i])) && t->type == TUPLE_CSTRING)
-        strncpy(g_settings.center_text[i], t->value->cstring, sizeof(g_settings.center_text[i]) - 1);
-    }
     Tuple *t;
-    if ((t = dict_find(iter, MESSAGE_KEY_SECONDS))) g_settings.seconds = tuple_int(t);
-    if ((t = dict_find(iter, MESSAGE_KEY_UNITS))) g_settings.imperial = tuple_int(t);
-    if ((t = dict_find(iter, MESSAGE_KEY_STEP_GOAL))) g_settings.step_goal = tuple_int(t);
-    if ((t = dict_find(iter, MESSAGE_KEY_SCHEME))) g_settings.scheme = clamp_i32(tuple_int(t), 0, 4);
-    if ((t = dict_find(iter, MESSAGE_KEY_BG_COLOR))) g_settings.bg = tuple_int(t) | 0xC0;  // opaque
-    if ((t = dict_find(iter, MESSAGE_KEY_ACCENT_COLOR))) g_settings.accent = tuple_int(t) | 0xC0;
+    for (unsigned i = 0; i < ARRAY_LENGTH(places); i++) {
+      if ((t = dict_find(iter, places[i].key))) *places[i].id = clamp_i32(t->value->int32, 0, COMP_COUNT - 1);
+      if ((t = dict_find(iter, places[i].text_key)) && t->type == TUPLE_CSTRING)
+        strncpy(places[i].text, t->value->cstring, places[i].size - 1);
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_SECONDS))) g_settings.seconds = t->value->int32;
+    if ((t = dict_find(iter, MESSAGE_KEY_UNITS))) g_settings.imperial = t->value->int32;
+    if ((t = dict_find(iter, MESSAGE_KEY_STEP_GOAL))) g_settings.step_goal = t->value->int32;
+    if ((t = dict_find(iter, MESSAGE_KEY_SCHEME))) g_settings.scheme = clamp_i32(t->value->int32, 0, 4);
+    if ((t = dict_find(iter, MESSAGE_KEY_BG_COLOR))) g_settings.bg = t->value->int32 | 0xC0;  // opaque
+    if ((t = dict_find(iter, MESSAGE_KEY_ACCENT_COLOR))) g_settings.accent = t->value->int32 | 0xC0;
     persist_write_data(PK_SETTINGS, &g_settings, sizeof(g_settings));
     subscribe_ticks();
   }

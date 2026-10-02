@@ -34,8 +34,8 @@ void comp_fill_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, GColor 
 
 // Bar captioned at its end, the value curved by its middle. Gabbro has no room
 // beside the arc: caption and value both lead the bar, "AQI 42 BAR".
-void comp_value_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, const char *caption,
-                      const char *value) {
+static void comp_value_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, const char *caption,
+                             const char *value) {
 #if defined(PBL_PLATFORM_GABBRO)
   char buf[16];
   snprintf(buf, sizeof(buf), "%s %s", caption, value);
@@ -44,6 +44,27 @@ void comp_value_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, const 
   comp_fill_gauge(ctx, s, pct, fill, COMP_TRACK, caption, NULL);
   text_draw_along(ctx, value, slot_point(s, 50, COMP_THUMB), s->center, COMP_TEXT + 2, GColorWhite);
 #endif
+}
+
+static GColor band_color(int v, const Band *bands) {
+  if (v < 0) return GColorWhite;
+  while (v > bands->to) bands++;
+  return (GColor){ .argb = bands->argb };
+}
+
+void comp_band_draw(GContext *ctx, const Slot *s, int v, int max, const Band *bands, const char *caption) {
+  char buf[12] = "--";
+  if (v >= 0) snprintf(buf, sizeof(buf), "%d", v);
+  comp_value_gauge(ctx, s, v >= 0 ? v * 100 / max : 0, band_color(v, bands), caption, buf);
+}
+
+void center_band_draw(GContext *ctx, GPoint c, int v, int max, const Band *bands, const char *caption) {
+  GColor color = band_color(v, bands);
+  char buf[12] = "--";
+  if (v >= 0) snprintf(buf, sizeof(buf), "%d", v);
+  center_gauge(ctx, c, v * 100 / max, color);
+  text_draw(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT, color);
+  text_draw(ctx, caption, GPoint(c.x, c.y + SUB_LOW), SUB_SMALL, GColorWhite);
 }
 
 // No bar: the text curved along the arc's middle, the icon toward the corner.

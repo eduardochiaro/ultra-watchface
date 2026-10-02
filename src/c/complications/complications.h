@@ -102,9 +102,12 @@ void center_custom_draw(GContext *ctx, GPoint c, const char *txt);
 // "ICON 30% BAR".
 void comp_fill_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, GColor track,
                      const char *label, const char *icon);  // icon NULL: none
-// A bar with a caption and a value (AQI, UV).
-void comp_value_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, const char *caption,
-                      const char *value);
+// A banded index (AQI, UV): a bar with a caption and the value `v` of `max`, in
+// its band's color; white and "--" for unknown (v < 0). `to` is a band's upper
+// bound, the last one INT16_MAX.
+typedef struct { int16_t to; uint8_t argb; } Band;
+void comp_band_draw(GContext *ctx, const Slot *s, int v, int max, const Band *bands, const char *caption);
+void center_band_draw(GContext *ctx, GPoint c, int v, int max, const Band *bands, const char *caption);
 // No bar: an icon and a text (heart, elevation).
 void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color, const char *txt);
 // Label along the arc at an end (0 or 100); trims that end of *s to make room.

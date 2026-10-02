@@ -3,6 +3,8 @@
 #include <pebble-fctx/fctx.h>
 #include <pebble-fctx/ffont.h>
 
+#define PX_ANGLE (TRIG_MAX_ANGLE * 10 / 63)  // angle 1px spans at radius 1 (TRIG_MAX_ANGLE / 2π)
+
 static FFont *s_font;
 static GSize s_screen;
 
@@ -16,7 +18,7 @@ void draw_deinit(void) {
   ffont_destroy(s_font);
 }
 
-bool color_light(GColor c) {
+static bool color_light(GColor c) {
   return c.r * 299 + c.g * 587 + c.b * 114 > 1500;  // luma, channels 0..3
 }
 
@@ -56,7 +58,7 @@ int32_t clamp_i32(int32_t v, int32_t lo, int32_t hi) {
   return v < lo ? lo : v > hi ? hi : v;
 }
 
-static GPoint polar(GPoint c, int32_t angle, int r) {
+GPoint polar(GPoint c, int32_t angle, int r) {
   return GPoint(c.x + sin_lookup(angle) * r / TRIG_MAX_RATIO,
                 c.y - cos_lookup(angle) * r / TRIG_MAX_RATIO);
 }
@@ -71,11 +73,11 @@ GPoint slot_point(const Slot *s, int pct, int dr) {
 
 // px -> angle on this slot's circle.
 static int32_t px_angle(const Slot *s, int px) {
-  return px * (TRIG_MAX_ANGLE * 10 / 63) / s->radius;
+  return px * PX_ANGLE / s->radius;
 }
 
 int slot_len(const Slot *s) {
-  return abs(s->a1 - s->a0) * s->radius / (TRIG_MAX_ANGLE * 10 / 63);
+  return abs(s->a1 - s->a0) * s->radius / PX_ANGLE;
 }
 
 GPoint slot_past(const Slot *s, int end, int px) {
@@ -146,7 +148,7 @@ void slot_box(GContext *ctx, const Slot *s, int from_pct, int to_pct, int r, GCo
   int32_t a = slot_angle(s, from_pct), b = slot_angle(s, to_pct);
   if (a > b) { int32_t t = a; a = b; b = t; }
   int outer = s->radius + s->thickness / 2, inner = outer - s->thickness;
-  int32_t io = r * (TRIG_MAX_ANGLE * 10 / 63) / outer, ii = r * (TRIG_MAX_ANGLE * 10 / 63) / inner;
+  int32_t io = r * PX_ANGLE / outer, ii = r * PX_ANGLE / inner;
   GPoint c = s->center;
   FContext f;
   fctx_init_context(&f, ctx);
@@ -210,26 +212,19 @@ static GPoint clamp_to_screen(GPoint c, int hw, int hh) {
 #endif
 }
 
-static void draw_text(GContext *ctx, const char *txt, GPoint c, int size, GColor color,
-                      int32_t rot) {
+void text_draw(GContext *ctx, const char *txt, GPoint c, int size, GColor color) {
   if (!s_font) return;
   FContext f;
   fctx_init_context(&f, ctx);
   fctx_set_text_cap_height(&f, s_font, size);
-  int hw = FIXED_TO_INT(fctx_string_width(&f, txt, s_font)) / 2, hh = size / 2 + 1;
-  int sn = abs(sin_lookup(rot)), cs = abs(cos_lookup(rot));
-  c = clamp_to_screen(c, (cs * hw + sn * hh) / TRIG_MAX_RATIO, (sn * hw + cs * hh) / TRIG_MAX_RATIO);
-  fctx_set_rotation(&f, rot);
+  c = clamp_to_screen(c, FIXED_TO_INT(fctx_string_width(&f, txt, s_font)) / 2, size / 2 + 1);
+  fctx_set_rotation(&f, 0);
   fctx_set_offset(&f, FPointI(c.x, c.y));
   fctx_set_fill_color(&f, theme(color));
   fctx_begin_fill(&f);
   fctx_draw_string(&f, txt, s_font, GTextAlignmentCenter, FTextAnchorCapMiddle);
   fctx_end_fill(&f);
   fctx_deinit_context(&f);
-}
-
-void text_draw(GContext *ctx, const char *txt, GPoint c, int size, GColor color) {
-  draw_text(ctx, txt, c, size, color, 0);
 }
 
 // Curved text centered on `c`, on the circle through it around `center`: each
@@ -257,7 +252,7 @@ void text_draw_along(GContext *ctx, const char *txt, GPoint c, GPoint center, in
     ch[n] = '\0';
     p += n;
     fixed_t w = fctx_string_width(&f, ch, s_font);
-    int32_t ang = a + (top ? 1 : -1) * (x + w / 2) * (TRIG_MAX_ANGLE * 10 / 63) / INT_TO_FIXED(r);
+    int32_t ang = a + (top ? 1 : -1) * (x + w / 2) * PX_ANGLE / INT_TO_FIXED(r);
     x += w;
     fctx_set_rotation(&f, top ? ang : ang + TRIG_MAX_ANGLE / 2);
     fctx_set_offset(&f, FPoint(INT_TO_FIXED(center.x) + sin_lookup(ang) * INT_TO_FIXED(r) / TRIG_MAX_RATIO,

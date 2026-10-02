@@ -17,6 +17,7 @@ typedef struct {
 void draw_init(GSize screen);  // loads the vector font
 void draw_deinit(void);
 
+GPoint polar(GPoint c, int32_t angle, int r);  // r px from c at a TRIG angle
 GPoint slot_point(const Slot *s, int pct, int dr);
 int slot_len(const Slot *s);  // px along the centerline
 // Point `px` pixels beyond an arc end (end: 0 = a0, 100 = a1) along its circle.
@@ -73,7 +74,6 @@ bool theme_light(void);
 // A color theme() leaves alone, for things that keep their real-world look.
 // ponytail: marked by alpha 2; nothing here draws translucent.
 GColor fixed(GColor c);
-bool color_light(GColor c);
 // White or black, whichever reads on `fill` once both are themed.
 GColor ink_on(GColor fill);
 

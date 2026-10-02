@@ -97,6 +97,5 @@ function getWeather(skipSame) {
 }
 
 module.exports = getWeather;
-module.exports.buildMessage = buildMessage;
 module.exports.condition = condition;
 module.exports.WEATHER_KEY = WEATHER_KEY;

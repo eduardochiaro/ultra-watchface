@@ -17,15 +17,12 @@ assert.deepStrictEqual([texts.TEXT_TL, texts.TEXT_B], ['Hllo bx 12:3', 'Hell']);
 execSync('node scripts/inline-config.mjs');
 delete require.cache[require.resolve('../src/pkjs/page')];
 var page = require('../src/pkjs/page');
-var state = { settings: { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 6, SCHEME: 1, SECONDS: 1 }, platform: 'gabbro' };
-page = page.replace('var STATE = null; //$$STATE$$', 'var STATE = ' + JSON.stringify(state) + ';');
 
 function el() {
   return { innerHTML: '', textContent: '', value: '', attrs: {}, dataset: {}, style: {}, classList: { add: function () {} },
     children: [], setAttribute: function (k, v) { this.attrs[k] = String(v); }, addEventListener: function () {} };
 }
-var els = {};
-var clicks = [];
+var els, clicks;
 var document = {
   getElementById: function (id) {
     if (!els[id]) { els[id] = el(); if (id === 'schemes' || id === 'units') els[id].children = [el(), el(), el(), el()].slice(0, id === 'units' ? 2 : 4); }
@@ -34,11 +31,18 @@ var document = {
   addEventListener: function (type, fn) { if (type === 'click') clicks.push(fn); },
   querySelectorAll: function () { return []; }
 };
-var ctx = { document: document, location: { search: '', href: '' }, URLSearchParams: URLSearchParams, setInterval: function () {}, Math: Math };
-var scripts = page.match(/<script>([\s\S]*?)<\/script>/g).map(function (s) { return s.replace(/<\/?script>/g, ''); });
-vm.createContext(ctx);
-scripts.forEach(function (s) { vm.runInContext(s, ctx); });
+// Runs the page with `state` written in, on a fresh stub DOM; returns its globals.
+function load(state) {
+  els = {};
+  clicks = [];
+  var ctx = { document: document, location: { search: '', href: '' }, URLSearchParams: URLSearchParams, setInterval: function () {}, Math: Math };
+  vm.createContext(ctx);
+  page.replace('var STATE = null; //$$STATE$$', 'var STATE = ' + JSON.stringify(state) + ';')
+    .match(/<script>([\s\S]*?)<\/script>/g).forEach(function (s) { vm.runInContext(s.replace(/<\/?script>/g, ''), ctx); });
+  return ctx;
+}
 
+var ctx = load({ settings: { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 6, SCHEME: 1, SECONDS: 1 }, platform: 'gabbro' });
 var svg = els.screen.innerHTML;
 assert.ok(svg.indexOf('viewBox="0 0 260 260"') > 0, 'gabbro geometry');
 assert.ok(svg.indexOf('fill="#ffffff"') > 0, 'white scheme background');
@@ -61,31 +65,20 @@ assert.strictEqual(sent.SCHEME, 1);
 assert.strictEqual(sent.SLOT_BR, 6);
 
 // Accent scheme on a light background: black text, accent fills, bg for black
-state = { settings: { SCHEME: 4, BG_COLOR: 0xFF, ACCENT_COLOR: 0xF0, SLOT_TL: 8, CENTER_T: 8, SLOT_TR: 14, CENTER_B: 14, CENTER_L: 14, TEXT_TR: 'Hello <i>', TEXT_B: 'Hello', TEXT_L: 'EC' }, platform: 'emery' };
-var page2 = require('../src/pkjs/page').replace('var STATE = null; //$$STATE$$', 'var STATE = ' + JSON.stringify(state) + ';');
-els = {};
-var ctx2 = { document: document, location: { search: '', href: '' }, URLSearchParams: URLSearchParams, setInterval: function () {}, Math: Math };
-vm.createContext(ctx2);
-page2.match(/<script>([\s\S]*?)<\/script>/g).forEach(function (s) { vm.runInContext(s.replace(/<\/?script>/g, ''), ctx2); });
+ctx = load({ settings: { SCHEME: 4, BG_COLOR: 0xFF, ACCENT_COLOR: 0xF0, SLOT_TL: 8, CENTER_T: 8, SLOT_TR: 14, CENTER_B: 14, CENTER_L: 14, TEXT_TR: 'Hello <i>', TEXT_B: 'Hello', TEXT_L: 'EC' }, platform: 'emery' });
 svg = els.screen.innerHTML;
 assert.ok(svg.indexOf('<rect width="200" height="228" fill="#ffffff"') > 0, 'custom background');
 assert.ok(svg.indexOf('stroke="#ff0000"') > 0, 'accent fills');
 assert.ok(svg.indexOf('fill="#000000" transform="rotate(0') > 0, 'numerals black on light bg');
 assert.strictEqual(els.colors.hidden, false);
 assert.ok(/font-size="14.29" fill="#000000"[^>]*>72 BPM<\/text>/.test(svg), 'heart corner: curved text, no bar');
-var heartIcon = require('fs').readFileSync(__dirname + '/../resources/icons/heart.svg', 'utf8').match(/ d="([^"]+)"/)[1];
 assert.ok(svg.indexOf('>Hello i</text>') > 0 && svg.indexOf('>Hell</text>') > 0 && svg.indexOf('>EC</text>') > 0, 'text per place, cleaned');
 assert.ok(els.corners.innerHTML.indexOf('data-text="TEXT_TR" data-slot-key="SLOT_TR" value="Hello i" maxlength="12"') > 0, 'corner text field');
-assert.ok(svg.split(heartIcon).length - 1 === 2, 'heart icon in corner and subdial');
+assert.ok(svg.split(ctx.ICONS.heart).length - 1 === 2, 'heart icon in corner and subdial');
 
 // New subdials and corners, imperial
-state = { settings: { SLOT_TL: 13, SLOT_TR: 11, SLOT_BL: 7, SLOT_BR: 10, CENTER_T: 11, CENTER_L: 9, CENTER_R: 12, CENTER_B: 3, UNITS: 1 },
-  weather: { TEMP: 70, TEMP_MIN: 60, TEMP_MAX: 75, RAIN: 10, AQI: 20, UV: 7, HUMIDITY: 55, CONDITION: 6, ELEVATION: 100, imperial: true }, platform: 'emery' };
-var page3 = require('../src/pkjs/page').replace('var STATE = null; //$$STATE$$', 'var STATE = ' + JSON.stringify(state) + ';');
-els = {};
-var ctx3 = { document: document, location: { search: '', href: '' }, URLSearchParams: URLSearchParams, setInterval: function () {}, Math: Math };
-vm.createContext(ctx3);
-page3.match(/<script>([\s\S]*?)<\/script>/g).forEach(function (s) { vm.runInContext(s.replace(/<\/?script>/g, ''), ctx3); });
+ctx = load({ settings: { SLOT_TL: 13, SLOT_TR: 11, SLOT_BL: 7, SLOT_BR: 10, CENTER_T: 11, CENTER_L: 9, CENTER_R: 12, CENTER_B: 3, UNITS: 1 },
+  weather: { TEMP: 70, TEMP_MIN: 60, TEMP_MAX: 75, RAIN: 10, AQI: 20, UV: 7, HUMIDITY: 55, CONDITION: 6, ELEVATION: 100, imperial: true }, platform: 'emery' });
 svg = els.screen.innerHTML;
 assert.ok(svg.indexOf('>55%</text>') > 0 && svg.indexOf('stroke="#00ffff" stroke-width="6"') > 0, 'humidity corner');
 assert.ok(svg.indexOf('>MI</text>') > 0 && svg.indexOf('>2.4</text>') > 0, 'distance subdial');
@@ -93,8 +86,7 @@ assert.strictEqual(svg.split('>UV</text>').length - 1, 2, 'UV corner and subdial
 // Orange is UV's alone here; width 6 is the corner bar (subdial rings are 3).
 assert.ok(svg.indexOf('stroke="#ff5500" stroke-width="6"') > 0, 'UV corner bar in its band color');
 assert.ok(/font-size="14.29" fill="#ffffff"[^>]*>7<\/text>/.test(svg), 'UV corner value, curved, white');
-var rainIcon = require('fs').readFileSync(__dirname + '/../resources/icons/rain.svg', 'utf8').match(/ d="([^"]+)"/)[1];
-assert.ok(svg.indexOf(rainIcon) > 0 && svg.indexOf('>FT</text>') < 0, 'weather subdial');
+assert.ok(svg.indexOf(ctx.ICONS.rain) > 0 && svg.indexOf('>FT</text>') < 0, 'weather subdial');
 assert.ok(svg.indexOf('>82</text>') > 0, 'battery subdial');
 assert.strictEqual(svg.split('>AQI</text>').length - 1, 1, 'AQI word in the corner, no AQI subdial');
 assert.ok(svg.indexOf('>20</text>') > 0, 'AQI corner');
