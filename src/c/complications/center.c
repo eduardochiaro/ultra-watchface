@@ -32,6 +32,7 @@ static const Subdial SUBDIAL[COMP_COUNT] = {
   [COMP_CALENDAR] = center_calendar_draw, [COMP_BATTERY] = center_battery_draw, [COMP_HEART] = center_heart_draw,
   [COMP_DISTANCE] = center_distance_draw, [COMP_ELEVATION] = center_elevation_draw, [COMP_UV] = center_uv_draw,
   [COMP_WEATHER] = conditions, [COMP_HUMIDITY] = center_humidity_draw,
+  [COMP_SUN] = center_sun_draw, [COMP_BEAT] = center_beat_draw,
 };
 
 void center_draw(GContext *ctx, GPoint c) {
@@ -41,6 +42,7 @@ void center_draw(GContext *ctx, GPoint c) {
   for (int i = 0; i < CENTER_POS_COUNT; i++) {
     uint8_t id = g_settings.center[i];
     if (id == COMP_CUSTOM) center_custom_draw(ctx, at[i], g_settings.center_text[i]);
+    else if (id >= COMP_API && id <= COMP_API_LAST) center_api_draw(ctx, at[i], id - COMP_API);
     else if (id < COMP_COUNT && SUBDIAL[id]) SUBDIAL[id](ctx, at[i]);
   }
 }

@@ -1,6 +1,8 @@
 #include "weather.h"
 
-#define PK_WEATHER 25  // bumped when Weather changes shape
+// Bumped when Weather changes shape. Fields added at the end don't count: a
+// shorter saved copy leaves them 0.
+#define PK_WEATHER 25
 
 Weather g_weather;
 
@@ -21,6 +23,8 @@ bool weather_handle_message(DictionaryIterator *iter) {
     { MESSAGE_KEY_HUMIDITY, &g_weather.humidity },
     { MESSAGE_KEY_CONDITION, &g_weather.condition },
     { MESSAGE_KEY_ELEVATION, &g_weather.elevation },
+    { MESSAGE_KEY_SUNRISE,  &g_weather.sunrise },
+    { MESSAGE_KEY_SUNSET,   &g_weather.sunset },
   };
   for (unsigned i = 0; i < ARRAY_LENGTH(fields); i++) {
     Tuple *f = dict_find(iter, fields[i].key);

@@ -213,7 +213,7 @@ static GPoint clamp_to_screen(GPoint c, int hw, int hh) {
 }
 
 void text_draw(GContext *ctx, const char *txt, GPoint c, int size, GColor color) {
-  if (!s_font) return;
+  if (!s_font || !txt[0]) return;
   FContext f;
   fctx_init_context(&f, ctx);
   fctx_set_text_cap_height(&f, s_font, size);

@@ -17,6 +17,8 @@ var COMPLICATIONS = [
   { label: 'Air quality', value: 7 },
   { label: 'UV index', value: 11 },
   { label: 'Elevation', value: 10 },
+  { label: 'Sunrise / sunset', value: 23 },
+  { label: '.beat time', value: 24 },
   { label: 'Text', value: 14 },
   { label: 'None', value: 0 }
 ];
@@ -34,9 +36,16 @@ var CENTER_COMPLICATIONS = [
   { label: 'Heart rate', value: 8 },
   { label: 'Distance', value: 9 },
   { label: 'Elevation', value: 10 },
+  { label: 'Sunrise / sunset', value: 23 },
+  { label: '.beat time', value: 24 },
   { label: 'Text', value: 14 },
   { label: 'None', value: 0 }
 ];
+
+// Custom API complications (src/pkjs/api.js): settings.APIS[i] is complication
+// API_ID + i in any place. Same numbers as COMP_API and API_MAX in complications.h.
+var API_ID = 15, API_MAX = 8;
+var API_TYPES = ['Text', 'Bar', 'Gauge'];  // index = type, see API_TEXT.. in complications/api.c
 
 var CORNERS = [
   { key: 'SLOT_TL', label: 'Top left' },
@@ -62,20 +71,44 @@ var SCHEME_ACCENT = 4;
 var DEFAULTS = { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6, SCHEME: 0, UNITS: 0, STEP_GOAL: 10000, SECONDS: 0,
   BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8,
   // The Text complication's text, per place: TEXT_ + the SLOT_/CENTER_ suffix.
-  TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' };
+  TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '',
+  // Custom API complications. Stays on the phone: the watch gets what to draw (api.js).
+  APIS: [] };
 
-// Only characters the watch font has. Corners fit 12, subdials 4 (TEXT_T etc.).
+// Only characters the watch font has, `n` at most.
+function clean(s, n) {
+  return String(s).replace(/[^ %,\-./0-9:A-Za-z]/g, '').slice(0, n);
+}
+
+// Corners fit 12, subdials 4 (TEXT_T etc.).
 function cleanText(k, s) {
-  return String(s).replace(/[^ %,\-./0-9:A-Za-z]/g, '').slice(0, k.length === 6 ? 4 : 12);
+  return clean(s, k.length === 6 ? 4 : 12);
+}
+
+// text, min and max may hold {{path.to[0].value}} patterns, filled from the response.
+function cleanApis(list) {
+  return (Array.isArray(list) ? list : []).slice(0, API_MAX).map(function (a) {
+    a = a || {};
+    return {
+      url: String(a.url || '').trim(),
+      freq: a.freq > 0 ? Math.max(1, Math.round(a.freq)) : 10,  // minutes, 1 at least
+      type: Math.min(API_TYPES.length - 1, Math.max(0, Math.round(Number(a.type)) || 0)),
+      name: clean(a.name || '', 4),
+      text: String(a.text || ''),
+      min: String(a.min == null ? 0 : a.min).trim(),
+      max: String(a.max == null ? 100 : a.max).trim()
+    };
+  });
 }
 
 function value(k, v) {
+  if (k === 'APIS') return cleanApis(v);
   return typeof DEFAULTS[k] === 'string' ? cleanText(k, v) : Number(v);
 }
 
 function withDefaults(saved) {
   var s = {};
-  for (var k in DEFAULTS) s[k] = saved && saved[k] !== undefined ? value(k, saved[k]) : DEFAULTS[k];
+  for (var k in DEFAULTS) s[k] = value(k, saved && saved[k] !== undefined ? saved[k] : DEFAULTS[k]);
   return s;
 }
 
@@ -89,7 +122,7 @@ function savedSettings() {
 
 function toMessage(settings) {
   var msg = {};
-  for (var k in DEFAULTS) msg[k] = value(k, settings[k]);
+  for (var k in DEFAULTS) if (k !== 'APIS') msg[k] = value(k, settings[k]);
   return msg;
 }
 
@@ -97,6 +130,7 @@ if (typeof module === 'object') {
   module.exports = {
     SETTINGS_KEY: SETTINGS_KEY, COMPLICATIONS: COMPLICATIONS, CENTER_COMPLICATIONS: CENTER_COMPLICATIONS,
     CORNERS: CORNERS, CENTERS: CENTERS, SCHEMES: SCHEMES, SCHEME_ACCENT: SCHEME_ACCENT,
-    DEFAULTS: DEFAULTS, cleanText: cleanText, withDefaults: withDefaults, savedSettings: savedSettings, toMessage: toMessage
+    API_ID: API_ID, API_MAX: API_MAX, API_TYPES: API_TYPES,
+    DEFAULTS: DEFAULTS, clean: clean, cleanText: cleanText, withDefaults: withDefaults, savedSettings: savedSettings, toMessage: toMessage
   };
 }

@@ -12,6 +12,7 @@ typedef struct {
   int16_t humidity;          // relative humidity now, %, -1 = unknown
   int16_t condition;         // ICON_SUN.. order (weather.js CONDITION), -1 = unknown
   int16_t elevation;         // ground at the phone's position, m
+  int16_t sunrise, sunset;   // today's, minutes after local midnight; equal = unknown
 } Weather;
 
 extern Weather g_weather;

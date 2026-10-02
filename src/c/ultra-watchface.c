@@ -177,7 +177,7 @@ static void subscribe_ticks(void) {
   { MESSAGE_KEY_##key, MESSAGE_KEY_##text_key, &g_settings.id, g_settings.text, sizeof(g_settings.text) }
 
 static void inbox_received(DictionaryIterator *iter, void *context) {
-  if (!weather_handle_message(iter)) {
+  if (!weather_handle_message(iter) && !api_handle_message(iter)) {
     const struct { uint32_t key, text_key; uint8_t *id; char *text; size_t size; } places[] = {
       PLACE(SLOT_TL, TEXT_TL, slots[SLOT_POS_TL], slot_text[SLOT_POS_TL]),
       PLACE(SLOT_TR, TEXT_TR, slots[SLOT_POS_TR], slot_text[SLOT_POS_TR]),
@@ -226,6 +226,7 @@ static void window_unload(Window *window) {
 int main(void) {
   if (persist_exists(PK_SETTINGS)) persist_read_data(PK_SETTINGS, &g_settings, sizeof(g_settings));
   weather_init();
+  api_init();
 
   s_window = window_create();
   window_set_background_color(s_window, theme(GColorBlack));

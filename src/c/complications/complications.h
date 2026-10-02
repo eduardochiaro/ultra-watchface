@@ -9,6 +9,8 @@
 // enum and the table in complications.c, and add an option to COMPLICATIONS in
 // src/pkjs/config.js with the same value.
 
+#define API_MAX 8  // custom API complications; API_MAX in src/pkjs/config.js
+
 // Values are persisted and sent by the config page: append only.
 typedef enum {
   COMP_NONE = 0,
@@ -26,6 +28,10 @@ typedef enum {
   COMP_WEATHER,   // subdial only
   COMP_HUMIDITY,
   COMP_CUSTOM,    // the user's text
+  COMP_API,       // first of API_MAX custom API complications, see api.c
+  COMP_API_LAST = COMP_API + API_MAX - 1,
+  COMP_SUN,       // sunrise and sunset
+  COMP_BEAT,      // Swatch .beat time
   COMP_COUNT
 } ComplicationId;
 
@@ -55,7 +61,15 @@ void comp_aqi_draw(GContext *ctx, const Slot *s);
 void comp_elevation_draw(GContext *ctx, const Slot *s);
 void comp_uv_draw(GContext *ctx, const Slot *s);
 void comp_humidity_draw(GContext *ctx, const Slot *s);
+void comp_sun_draw(GContext *ctx, const Slot *s);
+void comp_beat_draw(GContext *ctx, const Slot *s);
 void comp_custom_draw(GContext *ctx, const Slot *s, const char *txt);  // not in the tables: needs its text
+void comp_api_draw(GContext *ctx, const Slot *s, int i);  // i: 0..API_MAX-1
+
+// Custom API complications: what the phone last sent for each (src/pkjs/api.js).
+void api_init(void);
+// True when the message carried one.
+bool api_handle_message(DictionaryIterator *iter);
 
 int step_pct(void);  // today's steps toward the goal, in %
 
@@ -94,14 +108,28 @@ void center_distance_draw(GContext *ctx, GPoint c);
 void center_elevation_draw(GContext *ctx, GPoint c);
 void center_uv_draw(GContext *ctx, GPoint c);
 void center_humidity_draw(GContext *ctx, GPoint c);
+void center_sun_draw(GContext *ctx, GPoint c);
+void center_beat_draw(GContext *ctx, GPoint c);
 void center_custom_draw(GContext *ctx, GPoint c, const char *txt);
+void center_api_draw(GContext *ctx, GPoint c, int i);
+// Text centered on c, `size` at most, shrunk to fit `width`.
+void center_fit_text(GContext *ctx, const char *txt, GPoint c, int size, int width, GColor color);
 
 // Corner layout: the slot is the whole complication. Gauges put a label at
 // both ends, bars one on the left; labels eat into the arc, not past it.
 // Icons sit outside the arc, toward the corner; on gabbro they lead the bar,
-// "ICON 30% BAR".
+// "ICON 30% BAR". An `icon` may also be a short name (API complications),
+// drawn as text.
 void comp_fill_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, GColor track,
                      const char *label, const char *icon);  // icon NULL: none
+// Range gauge (temp, API gauge): min and max at the ends, a thumb at pct, the
+// value by the arc's middle, where an icon would be. pct < 0: unknown, a bare
+// track. Gabbro: no gauge, only the value on the arc's middle.
+void comp_range_draw(GContext *ctx, const Slot *s, int pct, const char *min, const char *max,
+                     const char *value);
+// Same in a subdial: min and max under the value. `name` (or NULL) goes above it.
+void center_range_draw(GContext *ctx, GPoint c, int pct, const char *min, const char *max,
+                       const char *value, const char *name);
 // A banded index (AQI, UV): a bar with a caption and the value `v` of `max`, in
 // its band's color; white and "--" for unknown (v < 0). `to` is a band's upper
 // bound, the last one INT16_MAX.

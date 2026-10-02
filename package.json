@@ -1,7 +1,7 @@
 {
   "name": "ultra-watchface",
   "author": "Eduardo Chiaro",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "keywords": [
     "pebble-app"
   ],
@@ -14,7 +14,7 @@
     "screenshot": "bash scripts/screenshot.sh",
     "logs": "pebble logs",
     "test": "node test/page.test.js",
-    "font": "node scripts/gen-svg-font.js resources/fonts/Nunito-Bold.ttf resources/fonts/nunito.svg nunito \" %,-./0123456789:ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\u00b0\" && fctx-compiler resources/fonts/nunito.svg && mv resources/nunito.ffont resources/fonts/nunito.ffont"
+    "font": "node scripts/gen-svg-font.js resources/fonts/Nunito-Bold.ttf resources/fonts/nunito.svg nunito \" %,-./0123456789:@ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz\u00b0\" && fctx-compiler resources/fonts/nunito.svg && mv resources/nunito.ffont resources/fonts/nunito.ffont"
   },
   "pebble": {
     "displayName": "Ultra",
@@ -59,7 +59,16 @@
       "TEXT_T",
       "TEXT_L",
       "TEXT_R",
-      "TEXT_B"
+      "TEXT_B",
+      "API_INDEX",
+      "API_TYPE",
+      "API_NAME",
+      "API_TEXT",
+      "API_PCT",
+      "API_MIN",
+      "API_MAX",
+      "SUNRISE",
+      "SUNSET"
     ],
     "resources": {
       "media": [
