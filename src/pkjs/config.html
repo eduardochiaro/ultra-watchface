@@ -298,12 +298,20 @@
 
 	// A picked hand color is fixed(); 0 follows the scheme, as `own`. draw_hands()
 	function handColor(k, own) { return settings[k] ? "!" + css(chans(settings[k])) : own; }
+	// shade() in ultra-watchface.c: a step darker per channel
+	function shade(c) {
+		var fx = c[0] === "!";
+		return (fx ? "!" : "") + css(hexChans(fx ? c.slice(1) : c).map(function (v) { return v ? v - 1 : 0; }));
+	}
 	// HAND_* in ultra-watchface.c
 	var HAND_STEM = 12, HAND_STEM_W = 2, HAND_W = 8, HAND_EDGE = 2;
 	// The hand styles as the buttons show them, pointing right. Index = HANDS value.
 	var HAND_ICONS = ['<path d="M3 6H45" stroke-width="5"/>',
 		'<path d="M2 6H12" stroke-width="2"/><rect x="12" y="2" width="34" height="8" rx="4" fill="currentColor" stroke="none"/>',
-		'<path d="M2 6H12" stroke-width="2"/><rect x="13" y="3" width="32" height="6" rx="3" stroke-width="2"/>'];
+		'<path d="M2 6H12" stroke-width="2"/><rect x="13" y="3" width="32" height="6" rx="3" stroke-width="2"/>',
+		'<path d="M2 6H12" stroke-width="2"/><path d="M12 4L14 2H38L46 6L38 10H14L12 8Z" fill="currentColor" stroke="none"/>',
+		'<path d="M2 6H12" stroke-width="2"/><path d="M12 6L20 1L46 5V7L20 11Z" fill="currentColor" stroke="none"/>',
+		'<path d="M2 6L12 1L46 6L12 11Z" fill="currentColor" stroke="none" opacity=".5"/><path d="M2 6L12 1L46 6Z" fill="currentColor" stroke="none"/>'];
 
 	// Weather is stored in the unit it was fetched in
 	function temp(t) {
@@ -370,9 +378,12 @@
 		function icon(name, p, s, c, rot) {
 			out.push('<path d="' + ICONS[name] + '" transform="' + (rot ? "rotate(" + f(rot) + " " + f(p[0]) + " " + f(p[1]) + ") " : "") + 'translate(' + f(p[0] - s / 2) + " " + f(p[1] - s / 2) + ") scale(" + f(s / 24) + ')" fill="' + T(c) + '"/>');
 		}
+		// draw.h: a "%" 3/4 the size, a subdial's; CORNER_PCT is a corner's
+		var SMALL_PCT = "\uE012", CORNER_PCT = g.round ? SMALL_PCT : "%";
+		function glyphs(s) { return String(s).replace(SMALL_PCT, '<tspan font-size="75%">%</tspan>'); }
 		function text(s, p, cap, c, rot) {
 			out.push('<text x="' + f(p[0]) + '" y="' + f(p[1]) + '" font-size="' + f(cap / 0.7) + '" fill="' + T(c) +
-				'" transform="rotate(' + f(rot) + " " + f(p[0]) + " " + f(p[1]) + ')" text-anchor="middle" dominant-baseline="central">' + s + "</text>");
+				'" transform="rotate(' + f(rot) + " " + f(p[0]) + " " + f(p[1]) + ')" text-anchor="middle" dominant-baseline="central">' + glyphs(s) + "</text>");
 		}
 		function seg(p, q) { return "M" + f(p[0]) + " " + f(p[1]) + "L" + f(q[0]) + " " + f(q[1]); }
 		function arc(r, a, b, c) {
@@ -387,7 +398,7 @@
 			var top = Math.cos(rad(a)) >= 0, id = "curve" + curves++;
 			out.push('<path id="' + id + '" d="' + (top ? arc(r - cap / 2, a - 80, a + 80) : arc(r + cap / 2, a + 80, a - 80)) +
 				'" fill="none"/><text><textPath href="#' + id + '" startOffset="50%" text-anchor="middle" font-size="' + f(cap / 0.7) +
-				'" fill="' + T(c) + '">' + s + "</textPath></text>");
+				'" fill="' + T(c) + '">' + glyphs(s) + "</textPath></text>");
 		}
 
 		// Slot helpers from draw.c: a0 is the pinned end, percentages run a0 -> a1
@@ -507,7 +518,7 @@
 		function battery(s0) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
 			compIcon(s, "bolt", C.white);
-			endLabel(s, left, BATTERY + "%");
+			endLabel(s, left, BATTERY + CORNER_PCT);
 			sarc(s, 0, 100, C.track);
 			if (BATTERY > 0) sarc(s, left, left ? 100 - BATTERY : BATTERY, batteryColor());
 		}
@@ -539,9 +550,9 @@
 			else if (id === 2) rangeGauge(s, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°", TEMP_COLOR);
 			if (isApi(id)) apiCorner(s, apiView(id - API_ID));
 			if (id === 3) battery(s);
-			if (id === 4) bar(s, weather.RAIN, C.picton, weather.RAIN + "%", "umbrella");
+			if (id === 4) bar(s, weather.RAIN, C.picton, weather.RAIN + CORNER_PCT, "umbrella");
 			if (id === 6) calendar(s);
-			if (id === 13) bar(s, HUM, C.cyan, HUM >= 0 ? HUM + "%" : "--", "drop");
+			if (id === 13) bar(s, HUM, C.cyan, HUM >= 0 ? HUM + CORNER_PCT : "--", "drop");
 			if (id === 14) along(settings["TEXT_" + k.slice(5)], at(s, 50), s.r, fitCap(settings["TEXT_" + k.slice(5)], g.TEXT + 2, slen(s)), C.white);
 			if (id === 8) iconText(s, "heart", BPM + " BPM", C.red);
 			if (id === 9) bar(s, stepPct(), C.forest, distance() + (settings.UNITS === 1 ? "mi" : "km"), "runner");
@@ -591,7 +602,9 @@
 		function thumb(c, pct, fill) { disc(P(-120 + 2.4 * clamp(pct), g.SUB_R, c), 2, fill, C.black); }
 		var ST = g.SUB_TEXT, SS = g.SUB_SMALL, SL = g.SUB_LOW, INNER = 2 * g.SUB_R - 7;
 		// center_fit_text: `cap` at most, shrunk to fit `width`
-		function fit(t, p, cap, width, col) { if (t) text(t, p, Math.min(cap, width * 0.7 / (t.length * 0.6)), col, 0); }
+		function fit(t, p, cap, width, col) {
+			if (t) text(t, p, Math.min(cap, width * 0.7 / (t.length * 0.6)), col, 0);
+		}
 		// center_range_draw: min and max under the value, a name above it
 		function subRange(c, pct, min, max, value, name, cols) {
 			if (pct < 0) {
@@ -627,15 +640,13 @@
 			4: function (c) {
 				gauge(c, weather.RAIN, C.picton);
 				thumb(c, weather.RAIN, C.celeste);
-				text(String(weather.RAIN), [c[0], c[1] - 1], ST + 2, C.white, 0);
-				icon("umbrella", [c[0] - 2, c[1] + SL], 9, C.white);
-				text("%", [c[0] + 5, c[1] + SL + 2], SS - 2, C.white, 0);
+				fit(weather.RAIN + SMALL_PCT, [c[0], c[1] - 1], ST + 2, INNER, C.white);
+				icon("umbrella", [c[0], c[1] + SL], 9, C.white);
 			},
 			13: function (c) {
 				gauge(c, HUM, C.cyan);
-				text(HUM >= 0 ? String(HUM) : "--", [c[0], c[1] - 1], ST + 2, C.white, 0);
-				icon("drop", [c[0] - 2, c[1] + SL], 9, C.cyan);
-				text("%", [c[0] + 5, c[1] + SL + 2], SS - 2, C.white, 0);
+				fit(HUM >= 0 ? HUM + SMALL_PCT : "--", [c[0], c[1] - 1], ST + 2, INNER, C.white);
+				icon("drop", [c[0], c[1] + SL], 9, C.cyan);
 			},
 			// center_band_draw: US AQI, its EPA bands around the ring
 			7: function (c) {
@@ -725,11 +736,25 @@
 		// draw_hands
 		var ha = (now.getHours() % 12) * 30 + now.getMinutes() / 2, ma = now.getMinutes() * 6, sa = now.getSeconds() * 6;
 		var secondCol = handColor("SECOND_COLOR", C.accent);
-		// draw_hand: a line `w` wide, or a stem and ray_bar(), drawn pointing up and turned
+		// draw_hand: a line `w` wide, or a stem and ray_bar() or ray_poly(), drawn pointing up and turned
 		function hand(a, len, w, handCol) {
 			if (!settings.HANDS) return stroke(seg([cx, cy], P(a, len)), handCol, w);
 			var e = settings.HANDS === 2 ? HAND_EDGE : 0, col = T(handCol);
+			// ray_poly(): points as [px out, px across]
+			var s = HAND_STEM, h = HAND_W / 2, W = HAND_W;
+			function poly(pts, c) {
+				out.push('<polygon points="' + pts.map(function (p) { return f(cx + p[1]) + "," + f(cy - p[0]); }).join(" ") +
+					'" transform="rotate(' + f(a) + " " + cx + " " + cy + ')" fill="' + T(c) + '"/>');
+			}
+			if (settings.HANDS === 5) {
+				var kite = [[-h, 0], [W, -h - 1], [len, 0], [W, h + 1]];
+				poly(kite, shade(handCol));
+				return poly(kite.slice(0, 3), handCol);
+			}
 			stroke(seg([cx, cy], P(a, HAND_STEM)), handCol, HAND_STEM_W);
+			var pts = settings.HANDS === 3 ? [[s, 2 - h], [s + 2, -h], [len - W, -h], [len, 0], [len - W, h], [s + 2, h], [s, h - 2]] :
+				settings.HANDS === 4 ? [[s, 0], [s + W, -h - 1], [len, -1], [len, 1], [s + W, h + 1]] : null;
+			if (pts) return poly(pts, handCol);
 			out.push('<rect x="' + (cx - (HAND_W - e) / 2) + '" y="' + f(cy - len + e / 2) + '" width="' + (HAND_W - e) + '" height="' + f(len - HAND_STEM - e) +
 				'" rx="' + (HAND_W - e) / 2 + '" transform="rotate(' + f(a) + " " + cx + " " + cy + ')" ' +
 				(e ? 'fill="' + T(C.black) + '" stroke="' + col + '" stroke-width="' + e + '"' : 'fill="' + col + '"') + "/>");

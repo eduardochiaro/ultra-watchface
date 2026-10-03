@@ -14,7 +14,7 @@ static GColor bolt_color(const BatteryChargeState *b) {
 void comp_battery_draw(GContext *ctx, const Slot *slot) {
   BatteryChargeState b = battery_state_service_peek();
   char buf[8];
-  snprintf(buf, sizeof(buf), "%d%%", b.charge_percent);
+  snprintf(buf, sizeof(buf), "%d" CORNER_PCT, b.charge_percent);
   Slot s = *slot;
   int left = slot_left_end(&s);
   comp_icon(ctx, &s, ICON_BOLT, bolt_color(&b));

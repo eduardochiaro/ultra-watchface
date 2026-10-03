@@ -36,6 +36,8 @@ void slot_box(GContext *ctx, const Slot *s, int from_pct, int to_pct, int r, GCo
 void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color);
 // Rounded bar on the ray from `c` at `angle`, from r0 to r1 px out, `w` wide.
 void ray_bar(GContext *ctx, GPoint c, int32_t angle, int r0, int r1, int w, GColor color);
+// Polygon on that ray: each point is (px out along it, px across it).
+void ray_poly(GContext *ctx, GPoint c, int32_t angle, const GPoint *pts, int n, GColor color);
 void slot_dot(GContext *ctx, const Slot *s, int pct, int r, GColor fill, GColor ring);
 
 // Icons are font glyphs (resources/icons, U+E000 on): draw them with
@@ -61,6 +63,14 @@ void slot_dot(GContext *ctx, const Slot *s, int pct, int r, GColor fill, GColor 
 #define ICON_UP       "\uE00F"
 #define ICON_DOWN     "\uE010"
 #define ICON_WIND     "\uE011"
+// Not an icon: a "%" 3/4 the size, for a subdial's value.
+#define SMALL_PCT     "\uE012"
+// A corner's "%": gabbro's is the small one too.
+#if defined(PBL_ROUND)
+#define CORNER_PCT    SMALL_PCT
+#else
+#define CORNER_PCT    "%%"
+#endif
 
 // Text centered on `c` (cap height `size` px). Text and icons are clamped so
 // they stay on screen.

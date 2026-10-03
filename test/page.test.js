@@ -73,7 +73,7 @@ assert.ok(svg.indexOf('fill="#ffffff"') > 0, 'white scheme background');
 assert.ok(svg.indexOf('>6240</text>') > 0, 'steps label');
 assert.ok(svg.indexOf('r="102"') > 0, 'gabbro dial');
 assert.ok(/font-size="15.71"[^>]*>21°<\/text>/.test(svg) && svg.split(ctx.ICONS.sun_cloud).length - 1 === 2, 'gabbro temp corner: the conditions icon and now, no gauge');
-assert.ok(/font-size="15.71"[^>]*>82%<\/text>/.test(svg), 'gabbro battery: value leads the bar');
+assert.ok(/font-size="15.71"[^>]*>82<tspan font-size="75%">%<\/tspan><\/text>/.test(svg), 'gabbro battery: value leads the bar, its % the small one');
 assert.ok(svg.indexOf('>PB</text>') > 0 && svg.indexOf('>290</text>') > 0 && svg.indexOf(ctx.ICONS.sun_cloud) > 0, 'default subdials: text, elevation, weather');
 assert.ok(/>(SUN|MON|TUE|WED|THU|FRI|SAT)<\/text>/.test(svg), 'calendar weekday');
 assert.ok(svg.indexOf('stroke="#ffaa00" stroke-width="2"') > 0, 'seconds hand');
@@ -109,6 +109,14 @@ clicks[0]({ target: { closest: function () { return save; } } });
 sent = JSON.parse(decodeURIComponent(ctx.location.href.split('#')[1]));
 assert.deepStrictEqual([sent.ACCENT_COLOR, sent.SECOND_COLOR, sent.HAND_COLOR], [0xC3, 0, 0xF0]);
 
+// Pointer and sword hands: a polygon each for hour and minute. Dauphine: two, one shaded
+[3, 4, 5].forEach(function (style) {
+  ctx = load({ settings: { HANDS: style, HAND_COLOR: 0xF0 }, platform: 'emery' });
+  svg = screen();
+  assert.ok(svg.split('<polygon').length - 1 === (style === 5 ? 4 : 2) && (style !== 5 || /<polygon[^>]*fill="#aa0000"/.test(svg)) && /<polygon[^>]*fill="#ff0000"/.test(svg), 'polygon hands, style ' + style);
+  assert.ok(els.hands.innerHTML.split('data-hands=').length - 1 === 6, 'six hand styles');
+});
+
 // Accent scheme on a light background: black text, accent fills, bg for black
 ctx = load({ settings: { SCHEME: 4, BG_COLOR: 0xFF, ACCENT_COLOR: 0xF0, SLOT_TL: 8, CENTER_T: 8, SLOT_TR: 14, CENTER_B: 14, CENTER_L: 14, TEXT_TR: 'Hello <i>', TEXT_B: 'Hello', TEXT_L: 'EC' }, platform: 'emery' });
 svg = screen();
@@ -126,6 +134,9 @@ ctx = load({ settings: { SLOT_TL: 13, SLOT_TR: 11, SLOT_BL: 7, SLOT_BR: 10, CENT
   weather: { TEMP: 70, TEMP_MIN: 60, TEMP_MAX: 75, RAIN: 10, AQI: 20, UV: 7, HUMIDITY: 55, CONDITION: 6, ELEVATION: 100, imperial: true }, platform: 'emery' });
 svg = screen();
 assert.ok(svg.indexOf('>55%</text>') > 0 && svg.indexOf('stroke="#00ffff" stroke-width="6"') > 0, 'humidity corner');
+// A subdial's % is the smaller one, a corner's the font's own
+load({ settings: { SLOT_TL: 13, CENTER_T: 13 }, weather: { HUMIDITY: 55 }, platform: 'emery' });
+assert.ok(screen().indexOf('>55<tspan font-size="75%">%</tspan></text>') > 0 && screen().indexOf('>55%</text>') > 0, 'small % in the subdial only');
 assert.ok(svg.indexOf('>MI</text>') > 0 && svg.indexOf('>2.4</text>') > 0, 'distance subdial');
 assert.strictEqual(svg.split('>UV</text>').length - 1, 2, 'UV corner and subdial');
 // Orange is UV's alone here; width 6 is the corner bar (subdial rings are 3).

@@ -69,7 +69,7 @@ var SCHEMES = ['Black', 'White', 'White on black', 'Black on white', 'Accent'];
 var SCHEME_ACCENT = 4;
 
 // Index = HANDS value, see HandStyle in src/c/settings.h
-var HANDS = ['Line', 'Bar', 'Outline'];
+var HANDS = ['Line', 'Bar', 'Outline', 'Pointer', 'Sword', 'Dauphine'];
 
 // Mirrors g_settings in C. weather.js asks Open-Meteo for the chosen
 // temperature unit; the watch converts distance and elevation. Colors are GColor8 argb (0xC0 = black,

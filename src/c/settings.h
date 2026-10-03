@@ -12,7 +12,9 @@ enum { SCHEME_LIGHT = 1, SCHEME_MONO = 2, SCHEME_ACCENT = 4 };
 
 // Hour and minute hands: plain lines, or a thin stem and a rounded bar, solid or
 // an outline around the background color.
-typedef enum { HANDS_LINE, HANDS_BAR, HANDS_OUTLINE, HANDS_COUNT } HandStyle;
+// Pointer: the bar with a pointed tip. Sword: widest by the stem, tapering to the tip.
+// Dauphine: no stem, a long kite out of the pin, one half of it shaded.
+typedef enum { HANDS_LINE, HANDS_BAR, HANDS_OUTLINE, HANDS_POINTER, HANDS_SWORD, HANDS_DAUPHINE, HANDS_COUNT } HandStyle;
 
 typedef struct {
   uint8_t slots[SLOT_POS_COUNT];   // ComplicationId per corner

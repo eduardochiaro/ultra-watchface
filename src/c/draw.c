@@ -209,6 +209,21 @@ void ray_bar(GContext *ctx, GPoint c, int32_t angle, int r0, int r1, int w, GCol
   fctx_deinit_context(&f);
 }
 
+void ray_poly(GContext *ctx, GPoint c, int32_t angle, const GPoint *pts, int n, GColor color) {
+  FPoint o = FPointI(c.x, c.y);
+  FContext f;
+  fctx_init_context(&f, ctx);
+  fctx_set_fill_color(&f, theme(color));
+  fctx_begin_fill(&f);
+  for (int i = 0; i < n; i++) {
+    FPoint p = fpolar_f(fpolar_f(o, angle, INT_TO_FIXED(pts[i].x)), angle + TRIG_MAX_ANGLE / 4, INT_TO_FIXED(pts[i].y));
+    if (i) fctx_line_to(&f, p); else fctx_move_to(&f, p);
+  }
+  fctx_close_path(&f);
+  fctx_end_fill(&f);
+  fctx_deinit_context(&f);
+}
+
 void slot_dot(GContext *ctx, const Slot *s, int pct, int r, GColor fill, GColor ring) {
   GPoint p = slot_point(s, pct, 0);
   graphics_context_set_fill_color(ctx, theme(ring));

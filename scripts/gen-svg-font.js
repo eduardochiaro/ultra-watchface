@@ -29,9 +29,9 @@ const em = font.unitsPerEm;
 const os2 = font.tables.os2 || {};
 const capHeight = os2.sCapHeight || Math.round(em * 0.7);
 
-function pathData(glyph) {
+function pathData(glyph, scale) {
   // getPath at fontSize == em keeps coordinates in font units (scale 1).
-  const p = glyph.getPath(0, 0, em);
+  const p = glyph.getPath(0, 0, em * scale);
   let d = '';
   for (const c of p.commands) {
     const ny = (v) => -Math.round(v);
@@ -57,7 +57,7 @@ for (const ch of chars) {
   const g = font.charToGlyph(ch);
   if (!g || g.index === 0) continue;            // skip .notdef
   const adv = Math.round(g.advanceWidth || em / 2);
-  glyphs.push(`    <glyph unicode="${esc(ch)}" horiz-adv-x="${adv}" d="${pathData(g)}"/>`);
+  glyphs.push(`    <glyph unicode="${esc(ch)}" horiz-adv-x="${adv}" d="${pathData(g, 1)}"/>`);
 }
 
 // 24-unit y-down icon path -> font units, y-up, box on the baseline. The y flip
@@ -94,6 +94,10 @@ ICONS.forEach((name, i) => {
   const d = fs.readFileSync(path.join(iconDir, `${name}.svg`), 'utf8').match(/ d="([^"]+)"/)[1];
   glyphs.push(`    <glyph unicode="&#x${(0xE000 + i).toString(16)};" glyph-name="${name}" horiz-adv-x="${capHeight}" d="${iconPath(d)}"/>`);
 });
+
+// A smaller "%" after the icons, on the baseline: SMALL_PCT in src/c/draw.h.
+const pct = font.charToGlyph('%'), PCT = 0.75;
+glyphs.push(`    <glyph unicode="&#x${(0xE000 + ICONS.length).toString(16)};" glyph-name="small_percent" horiz-adv-x="${Math.round(pct.advanceWidth * PCT)}" d="${pathData(pct, PCT)}"/>`);
 
 const svg = `<?xml version="1.0" standalone="no"?>
 <svg xmlns="http://www.w3.org/2000/svg">

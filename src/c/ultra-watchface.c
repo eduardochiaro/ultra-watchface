@@ -96,13 +96,43 @@ static void draw_dial(GContext *ctx, GPoint c) {
   graphics_draw_circle(ctx, c, DIAL_R + 4);
 }
 
+// A step darker per channel: the dauphine hand's shaded facet.
+static GColor shade(GColor c) {
+  if (c.r) c.r--;
+  if (c.g) c.g--;
+  if (c.b) c.b--;
+  return c;
+}
+
 // Hour or minute hand, `len` px long. `width` is the plain line's.
 static void draw_hand(GContext *ctx, GPoint c, int32_t angle, int len, int width, GColor color) {
   if (g_settings.hands == HANDS_LINE) {
     line(ctx, c, polar(c, angle, len), width, color);
     return;
   }
+  const int s = HAND_STEM, h = HAND_W / 2;
+  if (g_settings.hands == HANDS_DAUPHINE) {
+    // Widest HAND_W px out, a short tail under the pin. The whole kite shaded,
+    // then one half over it: two halves side by side would leave a seam.
+    const GPoint p[] = { { -h, 0 }, { HAND_W, -h - 1 }, { len, 0 }, { HAND_W, h + 1 } };
+    ray_poly(ctx, c, angle, p, 4, shade(color));
+    ray_poly(ctx, c, angle, p, 3, color);
+    return;
+  }
   line(ctx, c, polar(c, angle, HAND_STEM), HAND_STEM_W, color);
+  if (g_settings.hands == HANDS_POINTER) {
+    // The bar, its base corners cut, the last HAND_W px a point.
+    const GPoint p[] = { { s, 2 - h }, { s + 2, -h }, { len - HAND_W, -h }, { len, 0 },
+                         { len - HAND_W, h }, { s + 2, h }, { s, h - 2 } };
+    ray_poly(ctx, c, angle, p, ARRAY_LENGTH(p), color);
+    return;
+  }
+  if (g_settings.hands == HANDS_SWORD) {
+    // A little wider than the bar, HAND_W px out of the stem; the tip is 2px, not a point.
+    const GPoint p[] = { { s, 0 }, { s + HAND_W, -h - 1 }, { len, -1 }, { len, 1 }, { s + HAND_W, h + 1 } };
+    ray_poly(ctx, c, angle, p, ARRAY_LENGTH(p), color);
+    return;
+  }
   ray_bar(ctx, c, angle, HAND_STEM, len, HAND_W, color);
   // Outline: the background over its inside, not see-through.
   if (g_settings.hands == HANDS_OUTLINE)
