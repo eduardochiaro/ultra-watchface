@@ -55,7 +55,7 @@ void center_calendar_draw(GContext *ctx, GPoint c) {
 void center_calendar_plain_draw(GContext *ctx, GPoint c) {
   time_t now = time(NULL);
   struct tm *t = localtime(&now);
-  text_draw(ctx, DAYS[t->tm_wday], GPoint(c.x, c.y - 9), SUB_SMALL + 1, GColorRed);
+  text_draw(ctx, DAYS[t->tm_wday], GPoint(c.x, c.y - 9), SUB_SMALL + 1, GColorOrange);
   char buf[3];
   snprintf(buf, sizeof(buf), "%d", t->tm_mday);
   text_draw(ctx, buf, GPoint(c.x, c.y + 4), SUB_TEXT + 5, GColorWhite);

@@ -113,7 +113,7 @@ static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
   int32_t ha = DEG((t->tm_hour % 12) * 30 + t->tm_min / 2);
   int32_t ma = DEG(t->tm_min * 6);
   GColor second = picked(g_settings.second_color, ACCENT);
-  draw_hand(ctx, c, ha, INNER_R - 4, 6, picked(g_settings.hand_color, GColorWhite));  // just short of the inner ring
+  draw_hand(ctx, c, ha, INNER_R - 8, 6, picked(g_settings.hand_color, GColorWhite));  // just short of the inner ring
   // Up to the inner edge of 12/3/6/9.
   draw_hand(ctx, c, ma, NUM_R_BIG - NUM_BIG / 2, 3, picked(g_settings.minute_color, GColorWhite));
   if (g_settings.seconds) {

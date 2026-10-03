@@ -730,7 +730,7 @@
 				'" rx="' + (HAND_W - e) / 2 + '" transform="rotate(' + f(a) + " " + cx + " " + cy + ')" ' +
 				(e ? 'fill="' + T(C.black) + '" stroke="' + col + '" stroke-width="' + e + '"' : 'fill="' + col + '"') + "/>");
 		}
-		hand(ha, g.INNER_R - 4, 6, handColor("HAND_COLOR", C.white));
+		hand(ha, g.INNER_R - 8, 6, handColor("HAND_COLOR", C.white));
 		hand(ma, g.NUM_R_BIG - g.NUM_BIG / 2, 3, handColor("MINUTE_COLOR", C.white));
 		if (settings.SECONDS) stroke(seg(P(sa + 180, g.DIAL_R * 0.25), P(sa, g.DIAL_R - 10)), secondCol, 2);
 		disc([cx, cy], 5, secondCol);
