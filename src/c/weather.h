@@ -19,6 +19,9 @@ typedef struct {
 
 extern Weather g_weather;
 
+// The icon glyph (ICON_SUN.. in draw.h) for the conditions now, NULL if unknown.
+const char *weather_icon(void);
+
 void weather_init(void);
 // True when the message carried weather (and g_weather was updated).
 bool weather_handle_message(DictionaryIterator *iter);

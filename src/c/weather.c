@@ -1,4 +1,5 @@
 #include "weather.h"
+#include "draw.h"
 
 // Bumped when Weather changes shape. Fields added at the end don't count: a
 // shorter saved copy leaves them as initialized below.
@@ -35,4 +36,12 @@ bool weather_handle_message(DictionaryIterator *iter) {
   g_weather.valid = true;
   persist_write_data(PK_WEATHER, &g_weather, sizeof(g_weather));
   return true;
+}
+
+const char *weather_icon(void) {
+  static const char *const ICON[] = {
+    ICON_SUN, ICON_MOON, ICON_SUN_CLOUD, ICON_MOON_CLOUD, ICON_CLOUD, ICON_FOG, ICON_RAIN, ICON_SNOW, ICON_STORM,
+  };
+  int i = g_weather.valid ? g_weather.condition : -1;
+  return i >= 0 && i < (int)ARRAY_LENGTH(ICON) ? ICON[i] : NULL;
 }

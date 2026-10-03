@@ -322,6 +322,8 @@
 		var c = weather.imperial ? Math.trunc((t - 32) * 5 / 9) : t;
 		return TEMP_SHADES[Math.max(0, Math.min(TEMP_SHADES.length - 1, Math.trunc((c + 3) / 3))) || 0];  // no range in the stored weather: NaN
 	});
+	// weather_icon() in weather.c, icons in ICON_SUN.. order
+	var CONDITION_ICON = ["sun", "moon", "sun_cloud", "moon_cloud", "cloud", "fog", "rain", "snow", "storm"][weather.CONDITION];
 	function stepPct() { return Math.trunc(STEPS * 100 / settings.STEP_GOAL); }
 	// BANDS in aqi.c
 	var AQI = weather.AQI === undefined ? -1 : weather.AQI;
@@ -532,7 +534,9 @@
 			var s = { a0: SIDE[k], a1: SIDE[k] + DIR[k] * 45, r: g.COMP_R, t: g.COMP_T };
 			var id = settings[k];
 			if (id === 1) bar(s, stepPct(), C.green, String(STEPS), "runner");
-			if (id === 2) rangeGauge(s, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°", TEMP_COLOR);
+			// comp_temp_draw: round has no gauge, the conditions icon leads the value
+			if (id === 2 && g.round && CONDITION_ICON) iconText(s, CONDITION_ICON, temp(weather.TEMP) + "°", C.white);
+			else if (id === 2) rangeGauge(s, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°", TEMP_COLOR);
 			if (isApi(id)) apiCorner(s, apiView(id - API_ID));
 			if (id === 3) battery(s);
 			if (id === 4) bar(s, weather.RAIN, C.picton, weather.RAIN + "%", "umbrella");
@@ -639,9 +643,9 @@
 				text(AQI >= 0 ? String(AQI) : "--", [c[0], c[1] - 1], ST, C.white, 0);
 				text("AQI", [c[0], c[1] + SL], SS, C.white, 0);
 			},
-			// conditions() in center.c, icons in ICON_SUN.. order
+			// conditions() in center.c
 			12: function (c) {
-				var name = ["sun", "moon", "sun_cloud", "moon_cloud", "cloud", "fog", "rain", "snow", "storm"][weather.CONDITION];
+				var name = CONDITION_ICON;
 				var col = scheme === SCHEME_ACCENT ? C.accent : C.white;
 				if (name) icon(name, c, Math.trunc(7 * g.SUB_R / 4), col);
 				else text("--", c, ST, col, 0);

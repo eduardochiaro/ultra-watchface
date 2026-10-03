@@ -15,13 +15,10 @@ void center_gauge(GContext *ctx, GPoint c, int pct, GColor fill) {
 
 // Conditions now as one icon, no ring: text color, the accent in that scheme.
 static void conditions(GContext *ctx, GPoint c) {
-  static const char *const ICON[] = {
-    ICON_SUN, ICON_MOON, ICON_SUN_CLOUD, ICON_MOON_CLOUD, ICON_CLOUD, ICON_FOG, ICON_RAIN, ICON_SNOW, ICON_STORM,
-  };
-  int i = g_weather.valid ? g_weather.condition : -1;
+  const char *icon = weather_icon();
   // Any bright color themes to the accent; white stays the text color.
   GColor color = g_settings.scheme == SCHEME_ACCENT ? GColorChromeYellow : GColorWhite;
-  if (i >= 0 && i < (int)ARRAY_LENGTH(ICON)) text_draw(ctx, ICON[i], c, 7 * SUB_R / 4, color);  // 28px on emery
+  if (icon) text_draw(ctx, icon, c, 7 * SUB_R / 4, color);  // 28px on emery
   else text_draw(ctx, "--", c, SUB_TEXT, color);
 }
 

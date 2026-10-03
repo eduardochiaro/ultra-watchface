@@ -37,6 +37,14 @@ void comp_temp_draw(GContext *ctx, const Slot *s) {
   char min[8] = "", max[8] = "", now[8] = "--";
   uint8_t fill[STOPS];
   int pct = temp_range(min, max, now);
+#if defined(PBL_PLATFORM_GABBRO)
+  // No gauge on gabbro: the conditions icon leads the value.
+  const char *icon = weather_icon();
+  if (icon) {
+    comp_icon_text(ctx, s, icon, GColorWhite, now);
+    return;
+  }
+#endif
   temp_shades(fill);
   comp_range_draw(ctx, s, pct, min, max, now, fill, STOPS);
 }

@@ -72,7 +72,7 @@ assert.ok(svg.indexOf('viewBox="0 0 260 260"') > 0, 'gabbro geometry');
 assert.ok(svg.indexOf('fill="#ffffff"') > 0, 'white scheme background');
 assert.ok(svg.indexOf('>6240</text>') > 0, 'steps label');
 assert.ok(svg.indexOf('r="102"') > 0, 'gabbro dial');
-assert.ok(/font-size="18.57"[^>]*>21°<\/text>/.test(svg), 'gabbro temp corner: just now, on the arc');
+assert.ok(/font-size="15.71"[^>]*>21°<\/text>/.test(svg) && svg.split(ctx.ICONS.sun_cloud).length - 1 === 2, 'gabbro temp corner: the conditions icon and now, no gauge');
 assert.ok(/font-size="15.71"[^>]*>82%<\/text>/.test(svg), 'gabbro battery: value leads the bar');
 assert.ok(svg.indexOf('>PB</text>') > 0 && svg.indexOf('>290</text>') > 0 && svg.indexOf(ctx.ICONS.sun_cloud) > 0, 'default subdials: text, elevation, weather');
 assert.ok(/>(SUN|MON|TUE|WED|THU|FRI|SAT)<\/text>/.test(svg), 'calendar weekday');
