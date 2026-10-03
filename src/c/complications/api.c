@@ -43,6 +43,8 @@ bool api_handle_message(DictionaryIterator *iter) {
   return true;
 }
 
+static const uint8_t FILL = GColorChromeYellowARGB8;  // a gauge's arc
+
 static const char *api_text(const Api *a) {
   return a->text[0] ? a->text : "--";  // nothing received yet
 }
@@ -54,7 +56,7 @@ void comp_api_draw(GContext *ctx, const Slot *s, int i) {
   if (a->type == API_GAUGE) {
     char buf[sizeof(a->name) + sizeof(a->text)];
     snprintf(buf, sizeof(buf), "%s%s%s", a->name, a->name[0] ? " " : "", api_text(a));
-    comp_range_draw(ctx, s, a->pct, a->min, a->max, buf);
+    comp_range_draw(ctx, s, a->pct, a->min, a->max, buf, &FILL, 1);
   }
   else if (a->type == API_BAR) comp_fill_gauge(ctx, s, a->pct, GColorChromeYellow, COMP_TRACK, api_text(a), a->name);
   else comp_icon_text(ctx, s, a->name, GColorChromeYellow, api_text(a));
@@ -64,7 +66,7 @@ void center_api_draw(GContext *ctx, GPoint c, int i) {
   const Api *a = &s_api[i];
   int inner = 2 * SUB_R - SUB_T - 4;  // inside the ring
   if (a->type == API_GAUGE) {
-    center_range_draw(ctx, c, a->pct, a->min, a->max, api_text(a), a->name);
+    center_range_draw(ctx, c, a->pct, a->min, a->max, api_text(a), a->name, &FILL, 1);
   } else if (a->type == API_BAR) {
     // The value in the ring, the name in its gap.
     center_gauge(ctx, c, a->pct, GColorChromeYellow);

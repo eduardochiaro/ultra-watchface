@@ -238,7 +238,8 @@
 	var g = GEO[state.platform] || GEO.emery;
 	var C = { black: "#000000", white: "#FFFFFF", dg: "#555555", lg: "#AAAAAA", track: "#000055", green: "#00FF00",
 		accent: "#FFAA00", picton: "#55AAFF", red: "#FF0000", celeste: "#AAFFFF", melon: "#FFAAAA",
-		candy: "#AA0000", rose: "#550000", cyan: "#00FFFF" };
+		candy: "#AA0000", rose: "#550000", cyan: "#00FFFF",
+		forest: "#00AA00", yellow: "#FFFF00", coral: "#FF5555" };
 
 	function $(id) { return document.getElementById(id); }
 
@@ -267,6 +268,7 @@
 			gray = true;
 		}
 		if (light && gray) v = [3 - v[0], 3 - v[0], 3 - v[0]];
+		else if (light && v.join() === "3,3,0") v = [3, 2, 0];  // yellow washes out
 		return css(v);
 	}
 
@@ -280,16 +282,23 @@
 		var tenths = Math.trunc(settings.UNITS === 1 ? WALKED_M * 10 / 1609 : WALKED_M / 100);
 		return Math.trunc(tenths / 10) + "." + tenths % 10;
 	}
+	// temp_shades() in temp.c: a shade per 3°C, 12 samples from today's min to its max
+	var TEMP_SHADES = ["#0055FF", "#00AAFF", "#00FFFF", "#00FFAA", "#00FF55", "#00FF00", "#55FF00", "#AAFF00", "#FFFF00", "#FFAA00", "#FF5500", "#FF0000"];
+	var TEMP_COLOR = TEMP_SHADES.map(function (_, i) {
+		var t = weather.TEMP_MIN + Math.trunc((weather.TEMP_MAX - weather.TEMP_MIN) * (2 * i + 1) / 24);
+		var c = weather.imperial ? Math.trunc((t - 32) * 5 / 9) : t;
+		return TEMP_SHADES[Math.max(0, Math.min(TEMP_SHADES.length - 1, Math.trunc((c + 3) / 3))) || 0];  // no range in the stored weather: NaN
+	});
 	function stepPct() { return Math.trunc(STEPS * 100 / settings.STEP_GOAL); }
-	// aqi_color() in aqi.c, elevation_text() in elevation.c
+	// BANDS in aqi.c
 	var AQI = weather.AQI === undefined ? -1 : weather.AQI;
-	var AQI_COLOR = AQI < 0 ? "#FFFFFF" : [[50, "#00FF00"], [100, "#FFFF00"], [150, "#FF5500"], [200, "#FF0000"], [300, "#AA00FF"], [Infinity, "#550000"]]
-		.filter(function (b) { return AQI <= b[0]; })[0][1];
+	var AQI_BANDS = [[50, "#00FF00"], [100, "#FFFF00"], [150, "#FF5500"], [200, "#FF0000"], [300, "#AA00FF"], [Infinity, "#AA0000"]];
+	// The band v is in, -1 for unknown
+	function bandAt(v, bands) { return v < 0 ? -1 : bands.findIndex(function (b) { return v <= b[0]; }); }
 	var HUM = weather.HUMIDITY === undefined ? -1 : weather.HUMIDITY;
-	// uv_color() in uv.c
+	// BANDS in uv.c
 	var UV = weather.UV === undefined ? -1 : weather.UV;
-	var UV_COLOR = UV < 0 ? "#FFFFFF" : [[2, "#00FF00"], [5, "#FFFF00"], [7, "#FF5500"], [10, "#FF0000"], [Infinity, "#AA00FF"]]
-		.filter(function (b) { return UV <= b[0]; })[0][1];
+	var UV_BANDS = [[2, "#00FF00"], [5, "#FFFF00"], [7, "#FF5500"], [10, "#FF0000"], [Infinity, "#AA00FF"]];
 	// sun_known(), sun_time() in sun.c
 	var SUN = weather.SUNRISE !== weather.SUNSET;
 	// ponytail: always 24h; the 12h setting lives on the watch
@@ -381,6 +390,13 @@
 			sarc(s, 0, 100, C.track);
 			if (pct > 0) sarc(s, left, left ? 100 - pct : pct, c);
 		}
+		// shaded_arc(): each shade runs on to pct, over the one before
+		function shadedArc(s, flip, pct, cols) {
+			cols.forEach(function (c, i) {
+				var p = Math.trunc(i * 100 / cols.length);
+				if (p < pct && (!i || c !== cols[i - 1])) sarc(s, flip ? 100 - p : p, flip ? 100 - pct : pct, c);
+			});
+		}
 		// comp_icon(): toward the corner; round: along the arc at its left end, which is trimmed.
 		// ic: an icon's name, or { name } for an API complication's, drawn as text
 		function iconWidth(ic) { return ic.name === undefined ? g.ICON : ic.name.length * g.TEXT / 0.7 * 0.6; }
@@ -407,14 +423,25 @@
 			along(label, at(s, 50), s.r, fitCap(label, g.TEXT + 2, slen(s)), C.white);
 			compIcon(s, ic, c);
 		}
-		// comp_value_gauge: caption on the end, value by the middle; round: both lead the bar
-		function valueGauge(s, pct, c, caption, value) {
-			if (g.round) return bar(s, pct, c, caption + " " + value);
-			bar(s, pct, c, caption);
-			along(value, at(s, 50), s.r + g.THUMB, g.TEXT + 2, C.white);
+		// band_sections(): a section per band, 2px apart, lit in their own colors up to v's band
+		function sections(a0, a1, r, t, flip, v, bands, cen) {
+			var n = bands.length, lit = bandAt(v, bands), span = a1 - a0;
+			var ins = (span > 0 ? 1 : -1) * (t + 2) / 2 / r * 180 / Math.PI;  // its cap and half the gap
+			bands.forEach(function (b, i) {
+				var j = flip ? n - 1 - i : i;
+				stroke(arc(r, a0 + span * j / n + ins, a0 + span * (j + 1) / n - ins, cen), i <= lit ? b[1] : C.track, t);
+			});
+		}
+		// comp_band_draw: caption on the end, value by the middle; round: both lead the sections
+		function bandGauge(s0, v, bands, caption) {
+			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s), value = v >= 0 ? String(v) : "--";
+			var label = g.round ? caption + " " + value : caption;
+			endLabel(s, left, label, fitCap(label, g.TEXT, slen(s) / 2));
+			sections(s.a0, s.a1, s.r, s.t, left, v, bands);
+			if (!g.round) along(value, at(s0, 50), s0.r + g.THUMB, g.TEXT + 2, C.white);
 		}
 		// comp_range_draw: min on the left end, max on the right, thumb at pct (< 0: bare track), value centered
-		function rangeGauge(s0, pct, min, max, value) {
+		function rangeGauge(s0, pct, min, max, value, cols) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, lo = leftEnd(s), cap = fitCap(value, g.TEXT + 2, slen(s0));
 			if (g.round) return along(value, at(s, 50), s.r, cap, C.white);  // no gauge, just the value
 			if (pct < 0) {
@@ -422,7 +449,7 @@
 			} else {
 				endLabel(s, lo, min);
 				endLabel(s, 100 - lo, max);
-				sarc(s, 0, 100, C.accent);
+				shadedArc(s, lo, 100, cols);
 				dot(s, lo ? 100 - pct : pct, s.t / 2 + 2);
 			}
 			along(value, at(s, 50), s.r + g.THUMB, cap, C.white);
@@ -435,18 +462,19 @@
 		// comp_api_draw: text like heart rate, bar like rain, the header for an icon; gauge like temperature, "HEAD value"
 		function apiCorner(s, a) {
 			var name = { name: a.name };
-			if (a.type === 2) rangeGauge(s, a.pct, a.min, a.max, (a.name ? a.name + " " : "") + a.text);
+			if (a.type === 2) rangeGauge(s, a.pct, a.min, a.max, (a.name ? a.name + " " : "") + a.text, [C.accent]);
 			else if (a.type === 1) bar(s, a.pct, C.accent, a.text, name);
 			else iconText(s, name, a.text, C.accent);
 		}
 
-		// comp_battery_draw: full bar, label centered outside
-		function battery(s) {
-			if (g.round) return bar(s, BATTERY, BATTERY <= 20 ? C.red : C.accent, BATTERY + "%");
-			var left = leftEnd(s);
+		// comp_battery_draw: like bar(), "BOLT 82% BAR", the bolt in its own color
+		function batteryColor() { return BATTERY > 70 ? C.green : BATTERY < 15 ? C.red : C.accent; }  // level_color()
+		function battery(s0) {
+			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
+			compIcon(s, "bolt", C.white);
+			endLabel(s, left, BATTERY + "%");
 			sarc(s, 0, 100, C.track);
-			sarc(s, left, left ? 100 - BATTERY : BATTERY, BATTERY <= 20 ? C.red : C.accent);
-			along(BATTERY + "%", at(s, 50), s.r + g.THUMB, g.TEXT + 2, C.white);
+			if (BATTERY > 0) sarc(s, left, left ? 100 - BATTERY : BATTERY, batteryColor());
 		}
 		// comp_calendar_draw: weekday outside, yesterday/today/tomorrow boxes
 		function calendar(s0) {
@@ -455,11 +483,11 @@
 			if (g.round) endLabel(s, left, DAYS[now.getDay()]);
 			else along(DAYS[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
 			s.t = g.TEXT + 5;
-			var today = ink(C.accent), step = g.round ? 34 : 22, half = g.round ? 14 : 9;
+			var today = ink(C.melon), step = g.round ? 34 : 22, half = g.round ? 14 : 9;
 			[-1, 0, 1].forEach(function (d) {
 				var p = 50 + (left ? -d : d) * step;
 				// ponytail: square ends; the watch rounds the corners by 2px
-				out.push('<path d="' + arc(s.r, at(s, p - half), at(s, p + half)) + '" fill="none" stroke="' + T(d ? C.dg : C.accent) + '" stroke-width="' + s.t + '"/>');
+				out.push('<path d="' + arc(s.r, at(s, p - half), at(s, p + half)) + '" fill="none" stroke="' + T(d ? C.dg : C.melon) + '" stroke-width="' + s.t + '"/>');
 				along(String(new Date(now.getFullYear(), now.getMonth(), now.getDate() + d).getDate()), at(s, p), s.r, g.TEXT, d ? C.lg : today);
 			});
 		}
@@ -471,7 +499,7 @@
 			var s = { a0: SIDE[k], a1: SIDE[k] + DIR[k] * 45, r: g.COMP_R, t: g.COMP_T };
 			var id = settings[k];
 			if (id === 1) bar(s, stepPct(), C.green, String(STEPS), "runner");
-			if (id === 2) rangeGauge(s, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°");
+			if (id === 2) rangeGauge(s, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°", TEMP_COLOR);
 			if (isApi(id)) apiCorner(s, apiView(id - API_ID));
 			if (id === 3) battery(s);
 			if (id === 4) bar(s, weather.RAIN, C.picton, weather.RAIN + "%", "umbrella");
@@ -479,9 +507,9 @@
 			if (id === 13) bar(s, HUM, C.cyan, HUM >= 0 ? HUM + "%" : "--", "drop");
 			if (id === 14) along(settings["TEXT_" + k.slice(5)], at(s, 50), s.r, fitCap(settings["TEXT_" + k.slice(5)], g.TEXT + 2, slen(s)), C.white);
 			if (id === 8) iconText(s, "heart", BPM + " BPM", C.red);
-			if (id === 9) bar(s, stepPct(), C.accent, distance() + (settings.UNITS === 1 ? "mi" : "km"), "runner");
-			if (id === 7) valueGauge(s, AQI >= 0 ? Math.trunc(AQI * 100 / 300) : 0, AQI_COLOR, "AQI", AQI >= 0 ? String(AQI) : "--");
-			if (id === 11) valueGauge(s, UV >= 0 ? Math.trunc(UV * 100 / 11) : 0, UV_COLOR, "UV", UV >= 0 ? String(UV) : "--");
+			if (id === 9) bar(s, stepPct(), C.forest, distance() + (settings.UNITS === 1 ? "mi" : "km"), "runner");
+			if (id === 7) bandGauge(s, AQI, AQI_BANDS, "AQI");
+			if (id === 11) bandGauge(s, UV, UV_BANDS, "UV");
 			if (id === 25) iconText(s, "wind", wind() >= 0 ? wind() + (settings.UNITS === 1 ? "mph" : "km/h") + " " + windFrom() : "--", C.picton);
 			if (id === 10) iconText(s, "arrow", elevation() + (settings.UNITS === 1 ? "ft" : "m"), C.red);
 			// comp_beat_draw: like the heart, a big @ for an icon
@@ -492,7 +520,7 @@
 					text("@", corner(s, 4 + g.ICON / 2), g.ICON - 4, C.red, 0);
 				}
 			}
-			if (id === 23) iconText(s, "sun", SUN ? "\u25B4" + sunTime(weather.SUNRISE) + " \u25BE" + sunTime(weather.SUNSET) : "--", C.accent);
+			if (id === 23) iconText(s, "sun", SUN ? "\u25B4" + sunTime(weather.SUNRISE) + " \u25BE" + sunTime(weather.SUNSET) : "--", C.yellow);
 		}
 
 		// draw_dial
@@ -512,6 +540,12 @@
 
 		// center_draw: a subdial per CENTER_* setting, rings open at the bottom from -120° to 120°
 		function subArc(c, a, b, col) { stroke(arc(g.SUB_R, a, b, c), col, 3); }
+		function subShaded(c, pct, cols) {
+			cols.forEach(function (col, i) {
+				var p = Math.trunc(i * 100 / cols.length);
+				if (p < pct && (!i || col !== cols[i - 1])) subArc(c, -120 + 2.4 * p, -120 + 2.4 * pct, col);
+			});
+		}
 		function gauge(c, pct, col) {
 			subArc(c, -120, 120, C.track);
 			pct = clamp(pct);
@@ -522,11 +556,11 @@
 		// center_fit_text: `cap` at most, shrunk to fit `width`
 		function fit(t, p, cap, width, col) { if (t) text(t, p, Math.min(cap, width * 0.7 / (t.length * 0.6)), col, 0); }
 		// center_range_draw: min and max under the value, a name above it
-		function subRange(c, pct, min, max, value, name) {
+		function subRange(c, pct, min, max, value, name, cols) {
 			if (pct < 0) {
 				subArc(c, -120, 120, C.track);
 			} else {
-				subArc(c, -120, 120, C.accent);
+				subShaded(c, 100, cols);
 				thumb(c, pct, C.white);
 				if (min.length <= 3 && max.length <= 3) {
 					text(min, [c[0] - 7, c[1] + SL], SS, C.lg, 0);
@@ -538,7 +572,7 @@
 		}
 		// center_api_draw
 		function apiSubdial(c, a) {
-			if (a.type === 2) return subRange(c, a.pct, a.min, a.max, a.text, a.name);
+			if (a.type === 2) return subRange(c, a.pct, a.min, a.max, a.text, a.name, [C.accent]);
 			if (a.type === 1) {
 				gauge(c, a.pct, C.accent);
 				fit(a.text, [c[0], c[1] - 1], ST + 2, INNER, C.white);
@@ -551,7 +585,7 @@
 			// center_custom_draw: up to 4 characters, as big as fits across the ring
 			14: function (c, t) { fit(t, c, Math.trunc((g.SUB_R + 2) * 4 / 5), 2 * g.SUB_R, C.white); },
 			2: function (c) {
-				subRange(c, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°");
+				subRange(c, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°", null, TEMP_COLOR);
 			},
 			4: function (c) {
 				gauge(c, weather.RAIN, C.picton);
@@ -566,10 +600,10 @@
 				icon("drop", [c[0] - 2, c[1] + SL], 9, C.cyan);
 				text("%", [c[0] + 5, c[1] + SL + 2], SS - 2, C.white, 0);
 			},
-			// US AQI in its EPA band color, 0..300 around the ring
+			// center_band_draw: US AQI, its EPA bands around the ring
 			7: function (c) {
-				gauge(c, AQI * 100 / 300, AQI_COLOR);
-				text(AQI >= 0 ? String(AQI) : "--", [c[0], c[1] - 1], ST, AQI_COLOR, 0);
+				sections(-120, 120, g.SUB_R, 3, false, AQI, AQI_BANDS, c);
+				text(AQI >= 0 ? String(AQI) : "--", [c[0], c[1] - 1], ST, C.white, 0);
 				text("AQI", [c[0], c[1] + SL], SS, C.white, 0);
 			},
 			// conditions() in center.c, icons in ICON_SUN.. order
@@ -580,8 +614,8 @@
 				else text("--", c, ST, col, 0);
 			},
 			11: function (c) {
-				gauge(c, UV * 100 / 11, UV_COLOR);
-				text(UV >= 0 ? String(UV) : "--", [c[0], c[1] - 1], ST, UV_COLOR, 0);
+				sections(-120, 120, g.SUB_R, 3, false, UV, UV_BANDS, c);
+				text(UV >= 0 ? String(UV) : "--", [c[0], c[1] - 1], ST, C.white, 0);
 				text("UV", [c[0], c[1] + SL], SS, C.white, 0);
 			},
 			// Tear-off page: red header above a flat cut, black on white below in any scheme
@@ -594,7 +628,7 @@
 				text(String(now.getDate()), [c[0], c[1] + Math.trunc((cut + dr) / 2)], ST + 2, "!" + C.black, 0);
 			},
 			3: function (c) {
-				gauge(c, BATTERY, BATTERY <= 20 ? C.red : C.green);
+				gauge(c, BATTERY, batteryColor());
 				text(String(BATTERY), [c[0], c[1] - 1], ST + 1, C.white, 0);
 				icon("bolt", [c[0], c[1] + SL + 1], 12, C.white);
 			},
@@ -604,18 +638,18 @@
 				text(String(BPM), [c[0], c[1] + Math.trunc(g.SUB_R / 2) + 1], ST, C.white, 0);
 			},
 			9: function (c) {
-				gauge(c, stepPct(), C.accent);
+				gauge(c, stepPct(), C.forest);
 				text(settings.UNITS === 1 ? "MI" : "KM", [c[0], c[1] - 7], SS - 1, C.white, 0);
 				text(distance(), [c[0], c[1] + 2], ST + 1, C.white, 0);
-				icon("runner", [c[0], c[1] + SL + 2], 10, C.accent);
+				icon("runner", [c[0], c[1] + SL + 2], 10, C.forest);
 			},
 			// center_sun_draw: the day around the ring, the next of sunrise and sunset in the middle
 			23: function (c) {
 				var m = now.getHours() * 60 + now.getMinutes(), up = weather.SUNRISE, down = weather.SUNSET, day = SUN && m >= up && m < down;
-				gauge(c, day ? (m - up) * 100 / (down - up) : 0, C.accent);
+				gauge(c, day ? (m - up) * 100 / (down - up) : 0, C.yellow);
 				if (day) thumb(c, (m - up) * 100 / (down - up), C.white);
 				fit(SUN ? sunTime(day ? down : up) : "--", [c[0], c[1] - 1], ST, INNER, C.white);
-				icon(day ? "down" : "up", [c[0], c[1] + SL], SS + 1, C.accent);
+				icon(day ? "down" : "up", [c[0], c[1] + SL], SS + 1, C.yellow);
 			},
 			// center_beat_draw: the beats, a small @ under them
 			24: function (c) {

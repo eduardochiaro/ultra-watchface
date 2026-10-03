@@ -51,6 +51,8 @@ GColor theme(GColor c) {
     gray = true;
   }
   if (theme_light() && gray) c.r = c.g = c.b = 3 - c.r;
+  // Bright yellow washes out on a light background.
+  else if (theme_light() && gcolor_equal(c, GColorYellow)) c = GColorChromeYellow;
   return c;
 }
 

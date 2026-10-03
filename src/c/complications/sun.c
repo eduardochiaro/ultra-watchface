@@ -21,7 +21,7 @@ void comp_sun_draw(GContext *ctx, const Slot *s) {
     sun_time(down, sizeof(down), g_weather.sunset);
     snprintf(buf, sizeof(buf), ICON_UP "%s " ICON_DOWN "%s", up, down);
   }
-  comp_icon_text(ctx, s, ICON_SUN, GColorChromeYellow, buf);
+  comp_icon_text(ctx, s, ICON_SUN, GColorYellow, buf);
 }
 
 // The day around the ring, a thumb at now; the next of the two in the middle,
@@ -34,15 +34,15 @@ void center_sun_draw(GContext *ctx, GPoint c) {
     struct tm *tm = localtime(&t);
     int now = tm->tm_hour * 60 + tm->tm_min, up = g_weather.sunrise, down = g_weather.sunset;
     day = now >= up && now < down;
-    center_gauge(ctx, c, day ? (now - up) * 100 / (down - up) : 0, GColorChromeYellow);
+    center_gauge(ctx, c, day ? (now - up) * 100 / (down - up) : 0, GColorYellow);
     if (day) {
       Slot s = center_ring(c);
       slot_dot(ctx, &s, (now - up) * 100 / (down - up), SUB_T / 2 + 1, GColorWhite, GColorBlack);
     }
     sun_time(buf, sizeof(buf), day ? down : up);
   } else {
-    center_gauge(ctx, c, 0, GColorChromeYellow);
+    center_gauge(ctx, c, 0, GColorYellow);
   }
   center_fit_text(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT, 2 * SUB_R - SUB_T - 4, GColorWhite);
-  text_draw(ctx, day ? ICON_DOWN : ICON_UP, GPoint(c.x, c.y + SUB_LOW), SUB_SMALL + 1, GColorChromeYellow);
+  text_draw(ctx, day ? ICON_DOWN : ICON_UP, GPoint(c.x, c.y + SUB_LOW), SUB_SMALL + 1, GColorYellow);
 }

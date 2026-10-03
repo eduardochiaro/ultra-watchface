@@ -7,12 +7,12 @@ static const Band BANDS[] = {
   { 10, GColorRedARGB8 }, { INT16_MAX, GColorPurpleARGB8 },
 };
 
-// 0..11 along the bar in the WHO band's color, laid out like the AQI.
+// A section per WHO band, laid out like the AQI.
 void comp_uv_draw(GContext *ctx, const Slot *s) {
-  comp_band_draw(ctx, s, g_weather.valid ? g_weather.uv : -1, 11, BANDS, "UV");
+  comp_band_draw(ctx, s, g_weather.valid ? g_weather.uv : -1, BANDS, "UV");
 }
 
-// UV index, 0..11 around the ring in its WHO band color.
+// UV index: its WHO bands around the ring.
 void center_uv_draw(GContext *ctx, GPoint c) {
-  center_band_draw(ctx, c, g_weather.valid ? g_weather.uv : -1, 11, BANDS, "UV");
+  center_band_draw(ctx, c, g_weather.valid ? g_weather.uv : -1, BANDS, "UV");
 }

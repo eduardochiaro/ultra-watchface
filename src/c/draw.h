@@ -70,6 +70,7 @@ int text_width(GContext *ctx, const char *txt, int size);
 
 // Maps a color from the black scheme (what all drawing code is written in) to
 // the active scheme. The draw helpers apply it; direct graphics_* calls must too.
+// On a light background grays are inverted and bright yellow is darkened.
 // Accent scheme: black is the background, grays go dark or light to contrast
 // with it, bright colors become the accent and dark ones a gray track.
 GColor theme(GColor c);

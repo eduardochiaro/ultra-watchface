@@ -62,22 +62,20 @@ void comp_fill_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, GColor 
   if (pct > 0) slot_arc(ctx, &b, left, left ? 100 - pct : pct, fill);
 }
 
-// Bar captioned at its end, the value curved by its middle. Gabbro has no room
-// beside the arc: caption and value both lead the bar, "AQI 42 BAR".
-static void comp_value_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, const char *caption,
-                             const char *value) {
-#if defined(PBL_PLATFORM_GABBRO)
-  char buf[16];
-  snprintf(buf, sizeof(buf), "%s %s", caption, value);
-  comp_fill_gauge(ctx, s, pct, fill, COMP_TRACK, buf, NULL);
-#else
-  comp_fill_gauge(ctx, s, pct, fill, COMP_TRACK, caption, NULL);
-  text_draw_along(ctx, value, slot_point(s, 50, COMP_THUMB), s->center, COMP_TEXT + 2, GColorWhite);
-#endif
+// Each shade runs on to `pct` over the one before, so its cap rounds the join.
+// The arc from its start to `pct` in `n` shades spread evenly over the whole
+// arc; `flip`: it starts at the 100 end.
+static void shaded_arc(GContext *ctx, const Slot *s, bool flip, int pct, const uint8_t *fill, int n) {
+  for (int i = 0; i < n; i++) {
+    int p = i * 100 / n;
+    if (p >= pct) break;
+    if (i && fill[i] == fill[i - 1]) continue;
+    slot_arc(ctx, s, flip ? 100 - p : p, flip ? 100 - pct : pct, (GColor){ .argb = fill[i] });
+  }
 }
 
 void comp_range_draw(GContext *ctx, const Slot *slot, int pct, const char *min, const char *max,
-                     const char *value) {
+                     const char *value, const uint8_t *fill, int n) {
   Slot b = *slot, *s = &b;
   int size = comp_fit(ctx, value, COMP_TEXT + 2, slot_len(slot));
 #if defined(PBL_PLATFORM_GABBRO)
@@ -89,7 +87,7 @@ void comp_range_draw(GContext *ctx, const Slot *slot, int pct, const char *min, 
     int lo = slot_left_end(s);
     comp_end_label(ctx, s, lo, min);
     comp_end_label(ctx, s, 100 - lo, max);
-    slot_arc(ctx, s, 0, 100, GColorChromeYellow);
+    shaded_arc(ctx, s, lo, 100, fill, n);
     slot_dot(ctx, s, lo ? 100 - pct : pct, s->thickness / 2 + 2, GColorWhite, GColorBlack);
   }
   // Centered, not on the thumb: near min/max it would run off the arc end.
@@ -98,12 +96,12 @@ void comp_range_draw(GContext *ctx, const Slot *slot, int pct, const char *min, 
 }
 
 void center_range_draw(GContext *ctx, GPoint c, int pct, const char *min, const char *max,
-                       const char *value, const char *name) {
+                       const char *value, const char *name, const uint8_t *fill, int n) {
   Slot s = center_ring(c);
   if (pct < 0) {
     slot_arc(ctx, &s, 0, 100, COMP_TRACK);
   } else {
-    slot_arc(ctx, &s, 0, 100, GColorChromeYellow);
+    shaded_arc(ctx, &s, false, 100, fill, n);
     slot_dot(ctx, &s, pct, SUB_T / 2 + 1, GColorWhite, GColorBlack);
     // The ring's gap fits about 3 characters a side.
     if (strlen(min) <= 3 && strlen(max) <= 3) {
@@ -115,24 +113,50 @@ void center_range_draw(GContext *ctx, GPoint c, int pct, const char *min, const 
   center_fit_text(ctx, value, GPoint(c.x, c.y + (name ? 2 : -1)), SUB_TEXT, 2 * SUB_R - SUB_T - 4, GColorWhite);
 }
 
-static GColor band_color(int v, const Band *bands) {
-  if (v < 0) return GColorWhite;
-  while (v > bands->to) bands++;
-  return (GColor){ .argb = bands->argb };
+// A section per band, 2px apart: lit in their own colors up to the band `v` is
+// in, the rest track. `flip`: the first is at the 100 end.
+static void band_sections(GContext *ctx, const Slot *s, bool flip, int v, const Band *bands) {
+  int n = 1, lit = -1;
+  while (bands[n - 1].to != INT16_MAX) n++;
+  if (v >= 0) {
+    lit = 0;
+    while (v > bands[lit].to) lit++;
+  }
+  int32_t span = s->a1 - s->a0;
+  int32_t inset = span * (s->thickness + 2) / (2 * slot_len(s));  // its cap and half the gap
+  for (int i = 0; i < n; i++) {
+    int at = flip ? n - 1 - i : i;
+    Slot b = *s;
+    b.a0 = s->a0 + span * at / n + inset;
+    b.a1 = s->a0 + span * (at + 1) / n - inset;
+    slot_arc(ctx, &b, 0, 100, i <= lit ? (GColor){ .argb = bands[i].argb } : COMP_TRACK);
+  }
 }
 
-void comp_band_draw(GContext *ctx, const Slot *s, int v, int max, const Band *bands, const char *caption) {
-  char buf[12] = "--";
-  if (v >= 0) snprintf(buf, sizeof(buf), "%d", v);
-  comp_value_gauge(ctx, s, v >= 0 ? v * 100 / max : 0, band_color(v, bands), caption, buf);
+// Sections captioned at their left end, the value curved by the middle. Gabbro
+// has no room beside the arc: caption and value both lead, "AQI 42 SECTIONS".
+void comp_band_draw(GContext *ctx, const Slot *slot, int v, const Band *bands, const char *caption) {
+  char value[12] = "--";
+  if (v >= 0) snprintf(value, sizeof(value), "%d", v);
+  Slot s = *slot;
+  int left = slot_left_end(&s);
+#if defined(PBL_PLATFORM_GABBRO)
+  char label[16];
+  snprintf(label, sizeof(label), "%s %s", caption, value);
+#else
+  const char *label = caption;
+  text_draw_along(ctx, value, slot_point(slot, 50, COMP_THUMB), slot->center, COMP_TEXT + 2, GColorWhite);
+#endif
+  end_label(ctx, &s, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&s) / 2));
+  band_sections(ctx, &s, left, v, bands);
 }
 
-void center_band_draw(GContext *ctx, GPoint c, int v, int max, const Band *bands, const char *caption) {
-  GColor color = band_color(v, bands);
+void center_band_draw(GContext *ctx, GPoint c, int v, const Band *bands, const char *caption) {
   char buf[12] = "--";
   if (v >= 0) snprintf(buf, sizeof(buf), "%d", v);
-  center_gauge(ctx, c, v * 100 / max, color);
-  text_draw(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT, color);
+  Slot s = center_ring(c);
+  band_sections(ctx, &s, false, v, bands);
+  text_draw(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT, GColorWhite);
   text_draw(ctx, caption, GPoint(c.x, c.y + SUB_LOW), SUB_SMALL, GColorWhite);
 }
 

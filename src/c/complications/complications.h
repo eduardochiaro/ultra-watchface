@@ -132,17 +132,18 @@ void comp_fill_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, GColor 
 // Range gauge (temp, API gauge): min and max at the ends, a thumb at pct, the
 // value by the arc's middle, where an icon would be, shrunk to fit the slot.
 // pct < 0: unknown, a bare track. Gabbro: no gauge, only the value on the arc's middle.
+// `fill` is the arc's color: `n` GColor8 argb shades spread evenly, min to max.
 void comp_range_draw(GContext *ctx, const Slot *s, int pct, const char *min, const char *max,
-                     const char *value);
+                     const char *value, const uint8_t *fill, int n);
 // Same in a subdial: min and max under the value. `name` (or NULL) goes above it.
 void center_range_draw(GContext *ctx, GPoint c, int pct, const char *min, const char *max,
-                       const char *value, const char *name);
-// A banded index (AQI, UV): a bar with a caption and the value `v` of `max`, in
-// its band's color; white and "--" for unknown (v < 0). `to` is a band's upper
-// bound, the last one INT16_MAX.
+                       const char *value, const char *name, const uint8_t *fill, int n);
+// A banded index (AQI, UV): a section per band, lit in their own colors up to
+// the band the value `v` is in, with a caption and the value; all unlit and
+// "--" for unknown (v < 0). `to` is a band's upper bound, the last one INT16_MAX.
 typedef struct { int16_t to; uint8_t argb; } Band;
-void comp_band_draw(GContext *ctx, const Slot *s, int v, int max, const Band *bands, const char *caption);
-void center_band_draw(GContext *ctx, GPoint c, int v, int max, const Band *bands, const char *caption);
+void comp_band_draw(GContext *ctx, const Slot *s, int v, const Band *bands, const char *caption);
+void center_band_draw(GContext *ctx, GPoint c, int v, const Band *bands, const char *caption);
 // No bar: an icon and a text (heart, elevation, wind).
 void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color, const char *txt);
 // Label along the arc at an end (0 or 100); trims that end of *s to make room.

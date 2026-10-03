@@ -1,7 +1,7 @@
 #include "complications.h"
 
 // Yesterday, today and tomorrow as boxes along the arc, left to right, with
-// the weekday outside. Today is in the accent, the others gray. Gabbro has no
+// the weekday outside. Today is in light red, the others gray. Gabbro has no
 // room beside the arc: the weekday leads the boxes, "WED 30 1 2".
 static const char *const DAYS[] = { "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT" };
 
@@ -25,13 +25,13 @@ void comp_calendar_draw(GContext *ctx, const Slot *slot) {
   text_draw_along(ctx, wday, slot_point(slot, 50, COMP_THUMB + 2), slot->center, COMP_TEXT + 2, GColorWhite);
 #endif
   b.thickness = COMP_TEXT + 5;
-  GColor ink = ink_on(GColorChromeYellow);  // today's digits
+  GColor ink = ink_on(GColorSunsetOrange);  // today's digits
   for (int d = -1; d <= 1; d++) {
     time_t day = now + d * SECONDS_PER_DAY;
     char buf[3];
     snprintf(buf, sizeof(buf), "%d", localtime(&day)->tm_mday);
     int pct = 50 + (left ? -d : d) * BOX_STEP;
-    slot_box(ctx, &b, pct - BOX_HALF, pct + BOX_HALF, 2, d ? GColorDarkGray : GColorChromeYellow);
+    slot_box(ctx, &b, pct - BOX_HALF, pct + BOX_HALF, 2, d ? GColorDarkGray : GColorMelon);
     text_draw_along(ctx, buf, slot_point(&b, pct, 0), b.center, COMP_TEXT, d ? GColorLightGray : ink);
   }
 }
