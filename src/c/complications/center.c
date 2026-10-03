@@ -31,6 +31,8 @@ static const Subdial SUBDIAL[COMP_COUNT] = {
   [COMP_WEATHER] = conditions, [COMP_HUMIDITY] = center_humidity_draw,
   [COMP_SUN] = center_sun_draw, [COMP_BEAT] = center_beat_draw,
   [COMP_WIND] = center_wind_draw, [COMP_CALENDAR_PLAIN] = center_calendar_plain_draw,
+  [COMP_AQI_GAUGE] = center_aqi_gauge_draw, [COMP_UV_GAUGE] = center_uv_gauge_draw,
+  [COMP_CALORIES] = center_calories_draw,
 };
 
 void center_draw(GContext *ctx, GPoint c) {

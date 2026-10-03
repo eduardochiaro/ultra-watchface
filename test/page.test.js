@@ -214,3 +214,13 @@ svg = screen();
 assert.ok(/fill="#ff0000"[^>]*>(SUN|MON|TUE|WED|THU|FRI|SAT)<\/text>/.test(svg) && !/Z" fill="#ff0000"/.test(svg), 'plain calendar');
 
 console.log('ok');
+
+// AQI and UV as range gauges, calories: corners and subdials
+load({ settings: { SLOT_TL: 27, SLOT_TR: 28, SLOT_BL: 29, CENTER_T: 27, CENTER_L: 28, CENTER_R: 29 }, weather: { AQI: 75, UV: 6 }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('>AQI 75</text>') < 0 && svg.indexOf('>1480 KCAL</text>') > 0, 'gauge corner: caption and value apart; calories corner');
+assert.ok(svg.indexOf('>500</text>') < 0 && svg.split('>AQI</text>').length - 1 === 2 && svg.split('>75</text>').length - 1 === 2, 'AQI gauge: no min and max, caption and value in corner and subdial');
+load({ settings: { SLOT_TL: 27 }, weather: { AQI: 75 }, platform: 'gabbro' });
+assert.ok(screen().indexOf('>AQI 75</text>') > 0 && screen().indexOf('stroke="#aa0000"') > 0, 'gabbro gauge corner: the value leads the arc');
+assert.ok(svg.indexOf('>75</text>') > 0 && svg.indexOf('>KCAL</text>') > 0 && svg.split(ctx.ICONS.flame).length - 1 === 2, 'gauge and calories subdials');
+assert.ok(svg.indexOf('stroke="#aa0000"') > 0 && svg.indexOf('>AQI</text>') > 0, 'every band color on the gauge, its caption in the subdial');

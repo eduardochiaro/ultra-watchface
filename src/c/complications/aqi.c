@@ -17,3 +17,12 @@ void comp_aqi_draw(GContext *ctx, const Slot *s) {
 void center_aqi_draw(GContext *ctx, GPoint c) {
   center_band_draw(ctx, c, g_weather.valid ? g_weather.aqi : -1, BANDS, "AQI");
 }
+
+// The same bands as a range gauge.
+void comp_aqi_gauge_draw(GContext *ctx, const Slot *s) {
+  comp_band_gauge_draw(ctx, s, g_weather.valid ? g_weather.aqi : -1, BANDS, 500, "AQI");
+}
+
+void center_aqi_gauge_draw(GContext *ctx, GPoint c) {
+  center_band_gauge_draw(ctx, c, g_weather.valid ? g_weather.aqi : -1, BANDS, 500, "AQI");
+}

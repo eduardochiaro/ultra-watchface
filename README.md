@@ -2,7 +2,7 @@
 
 An analog watchface for Pebble with eight complications you choose yourself. Four gauges curve around the corners, four subdials sit inside the dial, and every one is yours to swap.
 
-- **Eight slots, your pick.** Steps, distance, heart rate, battery, calendar, temperature, rain, humidity, wind, air quality, UV index, elevation, sunrise and sunset, .beat time, current weather, your own text, or a value from any JSON API.
+- **Eight slots, your pick.** Steps, distance, calories, heart rate, battery, calendar, temperature, rain, humidity, wind, air quality and UV index (as sections or a gauge), elevation, sunrise and sunset, .beat time, current weather, your own text, or a value from any JSON API.
 - **Five color schemes.** Black, White, two monochromes, or Accent: any background and accent from the watch's 64 colors.
 - **Live preview.** The settings page draws the face as you change it.
 - **No account, no API key.** Weather and air quality come from [Open-Meteo](https://open-meteo.com), refreshed every 30 minutes.
@@ -67,7 +67,7 @@ Limits:
 
 ### Good to know
 - Weather, rain, humidity, wind, air quality, UV, elevation and sunrise/sunset need location access for the Pebble app and a connection to your phone.
-- Steps, distance and heart rate come from Pebble Health, so it has to be turned on. Heart rate needs a watch with a sensor.
+- Steps, distance, calories and heart rate come from Pebble Health, so it has to be turned on. Heart rate needs a watch with a sensor.
 
 ## Development
 ```sh

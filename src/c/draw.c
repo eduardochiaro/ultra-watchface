@@ -224,12 +224,18 @@ void ray_poly(GContext *ctx, GPoint c, int32_t angle, const GPoint *pts, int n, 
   fctx_deinit_context(&f);
 }
 
-void slot_dot(GContext *ctx, const Slot *s, int pct, int r, GColor fill, GColor ring) {
-  GPoint p = slot_point(s, pct, 0);
-  graphics_context_set_fill_color(ctx, theme(ring));
-  graphics_fill_circle(ctx, p, r + 1);
-  graphics_context_set_fill_color(ctx, theme(fill));
-  graphics_fill_circle(ctx, p, r);
+// fctx, not graphics_fill_circle: that one snaps to a pixel, off the arc's centerline.
+void slot_dot(GContext *ctx, const Slot *s, int pct, int r, int edge, GColor fill, GColor ring) {
+  FPoint p = fpolar(s->center, slot_angle(s, pct), s->radius);
+  FContext f;
+  fctx_init_context(&f, ctx);
+  for (int i = 0; i < 2; i++) {
+    fctx_set_fill_color(&f, theme(i ? fill : ring));
+    fctx_begin_fill(&f);
+    fctx_plot_circle(&f, &p, INT_TO_FIXED(i ? r : r + edge));
+    fctx_end_fill(&f);
+  }
+  fctx_deinit_context(&f);
 }
 
 // Pull a box back inside the screen: the bounds on rect, the circle on round.

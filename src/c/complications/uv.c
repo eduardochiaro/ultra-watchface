@@ -16,3 +16,12 @@ void comp_uv_draw(GContext *ctx, const Slot *s) {
 void center_uv_draw(GContext *ctx, GPoint c) {
   center_band_draw(ctx, c, g_weather.valid ? g_weather.uv : -1, BANDS, "UV");
 }
+
+// The same bands as a range gauge.
+void comp_uv_gauge_draw(GContext *ctx, const Slot *s) {
+  comp_band_gauge_draw(ctx, s, g_weather.valid ? g_weather.uv : -1, BANDS, 11, "UV");
+}
+
+void center_uv_gauge_draw(GContext *ctx, GPoint c) {
+  center_band_gauge_draw(ctx, c, g_weather.valid ? g_weather.uv : -1, BANDS, 11, "UV");
+}

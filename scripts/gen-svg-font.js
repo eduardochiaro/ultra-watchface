@@ -16,7 +16,7 @@ const opentype = require('opentype.js');
 const parsePath = require('svg-path-parser');
 
 const ICONS = ['heart', 'runner', 'bolt', 'umbrella', 'arrow',
-  'sun', 'moon', 'sun_cloud', 'moon_cloud', 'cloud', 'fog', 'rain', 'snow', 'storm', 'drop', 'up', 'down', 'wind'];
+  'sun', 'moon', 'sun_cloud', 'moon_cloud', 'cloud', 'fog', 'rain', 'snow', 'storm', 'drop', 'up', 'down', 'wind', 'flame'];
 
 const [, , inPath, outPath, fontId, chars] = process.argv;
 if (!inPath || !outPath || !fontId || !chars) {

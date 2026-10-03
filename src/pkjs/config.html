@@ -237,7 +237,7 @@
 	// Last weather sent to the watch, else a sample. Health and battery live on
 	// the watch only, so the preview always samples them.
 	var weather = state.weather || { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, SUNRISE: 390, SUNSET: 1195, WIND: 14, WIND_DIR: 315, imperial: false };
-	var STEPS = 6240, BATTERY = 82, BPM = 72, WALKED_M = 3900;
+	var STEPS = 6240, BATTERY = 82, BPM = 72, WALKED_M = 3900, KCAL = 1480;
 	// Custom API complication i as the watch draws it: the last message sent for
 	// it (api.js), else a sample.
 	function apiView(i) {
@@ -338,6 +338,14 @@
 	var AQI_BANDS = [[50, "#00FF00"], [100, "#FFFF00"], [150, "#FF5500"], [200, "#FF0000"], [300, "#AA00FF"], [Infinity, "#AA0000"]];
 	// The band v is in, -1 for unknown
 	function bandAt(v, bands) { return v < 0 ? -1 : bands.findIndex(function (b) { return v <= b[0]; }); }
+	// band_pct() in complications.c: where v falls along the bands at even widths; `top` ends the last
+	function bandPct(v, bands, top) {
+		var i = bandAt(v, bands);
+		if (i < 0) return -1;
+		var lo = i ? bands[i - 1][0] : 0, hi = isFinite(bands[i][0]) ? bands[i][0] : top;
+		return Math.max(0, Math.min(100, Math.trunc((i * 100 + Math.trunc((v - lo) * 100 / (hi - lo))) / bands.length)));
+	}
+	function bandCols(bands) { return bands.map(function (b) { return b[1]; }); }
 	var HUM = weather.HUMIDITY === undefined ? -1 : weather.HUMIDITY;
 	// BANDS in uv.c
 	var UV = weather.UV === undefined ? -1 : weather.UV;
@@ -379,7 +387,7 @@
 			out.push('<path d="' + ICONS[name] + '" transform="' + (rot ? "rotate(" + f(rot) + " " + f(p[0]) + " " + f(p[1]) + ") " : "") + 'translate(' + f(p[0] - s / 2) + " " + f(p[1] - s / 2) + ") scale(" + f(s / 24) + ')" fill="' + T(c) + '"/>');
 		}
 		// draw.h: a "%" 3/4 the size, a subdial's; CORNER_PCT is a corner's
-		var SMALL_PCT = "\uE012", CORNER_PCT = g.round ? SMALL_PCT : "%";
+		var SMALL_PCT = "\uE013", CORNER_PCT = g.round ? SMALL_PCT : "%";
 		function glyphs(s) { return String(s).replace(SMALL_PCT, '<tspan font-size="75%">%</tspan>'); }
 		function text(s, p, cap, c, rot) {
 			out.push('<text x="' + f(p[0]) + '" y="' + f(p[1]) + '" font-size="' + f(cap / 0.7) + '" fill="' + T(c) +
@@ -408,7 +416,11 @@
 		function past(s, end, px) { return end === 0 ? s.a0 - deg(s, px) : s.a1 + deg(s, px); }
 		function trim(s, end, px) { if (end === 0) s.a0 += deg(s, px); else s.a1 -= deg(s, px); }
 		function sarc(s, p0, p1, c) { stroke(arc(s.r, at(s, p0), at(s, p1)), c, s.t); }
-		function dot(s, p, r) { disc(P(at(s, p), s.r), r, C.white, C.black); }
+		// slot_dot on a corner gauge: as wide as the bar, a 2px ring around it
+		function dot(s, p) {
+			var q = P(at(s, p), s.r);
+			out.push('<circle cx="' + f(q[0]) + '" cy="' + f(q[1]) + '" r="' + (s.t / 2 + 1) + '" fill="' + T(C.white) + '" stroke="' + T(C.black) + '" stroke-width="2"/>');
+		}
 		// ponytail: fixed per-glyph width; the watch measures with fctx
 		function width(str, cap) { return str.length * cap / 0.7 * 0.6; }
 		// comp_fit(): `cap`, or the largest below it at which str fits `px`
@@ -486,6 +498,16 @@
 			sections(s.a0, s.a1, s.r, s.t, left, v, bands);
 			if (!g.round) along(value, at(s0, 50), s0.r + g.THUMB, g.TEXT + 2, C.white);
 		}
+		// comp_band_gauge_draw: laid out like bandGauge, the sections one shaded arc with a thumb
+		function bandRange(s0, v, bands, top, caption) {
+			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s), value = v >= 0 ? String(v) : "--", pct = bandPct(v, bands, top);
+			var label = g.round ? caption + " " + value : caption;
+			endLabel(s, left, label, fitCap(label, g.TEXT, slen(s) / 2));
+			if (!g.round) along(value, at(s0, 50), s0.r + g.THUMB, g.TEXT + 2, C.white);
+			if (pct < 0) return sarc(s, 0, 100, C.track);
+			shadedArc(s, left, 100, bandCols(bands));
+			dot(s, left ? 100 - pct : pct);
+		}
 		// comp_range_draw: min on the left end, max on the right, thumb at pct (< 0: bare track), value centered
 		function rangeGauge(s0, pct, min, max, value, cols) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, lo = leftEnd(s), cap = fitCap(value, g.TEXT + 2, slen(s0));
@@ -496,7 +518,7 @@
 				endLabel(s, lo, min);
 				endLabel(s, 100 - lo, max);
 				shadedArc(s, lo, 100, cols);
-				dot(s, lo ? 100 - pct : pct, s.t / 2 + 2);
+				dot(s, lo ? 100 - pct : pct);
 			}
 			along(value, at(s, 50), s.r + g.THUMB, cap, C.white);
 		}
@@ -558,6 +580,9 @@
 			if (id === 9) bar(s, stepPct(), C.forest, distance() + (settings.UNITS === 1 ? "mi" : "km"), "runner");
 			if (id === 7) bandGauge(s, AQI, AQI_BANDS, "AQI");
 			if (id === 11) bandGauge(s, UV, UV_BANDS, "UV");
+			if (id === 27) bandRange(s, AQI, AQI_BANDS, 500, "AQI");
+			if (id === 28) bandRange(s, UV, UV_BANDS, 11, "UV");
+			if (id === 29) iconText(s, "flame", KCAL + " KCAL", "#FF5500");
 			if (id === 25) iconText(s, "wind", wind() >= 0 ? wind() + (settings.UNITS === 1 ? "mph" : "km/h") + " " + windFrom() : "--", C.picton);
 			if (id === 10) iconText(s, "arrow", elevation() + (settings.UNITS === 1 ? "ft" : "m"), C.red);
 			// comp_beat_draw: like the heart, a big @ for an icon
@@ -690,6 +715,15 @@
 				text(settings.UNITS === 1 ? "MI" : "KM", [c[0], c[1] - 7], SS - 1, C.white, 0);
 				text(distance(), [c[0], c[1] + 2], ST + 1, C.white, 0);
 				icon("runner", [c[0], c[1] + SL + 2], 10, C.forest);
+			},
+			// center_band_gauge_draw: no min and max
+			27: function (c) { subRange(c, bandPct(AQI, AQI_BANDS, 500), "", "", AQI >= 0 ? String(AQI) : "--", "AQI", bandCols(AQI_BANDS)); },
+			28: function (c) { subRange(c, bandPct(UV, UV_BANDS, 11), "", "", UV >= 0 ? String(UV) : "--", "UV", bandCols(UV_BANDS)); },
+			// center_calories_draw: no ring, a flame, the value under it, the unit below
+			29: function (c) {
+				icon("flame", [c[0], c[1] - g.SUB_R + 5], 10, "#FF5500");
+				fit(String(KCAL), [c[0], c[1] + 1], ST + 2, 2 * g.SUB_R - 4, C.white);
+				text("KCAL", [c[0], c[1] + SL + 2], SS - 1, C.white, 0);
 			},
 			// center_sun_draw: the day around the ring, the next of sunrise and sunset in the middle
 			23: function (c) {

@@ -37,7 +37,7 @@ void center_sun_draw(GContext *ctx, GPoint c) {
     center_gauge(ctx, c, day ? (now - up) * 100 / (down - up) : 0, GColorYellow);
     if (day) {
       Slot s = center_ring(c);
-      slot_dot(ctx, &s, (now - up) * 100 / (down - up), SUB_T / 2 + 1, GColorWhite, GColorBlack);
+      slot_dot(ctx, &s, (now - up) * 100 / (down - up), SUB_T / 2 + 1, 1, GColorWhite, GColorBlack);
     }
     sun_time(buf, sizeof(buf), day ? down : up);
   } else {

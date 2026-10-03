@@ -17,6 +17,9 @@ static const ComplicationDraw DRAW[COMP_COUNT] = {
   [COMP_SUN]     = comp_sun_draw,
   [COMP_BEAT]    = comp_beat_draw,
   [COMP_WIND]    = comp_wind_draw,
+  [COMP_AQI_GAUGE] = comp_aqi_gauge_draw,
+  [COMP_UV_GAUGE] = comp_uv_gauge_draw,
+  [COMP_CALORIES] = comp_calories_draw,
 };
 
 void complication_draw(ComplicationId id, GContext *ctx, const Slot *s) {
@@ -88,7 +91,7 @@ void comp_range_draw(GContext *ctx, const Slot *slot, int pct, const char *min, 
     comp_end_label(ctx, s, lo, min);
     comp_end_label(ctx, s, 100 - lo, max);
     shaded_arc(ctx, s, lo, 100, fill, n);
-    slot_dot(ctx, s, lo ? 100 - pct : pct, s->thickness / 2 + 2, GColorWhite, GColorBlack);
+    slot_dot(ctx, s, lo ? 100 - pct : pct, s->thickness / 2, 2, GColorWhite, GColorBlack);
   }
   // Centered, not on the thumb: near min/max it would run off the arc end.
   text_draw_along(ctx, value, slot_point(s, 50, COMP_THUMB), s->center, size, GColorWhite);
@@ -102,7 +105,7 @@ void center_range_draw(GContext *ctx, GPoint c, int pct, const char *min, const 
     slot_arc(ctx, &s, 0, 100, COMP_TRACK);
   } else {
     shaded_arc(ctx, &s, false, 100, fill, n);
-    slot_dot(ctx, &s, pct, SUB_T / 2 + 1, GColorWhite, GColorBlack);
+    slot_dot(ctx, &s, pct, SUB_T / 2 + 1, 1, GColorWhite, GColorBlack);
     // The ring's gap fits about 3 characters a side.
     if (strlen(min) <= 3 && strlen(max) <= 3) {
       text_draw(ctx, min, GPoint(c.x - 7, c.y + SUB_LOW), SUB_SMALL, GColorLightGray);
@@ -158,6 +161,54 @@ void center_band_draw(GContext *ctx, GPoint c, int v, const Band *bands, const c
   band_sections(ctx, &s, false, v, bands);
   text_draw(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT, GColorWhite);
   text_draw(ctx, caption, GPoint(c.x, c.y + SUB_LOW), SUB_SMALL, GColorWhite);
+}
+
+#define BANDS_MAX 8
+
+// The bands' colors into `fill`, their count into *n; where `v` falls along
+// them at even widths, in %, -1 for unknown.
+static int band_pct(int v, const Band *bands, int top, uint8_t fill[BANDS_MAX], int *n) {
+  int count = 0;
+  do fill[count] = bands[count].argb; while (bands[count++].to != INT16_MAX && count < BANDS_MAX);
+  *n = count;
+  if (v < 0) return -1;
+  int i = 0, lo = 0;
+  while (v > bands[i].to) lo = bands[i++].to;
+  int hi = bands[i].to == INT16_MAX ? top : bands[i].to;
+  return clamp_i32((i * 100 + (v - lo) * 100 / (hi - lo)) / count, 0, 100);
+}
+
+// Laid out like comp_band_draw, the sections one shaded arc with a thumb.
+void comp_band_gauge_draw(GContext *ctx, const Slot *slot, int v, const Band *bands, int top, const char *caption) {
+  uint8_t fill[BANDS_MAX];
+  int n, pct = band_pct(v, bands, top, fill, &n);
+  char value[12] = "--";
+  if (v >= 0) snprintf(value, sizeof(value), "%d", v);
+  Slot s = *slot;
+  int left = slot_left_end(&s);
+#if defined(PBL_PLATFORM_GABBRO)
+  char label[16];
+  snprintf(label, sizeof(label), "%s %s", caption, value);
+#else
+  const char *label = caption;
+  text_draw_along(ctx, value, slot_point(slot, 50, COMP_THUMB), slot->center, COMP_TEXT + 2, GColorWhite);
+#endif
+  end_label(ctx, &s, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&s) / 2));
+  if (pct < 0) {
+    slot_arc(ctx, &s, 0, 100, COMP_TRACK);
+    return;
+  }
+  shaded_arc(ctx, &s, left, 100, fill, n);
+  slot_dot(ctx, &s, left ? 100 - pct : pct, s.thickness / 2, 2, GColorWhite, GColorBlack);
+}
+
+// The caption above the value, no min and max.
+void center_band_gauge_draw(GContext *ctx, GPoint c, int v, const Band *bands, int top, const char *caption) {
+  uint8_t fill[BANDS_MAX];
+  int n, pct = band_pct(v, bands, top, fill, &n);
+  char value[8] = "--";
+  if (v >= 0) snprintf(value, sizeof(value), "%d", v);
+  center_range_draw(ctx, c, pct, "", "", value, caption, fill, n);
 }
 
 // No bar: the text curved along the arc's middle, the icon toward the corner.

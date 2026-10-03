@@ -14,7 +14,7 @@ void center_rain_draw(GContext *ctx, GPoint c) {
   if (g_weather.valid) {
     Slot s = center_ring(c);
     center_gauge(ctx, c, g_weather.rain, GColorPictonBlue);
-    slot_dot(ctx, &s, clamp_i32(g_weather.rain, 0, 100), SUB_T / 2 + 1, GColorCeleste, GColorBlack);
+    slot_dot(ctx, &s, clamp_i32(g_weather.rain, 0, 100), SUB_T / 2 + 1, 1, GColorCeleste, GColorBlack);
     snprintf(buf, sizeof(buf), "%d" SMALL_PCT, g_weather.rain);
   } else {
     center_gauge(ctx, c, 0, GColorPictonBlue);
