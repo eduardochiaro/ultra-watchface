@@ -30,19 +30,34 @@ static int icon_size(const char *icon) {
   return (uint8_t)icon[0] == 0xEE ? COMP_ICON : COMP_TEXT;
 }
 
+#if defined(PBL_PLATFORM_GABBRO)
 // Px between it and the label it leads (gabbro): a name needs a word space.
 static int icon_gap(const char *icon) {
   return icon_size(icon) == COMP_ICON ? COMP_GAP : 2 * COMP_GAP;
 }
+#endif
 
-// Bar: value label on the left, filling from the left.
+int comp_fit(GContext *ctx, const char *txt, int size, int width) {
+  int w = text_width(ctx, txt, size);  // grows with size
+  return w > width ? size * width / w : size;
+}
+
+// comp_end_label at any size.
+static void end_label(GContext *ctx, Slot *s, int end, const char *txt, int size) {
+  int w = text_width(ctx, txt, size);
+  text_draw_along(ctx, txt, slot_past(s, end, -w / 2), s->center, size, GColorWhite);
+  slot_trim(s, end, w + COMP_GAP + s->thickness / 2);
+}
+
+// Bar: value label on the left, filling from the left. A long label shrinks to
+// leave half the slot to the bar.
 void comp_fill_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, GColor track,
                      const char *label, const char *icon) {
   pct = clamp_i32(pct, 0, 100);
   int left = slot_left_end(s);
   Slot b = *s;
   if (icon) comp_icon(ctx, &b, icon, fill);
-  comp_end_label(ctx, &b, left, label);
+  end_label(ctx, &b, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&b) / 2));
   slot_arc(ctx, &b, 0, 100, track);
   if (pct > 0) slot_arc(ctx, &b, left, left ? 100 - pct : pct, fill);
 }
@@ -64,8 +79,9 @@ static void comp_value_gauge(GContext *ctx, const Slot *s, int pct, GColor fill,
 void comp_range_draw(GContext *ctx, const Slot *slot, int pct, const char *min, const char *max,
                      const char *value) {
   Slot b = *slot, *s = &b;
+  int size = comp_fit(ctx, value, COMP_TEXT + 2, slot_len(slot));
 #if defined(PBL_PLATFORM_GABBRO)
-  text_draw_along(ctx, value, slot_point(s, 50, 0), s->center, COMP_TEXT + 2, GColorWhite);
+  text_draw_along(ctx, value, slot_point(s, 50, 0), s->center, size, GColorWhite);
 #else
   if (pct < 0) {
     slot_arc(ctx, s, 0, 100, COMP_TRACK);
@@ -77,7 +93,7 @@ void comp_range_draw(GContext *ctx, const Slot *slot, int pct, const char *min, 
     slot_dot(ctx, s, lo ? 100 - pct : pct, s->thickness / 2 + 2, GColorWhite, GColorBlack);
   }
   // Centered, not on the thumb: near min/max it would run off the arc end.
-  text_draw_along(ctx, value, slot_point(s, 50, COMP_THUMB), s->center, COMP_TEXT + 2, GColorWhite);
+  text_draw_along(ctx, value, slot_point(s, 50, COMP_THUMB), s->center, size, GColorWhite);
 #endif
 }
 
@@ -121,17 +137,18 @@ void center_band_draw(GContext *ctx, GPoint c, int v, int max, const Band *bands
 }
 
 // No bar: the text curved along the arc's middle, the icon toward the corner.
-// Gabbro: "ICON 72 BPM" centered on the arc.
+// Gabbro: "ICON 72 BPM" centered on the arc. A long text shrinks to fit the slot.
 void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color, const char *txt) {
   Slot b = *s;
 #if defined(PBL_PLATFORM_GABBRO)
   int left = slot_left_end(&b);
-  int w = text_width(ctx, icon, icon_size(icon)) + icon_gap(icon) + text_width(ctx, txt, COMP_TEXT);
-  slot_trim(&b, left, (slot_len(&b) - w) / 2);
+  int lead = text_width(ctx, icon, icon_size(icon)) + icon_gap(icon);
+  int size = comp_fit(ctx, txt, COMP_TEXT, slot_len(&b) - lead);
+  slot_trim(&b, left, (slot_len(&b) - lead - text_width(ctx, txt, size)) / 2);
   comp_icon(ctx, &b, icon, color);
-  comp_end_label(ctx, &b, left, txt);
+  end_label(ctx, &b, left, txt, size);
 #else
-  text_draw_along(ctx, txt, slot_point(s, 50, 0), s->center, COMP_TEXT + 2, GColorWhite);
+  text_draw_along(ctx, txt, slot_point(s, 50, 0), s->center, comp_fit(ctx, txt, COMP_TEXT + 2, slot_len(s)), GColorWhite);
   comp_icon(ctx, &b, icon, color);
 #endif
 }
@@ -139,9 +156,7 @@ void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color
 // Label laid along the arc at an end; the arc is trimmed to make room so
 // label + arc stay inside the slot's original span.
 void comp_end_label(GContext *ctx, Slot *s, int end, const char *txt) {
-  int w = text_width(ctx, txt, COMP_TEXT);
-  text_draw_along(ctx, txt, slot_past(s, end, -w / 2), s->center, COMP_TEXT, GColorWhite);
-  slot_trim(s, end, w + COMP_GAP + s->thickness / 2);
+  end_label(ctx, s, end, txt, COMP_TEXT);
 }
 
 // Just past the arc, toward the screen corner. Gabbro has no corners: the icon

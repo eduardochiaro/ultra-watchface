@@ -38,9 +38,10 @@ function short(n) {
 
 // data: the parsed response, or null when there is none ('--' on the watch).
 function buildMessage(api, i, data) {
-  var msg = { API_INDEX: i, API_TYPE: api.type, API_NAME: api.name, API_TEXT: '--', API_PCT: -1, API_MIN: '', API_MAX: '' };
+  // Sizes: name[5] and text[21] in complications/api.c.
+  var msg = { API_INDEX: i, API_TYPE: api.type, API_NAME: config.clean(fill(api.header, data), 4), API_TEXT: '--', API_PCT: -1, API_MIN: '', API_MAX: '' };
   if (data == null) { return msg; }
-  msg.API_TEXT = config.clean(fill(api.text, data), 12);
+  msg.API_TEXT = config.clean(fill(api.text, data), 20);
   if (api.type === 0) { return msg; }
   // Bar and gauge: the text's first pattern, placed between min and max.
   var v = number(fill((/\{\{.*?\}\}/.exec(api.text) || [api.text])[0], data));

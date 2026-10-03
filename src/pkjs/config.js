@@ -34,6 +34,7 @@ var CENTER_COMPLICATIONS = [
   { label: 'UV index', value: 11 },
   { label: 'Weather', value: 12 },
   { label: 'Calendar', value: 6 },
+  { label: 'Calendar (plain)', value: 26 },
   { label: 'Battery', value: 3 },
   { label: 'Heart rate', value: 8 },
   { label: 'Distance', value: 9 },
@@ -87,7 +88,9 @@ function cleanText(k, s) {
   return clean(s, k.length === 6 ? 4 : 12);
 }
 
-// text, min and max may hold {{path.to[0].value}} patterns, filled from the response.
+// header, text, min and max may hold {{path.to[0].value}} patterns, filled from
+// the response. title names it in Settings; header is what the face shows, 4
+// characters once filled. Both were one `name` once.
 function cleanApis(list) {
   return (Array.isArray(list) ? list : []).slice(0, API_MAX).map(function (a) {
     a = a || {};
@@ -95,7 +98,8 @@ function cleanApis(list) {
       url: String(a.url || '').trim(),
       freq: a.freq > 0 ? Math.max(1, Math.round(a.freq)) : 10,  // minutes, 1 at least
       type: Math.min(API_TYPES.length - 1, Math.max(0, Math.round(Number(a.type)) || 0)),
-      name: clean(a.name || '', 4),
+      title: String(a.title == null ? a.name || '' : a.title).trim(),
+      header: String(a.header == null ? a.name || '' : a.header).trim(),
       text: String(a.text || ''),
       min: String(a.min == null ? 0 : a.min).trim(),
       max: String(a.max == null ? 100 : a.max).trim()

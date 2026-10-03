@@ -15,22 +15,26 @@ var texts = config.withDefaults({ TEXT_TL: 'Héllo <b>&"x" 12:30 and more', TEXT
 assert.deepStrictEqual([texts.TEXT_TL, texts.TEXT_B], ['Hllo bx 12:3', 'Hell']);
 
 // Custom API complications: cleaned on the way in, kept off the settings message
-var apis = config.withDefaults({ APIS: [{ url: ' https://x.test/a ', freq: 0.2, type: '2', name: 'Powér!', text: '{{a}}', min: 5 }, null] }).APIS;
-assert.deepStrictEqual(apis, [{ url: 'https://x.test/a', freq: 1, type: 2, name: 'Powr', text: '{{a}}', min: '5', max: '100' },
-  { url: '', freq: 10, type: 0, name: '', text: '', min: '0', max: '100' }]);
+var apis = config.withDefaults({ APIS: [{ url: ' https://x.test/a ', freq: 0.2, type: '2', title: ' Solar power ', header: '{{u}}', text: '{{a}}', min: 5 }, null, { name: 'KW' }] }).APIS;
+assert.deepStrictEqual(apis.slice(0, 2), [{ url: 'https://x.test/a', freq: 1, type: 2, title: 'Solar power', header: '{{u}}', text: '{{a}}', min: '5', max: '100' },
+  { url: '', freq: 10, type: 0, title: '', header: '', text: '', min: '0', max: '100' }]);
+assert.deepStrictEqual([apis[2].title, apis[2].header, apis[2].name], ['KW', 'KW', undefined], 'the old name is both');
 assert.strictEqual(config.toMessage(config.withDefaults({ APIS: apis })).APIS, undefined);
 assert.strictEqual(config.withDefaults({ APIS: new Array(20) }).APIS.length, config.API_MAX);
 
 // Patterns filled from the response; bar and gauge place the first one between min and max
 var buildMessage = require('../src/pkjs/api').buildMessage;
 var data = { results: { data: { points: [{ value: 1 }, { value: 12.3456, hi: 20 }] } }, on: true };
-assert.deepStrictEqual(buildMessage({ type: 2, name: 'KW', text: '{{ results.data.points[1].value }} kW', min: '10', max: '{{results.data.points[1].hi}}' }, 3, data),
+assert.deepStrictEqual(buildMessage({ type: 2, header: 'KW', text: '{{ results.data.points[1].value }} kW', min: '10', max: '{{results.data.points[1].hi}}' }, 3, data),
   { API_INDEX: 3, API_TYPE: 2, API_NAME: 'KW', API_TEXT: '12.35 kW', API_PCT: 23, API_MIN: '10', API_MAX: '20' });
-assert.strictEqual(buildMessage({ type: 0, name: '', text: 'CO2 {{nope.x}} {{on}} é', min: '0', max: '100' }, 0, data).API_TEXT, 'CO2 -- true ');
-assert.strictEqual(buildMessage({ type: 1, name: '', text: '{{results.data.points[0].value}}', min: 'abc', max: '100' }, 0, data).API_PCT, -1, 'min not a number');
-assert.strictEqual(buildMessage({ type: 1, name: '', text: '{{results.data.points[0].value}}', min: '-50000', max: '2' }, 0, data).API_MIN, '-50k');
-assert.deepStrictEqual(buildMessage({ type: 1, name: 'X', text: '{{a}}', min: '0', max: '1' }, 1, null),
+assert.strictEqual(buildMessage({ type: 0, header: '', text: 'CO2 {{nope.x}} {{on}} é', min: '0', max: '100' }, 0, data).API_TEXT, 'CO2 -- true ');
+assert.strictEqual(buildMessage({ type: 1, header: '', text: '{{results.data.points[0].value}}', min: 'abc', max: '100' }, 0, data).API_PCT, -1, 'min not a number');
+assert.strictEqual(buildMessage({ type: 1, header: '', text: '{{results.data.points[0].value}}', min: '-50000', max: '2' }, 0, data).API_MIN, '-50k');
+assert.deepStrictEqual(buildMessage({ type: 1, header: 'X', text: '{{a}}', min: '0', max: '1' }, 1, null),
   { API_INDEX: 1, API_TYPE: 1, API_NAME: 'X', API_TEXT: '--', API_PCT: -1, API_MIN: '', API_MAX: '' }, 'no response');
+var long = buildMessage({ type: 0, header: '{{unit}}!', text: 'Living room {{results.data.points[1].value}} ppm' }, 0, { unit: 'kWh/d', results: data.results });
+assert.deepStrictEqual([long.API_NAME, long.API_TEXT], ['kWh/', 'Living room 12.35 pp'], 'header pattern, 4 characters; text 20');
+assert.strictEqual(buildMessage({ type: 0, header: '{{unit}}', text: '' }, 0, null).API_NAME, '--', 'header pattern, no response');
 
 execSync('node scripts/inline-config.mjs');
 delete require.cache[require.resolve('../src/pkjs/page')];
@@ -115,16 +119,25 @@ assert.ok(els.centers.innerHTML.indexOf('value="12" selected') > 0, 'center pick
 
 // Custom API complications: listed in the pickers, drawn from the last message or a sample
 ctx = load({ settings: { SLOT_TL: 15, SLOT_TR: 16, SLOT_BL: 17, CENTER_T: 17, CENTER_L: 16, CENTER_R: 15, APIS: [
-  { url: 'https://x.test/"a"', type: 2, name: 'KW', text: '{{a}}', min: '0', max: '50' }, { type: 1, name: 'rain' }, { type: 0 }] },
-  api: [{ API_TEXT: '12.3', API_PCT: 25, API_MIN: '0', API_MAX: '50' }], platform: 'emery' });
+  { url: 'https://x.test/"a"', type: 2, name: 'KW', text: '{{a}}', min: '0', max: '50' }, { type: 1, title: 'Rain <b>', header: 'rain' },
+  { type: 0, header: '{{unit}}' }] },
+  api: [{ API_TEXT: '12.3', API_PCT: 25, API_MIN: '0', API_MAX: '50' }, null, { API_NAME: 'ppm', API_TEXT: 'Living room 1234 ppm' }], platform: 'emery' });
 svg = screen();
 assert.ok(svg.indexOf('>KW 12.3</text>') > 0 && svg.indexOf('>12.3</text>') > 0, 'gauge: last value, named in the corner, and subdial');
 assert.strictEqual(svg.split('>50</text>').length - 1, 2, 'gauge: max label, corner and subdial');
 assert.strictEqual(svg.split('>rain</text>').length - 1, 2, 'bar: its name for an icon, not the icon of that name');
-assert.strictEqual(svg.split('>42</text>').length - 1, 4, 'bar and text: sample value');
-assert.ok(els.corners.innerHTML.indexOf('<option value="15" selected>KW</option>') > 0 && els.centers.innerHTML.indexOf('<option value="17" selected>Custom 3</option>') > 0, 'API options');
+assert.strictEqual(svg.split('>42</text>').length - 1, 2, 'bar: sample value');
+assert.strictEqual(svg.split('>ppm</text>').length - 1, 2, 'header pattern: as last sent');
+var sizes = svg.split('font-size="').map(parseFloat);  // [i + 1]: of the text after split i
+assert.ok(sizes[svg.split('>Living room 1234 ppm</text>')[0].split('font-size="').length - 1] < sizes[svg.split('>KW 12.3</text>')[0].split('font-size="').length - 1], 'a long corner text shrinks');
+assert.ok(els.corners.innerHTML.indexOf('<option value="15" selected>KW</option>') > 0 && els.corners.innerHTML.indexOf('>Rain &lt;b></option>') > 0 && els.centers.innerHTML.indexOf('<option value="17" selected>Custom 3</option>') > 0, 'API options');
 assert.ok(els.apis.innerHTML.indexOf('<details class="card api" data-card="0"><summary>KW \u00B7 Gauge</summary>') === 0, 'saved cards start collapsed');
 assert.ok(els.apis.innerHTML.indexOf('value="https://x.test/&quot;a&quot;"') > 0 && els.apis.innerHTML.split('data-api-remove').length - 1 === 3, 'API cards');
+// A card's Save sends everything, like the page's
+var cardSave = el(); cardSave.dataset.apiSave = '0';
+cardSave.closest = function () { return { querySelectorAll: function () { return []; } }; };
+clicks[0]({ target: { closest: function () { return cardSave; } } });
+assert.strictEqual(JSON.parse(decodeURIComponent(ctx.location.href.split('#')[1])).APIS.length, 3, 'card Save closes with the settings');
 // Removing the second: its places empty, the third takes its number
 var remove = el(); remove.dataset.apiRemove = '1';
 clicks[0]({ target: { closest: function () { return remove; } } });
@@ -151,16 +164,21 @@ ctx = load({ settings: { SLOT_TL: 24, CENTER_T: 24 }, platform: 'emery' });
 svg = screen();
 assert.ok(svg.split('>@</text>').length - 1 === 2 && svg.split(/>\.\d{3}<\/text>/).length - 1 === 2, '.beat corner and subdial');
 
-// Wind: km/h on the wire, the page converts; speed and direction in the corner, two rows in the subdial
+// Wind: km/h on the wire, the page converts; speed and direction in the corner, direction, speed and unit in the subdial
 weather = require('../src/pkjs/weather').buildMessage({ current: { wind_speed_10m: 13.6, wind_direction_10m: 338 }, daily: { temperature_2m_min: [1],
   temperature_2m_max: [2], precipitation_probability_max: [3] } }, null);
 assert.deepStrictEqual([weather.WIND, weather.WIND_DIR], [14, 338]);
 ctx = load({ settings: { SLOT_TL: 25, CENTER_T: 25 }, weather: weather, platform: 'emery' });
 svg = screen();
-assert.ok(svg.indexOf('>14km/h N</text>') > 0 && svg.indexOf('>14</text>') > 0 && svg.split(ctx.ICONS.wind).length - 1 === 2, 'wind corner and subdial');
+assert.ok(svg.indexOf('>14km/h N</text>') > 0 && svg.indexOf('>14</text>') > 0 && svg.indexOf('>N</text>') > 0 && svg.indexOf('>km/h</text>') > 0, 'wind corner and subdial');
 ctx = load({ settings: { SLOT_TL: 25, UNITS: 1 }, weather: weather, platform: 'gabbro' });
 assert.ok(screen().indexOf('>8mph N</text>') > 0, 'wind in mph');
 ctx = load({ settings: { SLOT_TL: 25 }, weather: { TEMP: 1 }, platform: 'emery' });
 assert.ok(screen().indexOf('>--</text>') > 0, 'weather saved before wind has none');
+
+// Plain calendar: subdial only, weekday in red, no page behind it
+ctx = load({ settings: { CENTER_T: 26, CENTER_B: 0 }, platform: 'emery' });
+svg = screen();
+assert.ok(/fill="#ff0000"[^>]*>(SUN|MON|TUE|WED|THU|FRI|SAT)<\/text>/.test(svg) && !/Z" fill="#ff0000"/.test(svg), 'plain calendar');
 
 console.log('ok');

@@ -1,5 +1,6 @@
 // One AppMessage at a time: a second one sent while the first is in flight
 // fails, and weather and every API complication send on their own timers.
+// A failed one is tried once more: the watch is often busy right after Settings.
 
 var queue = [], busy = false;
 
@@ -11,6 +12,11 @@ function next() {
     next();
     if (job.ok) { job.ok(); }
   }, function(err) {
+    if (!job.retried) {
+      job.retried = true;
+      queue.unshift(job);
+      return setTimeout(next, 1000);
+    }
     next();
     if (job.fail) { job.fail(err); }
   });

@@ -10,8 +10,8 @@ enum { API_TEXT, API_BAR, API_GAUGE };  // API_TYPES in src/pkjs/config.js
 typedef struct {
   uint8_t type;
   int8_t pct;           // bar and gauge: the value between min and max, -1 = unknown
-  char name[5];
-  char text[13];
+  char name[5];         // the header
+  char text[21];        // corners shrink it to fit
   char min[7], max[7];  // gauge end labels
 } Api;
 
@@ -47,8 +47,8 @@ static const char *api_text(const Api *a) {
   return a->text[0] ? a->text : "--";  // nothing received yet
 }
 
-// Text: like heart rate. Bar: like rain. Gauge: like temperature. The name
-// goes where their icons do; the gauge has its value there, so "NAME value".
+// Text: like heart rate. Bar: like rain. Gauge: like temperature. The header
+// goes where their icons do; the gauge has its value there, so "HEAD value".
 void comp_api_draw(GContext *ctx, const Slot *s, int i) {
   const Api *a = &s_api[i];
   if (a->type == API_GAUGE) {

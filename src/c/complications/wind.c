@@ -23,12 +23,12 @@ void comp_wind_draw(GContext *ctx, const Slot *s) {
   comp_icon_text(ctx, s, ICON_WIND, GColorPictonBlue, buf);
 }
 
-// No ring: the speed over where it blows from, the icon below.
+// No ring: where it blows from, the speed big under it, the unit below.
 void center_wind_draw(GContext *ctx, GPoint c) {
   int v = wind_speed();
   char buf[8] = "--";
   if (v >= 0) snprintf(buf, sizeof(buf), "%d", v);
-  text_draw(ctx, buf, GPoint(c.x, c.y - 7), SUB_TEXT + 1, GColorWhite);
-  if (v >= 0) text_draw(ctx, wind_from(), GPoint(c.x, c.y + 2), SUB_SMALL, GColorPictonBlue);
-  text_draw(ctx, ICON_WIND, GPoint(c.x, c.y + SUB_LOW + 2), 10, GColorPictonBlue);
+  if (v >= 0) text_draw(ctx, wind_from(), GPoint(c.x, c.y - SUB_R + 5), SUB_SMALL, GColorPictonBlue);
+  text_draw(ctx, buf, GPoint(c.x, c.y + 1), SUB_TEXT + 3, GColorWhite);
+  text_draw(ctx, g_settings.imperial ? "mph" : "km/h", GPoint(c.x, c.y + SUB_LOW + 2), SUB_SMALL + 1, GColorWhite);
 }

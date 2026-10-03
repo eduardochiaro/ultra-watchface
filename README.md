@@ -45,9 +45,10 @@ Each one reads a JSON API of your choice and shows a value from it.
 | Field | What it does |
 | --- | --- |
 | URL | The endpoint. A plain `GET` that answers with JSON; an API key has to go in the URL. |
-| Name | Up to 4 characters, shown with the value and in the slot pickers. |
+| Title | Its name in Settings and the slot pickers. |
+| Header | Shown on the face with the value. Fixed text or a `{{path}}`; up to 4 characters once filled in. |
 | Type | **Text** shows the value, like heart rate. **Bar** fills from min to max, like chance of rain. **Gauge** marks the value between min and max, like temperature. |
-| Text | What to show. `{{path}}` is replaced with that value from the response, for example `{{results.data.points[1].value}} kW`. Up to 12 characters once filled in. |
+| Text | What to show. `{{path}}` is replaced with that value from the response, for example `{{results.data.points[1].value}} kW`. Up to 20 characters once filled in; in a corner a long one shrinks to fit. |
 | Min, Max | Bar and gauge only. A number, or a `{{path}}` to one. The first `{{path}}` in Text is placed between them. |
 | Refresh | Minutes between requests: 10 by default, 1 at least. |
 
@@ -58,7 +59,7 @@ Limits:
 - No request headers: the API has to work with a plain `GET`, any key in the URL.
 - Numbers are rounded to 2 decimals. Text keeps only letters, digits, spaces and `% , - . / :`, so no `°` or accents.
 - The bar and gauge use the accent color.
-- On the round watch a bar with a 4-letter name and a long value leaves little room for the bar itself.
+- A bar's value shrinks to leave half the corner to the bar.
 - A gauge in a subdial hides its min and max when either is longer than 3 characters.
 - When a refresh fails the last value stays; `--` only shows if the first request fails.
 - Two complications on the same URL make two requests.

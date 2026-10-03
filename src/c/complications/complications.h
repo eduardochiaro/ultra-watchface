@@ -33,6 +33,7 @@ typedef enum {
   COMP_SUN,       // sunrise and sunset
   COMP_BEAT,      // Swatch .beat time
   COMP_WIND,
+  COMP_CALENDAR_PLAIN, // subdial only: no page behind it
   COMP_COUNT
 } ComplicationId;
 
@@ -104,6 +105,7 @@ void center_temp_draw(GContext *ctx, GPoint c);
 void center_battery_draw(GContext *ctx, GPoint c);
 void center_rain_draw(GContext *ctx, GPoint c);
 void center_calendar_draw(GContext *ctx, GPoint c);
+void center_calendar_plain_draw(GContext *ctx, GPoint c);
 void center_aqi_draw(GContext *ctx, GPoint c);
 void center_heart_draw(GContext *ctx, GPoint c);
 void center_distance_draw(GContext *ctx, GPoint c);
@@ -115,6 +117,8 @@ void center_beat_draw(GContext *ctx, GPoint c);
 void center_wind_draw(GContext *ctx, GPoint c);
 void center_custom_draw(GContext *ctx, GPoint c, const char *txt);
 void center_api_draw(GContext *ctx, GPoint c, int i);
+// `size`, or the largest below it at which `txt` fits `width` px.
+int comp_fit(GContext *ctx, const char *txt, int size, int width);
 // Text centered on c, `size` at most, shrunk to fit `width`.
 void center_fit_text(GContext *ctx, const char *txt, GPoint c, int size, int width, GColor color);
 
@@ -126,8 +130,8 @@ void center_fit_text(GContext *ctx, const char *txt, GPoint c, int size, int wid
 void comp_fill_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, GColor track,
                      const char *label, const char *icon);  // icon NULL: none
 // Range gauge (temp, API gauge): min and max at the ends, a thumb at pct, the
-// value by the arc's middle, where an icon would be. pct < 0: unknown, a bare
-// track. Gabbro: no gauge, only the value on the arc's middle.
+// value by the arc's middle, where an icon would be, shrunk to fit the slot.
+// pct < 0: unknown, a bare track. Gabbro: no gauge, only the value on the arc's middle.
 void comp_range_draw(GContext *ctx, const Slot *s, int pct, const char *min, const char *max,
                      const char *value);
 // Same in a subdial: min and max under the value. `name` (or NULL) goes above it.

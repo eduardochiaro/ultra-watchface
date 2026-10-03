@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>Ultra</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap">
 <style>
@@ -27,7 +27,9 @@
 		font: 16px/1.4 Nunito, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 	}
 	main { max-width: 30rem; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+	/* 16px: iOS zooms the page on focus of anything smaller */
 	button, input, select { font: inherit; color: inherit; }
+	input, select { font-size: 16px; }
 	button { cursor: pointer; }
 	button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 	header { display: flex; align-items: baseline; justify-content: space-between; }
@@ -49,7 +51,7 @@
 	.corner span { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--soft); }
 	/* Center pickers as a cross: top / left right / bottom */
 	#centers > :first-child, #centers > :last-child { grid-column: 1 / -1; justify-self: center; width: calc(50% - 5px); }
-	select { min-height: 44px; width: 100%; padding: 0 10px; background: var(--field); border: 1px solid var(--edge); border-radius: 10px; font-size: 15px; font-weight: 700; }
+	select { min-height: 44px; width: 100%; padding: 0 10px; background: var(--field); border: 1px solid var(--edge); border-radius: 10px; font-weight: 700; }
 
 	.scheme { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 10px 12px; background: var(--card); border: 2px solid var(--line); border-radius: 16px; text-align: left; font-size: 14px; font-weight: 700; line-height: 1.25; }
 	.scheme[aria-pressed="true"] { border-color: var(--accent); }
@@ -86,10 +88,12 @@
 	.switch[aria-checked="true"] i { background: var(--accent); }
 	.switch[aria-checked="true"] i::after { transform: translateX(22px); }
 
-	.corner input { min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--ground); color: var(--ink); font: inherit; font-weight: 700; }
+	.corner input { min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--ground); color: var(--ink); font-weight: 700; }
 
 	.limits { margin: 0 0 12px; padding-left: 18px; font-size: 13px; }
-	.api { padding: 0 12px; margin-bottom: 10px; }
+	.api, .howto { padding: 0 12px; margin-bottom: 10px; }
+	.howto summary::after { content: "+"; color: var(--soft); }
+	.howto[open] summary::after { content: "\2212"; }
 	.api summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; font-weight: 700; cursor: pointer; }
 	.api summary::after { content: "Edit"; font-size: 13px; color: var(--soft); }
 	.api[open] summary::after { content: ""; }
@@ -131,15 +135,19 @@
 	<section>
 		<h2>Custom complications</h2>
 		<p class="soft" style="margin: 0 0 8px">Shows a value from any JSON API. Create one, then pick it in a corner or the center.</p>
+		<details class="card howto">
+		<summary>How to use</summary>
 		<ul class="soft limits">
 			<li>Up to 8. The phone makes the requests, so the watch needs a connection to it.</li>
 			<li>Plain GET only, no headers: an API key has to go in the URL.</li>
-			<li>Text shows up to 12 characters: letters, digits, spaces and % , - . / : only. Numbers are rounded to 2 decimals.</li>
+			<li>Title names it here. Header is what the face shows with the value: up to 4 characters, fixed or a {{pattern}}.</li>
+			<li>Text shows up to 20 characters: letters, digits, spaces and % , - . / : only. In a corner a long one shrinks to fit. Numbers are rounded to 2 decimals.</li>
 			<li>Bar and gauge place the first {{value}} in Text between min and max, in the accent color.</li>
-			<li>On a round watch a 4-letter name and a long value leave little room for the bar.</li>
+			<li>A bar's value shrinks to leave half the corner to the bar.</li>
 			<li>A gauge in the center hides min and max longer than 3 characters.</li>
 			<li>If a refresh fails the last value stays. A value that can't be read shows as --.</li>
 		</ul>
+		</details>
 		<div id="apis"></div>
 		<button type="button" id="api-add">Add complication</button>
 	</section>
@@ -209,8 +217,10 @@
 	// Custom API complication i as the watch draws it: the last message sent for
 	// it (api.js), else a sample.
 	function apiView(i) {
-		var a = settings.APIS[i] || { type: 0, name: "" }, last = (state.api || [])[i];
-		return { type: a.type, name: a.name, text: last ? last.API_TEXT : "42", pct: last ? last.API_PCT : 42,
+		var a = settings.APIS[i] || { type: 0, header: "" }, last = (state.api || [])[i];
+		// A fixed header follows the field; a pattern needs a response.
+		var name = /\{\{/.test(a.header) ? (last ? last.API_NAME : "--") : clean(a.header || "", 4);
+		return { type: a.type, name: name, text: last ? last.API_TEXT : "42", pct: last ? last.API_PCT : 42,
 			min: last ? last.API_MIN : "0", max: last ? last.API_MAX : "100" };
 	}
 	function isApi(id) { return id >= API_ID && id < API_ID + API_MAX; }
@@ -345,9 +355,14 @@
 		function sarc(s, p0, p1, c) { stroke(arc(s.r, at(s, p0), at(s, p1)), c, s.t); }
 		function dot(s, p, r) { disc(P(at(s, p), s.r), r, C.white, C.black); }
 		// ponytail: fixed per-glyph width; the watch measures with fctx
-		function endLabel(s, end, str) {
-			var w = str.length * g.TEXT / 0.7 * 0.6;
-			along(str, past(s, end, -w / 2), s.r, g.TEXT, C.white);
+		function width(str, cap) { return str.length * cap / 0.7 * 0.6; }
+		// comp_fit(): `cap`, or the largest below it at which str fits `px`
+		function fitCap(str, cap, px) { return Math.min(cap, cap * px / (width(str, cap) || 1)); }
+		function slen(s) { return Math.abs(s.a1 - s.a0) * Math.PI / 180 * s.r; }
+		function endLabel(s, end, str, cap) {
+			cap = cap || g.TEXT;
+			var w = width(str, cap);
+			along(str, past(s, end, -w / 2), s.r, cap, C.white);
 			trim(s, end, w + 4 + s.t / 2);
 		}
 
@@ -362,7 +377,7 @@
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
 			pct = clamp(pct);
 			if (ic) compIcon(s, ic, c);
-			endLabel(s, left, label);
+			endLabel(s, left, label, fitCap(label, g.TEXT, slen(s) / 2));
 			sarc(s, 0, 100, C.track);
 			if (pct > 0) sarc(s, left, left ? 100 - pct : pct, c);
 		}
@@ -383,12 +398,13 @@
 		// comp_icon_text: no bar, text on the arc's middle, icon toward the corner; round: "ICON 72 BPM" centered
 		function iconText(s, ic, label, c) {
 			if (g.round) {
-				var left = leftEnd(s);
-				trim(s, left, (45 * Math.PI / 180 * s.r - iconWidth(ic) - (ic.name === undefined ? 4 : 8) - label.length * g.TEXT / 0.7 * 0.6) / 2);
+				var left = leftEnd(s), lead = iconWidth(ic) + (ic.name === undefined ? 4 : 8);
+				var cap = fitCap(label, g.TEXT, slen(s) - lead);
+				trim(s, left, (slen(s) - lead - width(label, cap)) / 2);
 				compIcon(s, ic, c);
-				return endLabel(s, left, label);
+				return endLabel(s, left, label, cap);
 			}
-			along(label, at(s, 50), s.r, g.TEXT + 2, C.white);
+			along(label, at(s, 50), s.r, fitCap(label, g.TEXT + 2, slen(s)), C.white);
 			compIcon(s, ic, c);
 		}
 		// comp_value_gauge: caption on the end, value by the middle; round: both lead the bar
@@ -399,8 +415,8 @@
 		}
 		// comp_range_draw: min on the left end, max on the right, thumb at pct (< 0: bare track), value centered
 		function rangeGauge(s0, pct, min, max, value) {
-			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, lo = leftEnd(s);
-			if (g.round) return along(value, at(s, 50), s.r, g.TEXT + 2, C.white);  // no gauge, just the value
+			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, lo = leftEnd(s), cap = fitCap(value, g.TEXT + 2, slen(s0));
+			if (g.round) return along(value, at(s, 50), s.r, cap, C.white);  // no gauge, just the value
 			if (pct < 0) {
 				sarc(s, 0, 100, C.track);
 			} else {
@@ -409,14 +425,14 @@
 				sarc(s, 0, 100, C.accent);
 				dot(s, lo ? 100 - pct : pct, s.t / 2 + 2);
 			}
-			along(value, at(s, 50), s.r + g.THUMB, g.TEXT + 2, C.white);
+			along(value, at(s, 50), s.r + g.THUMB, cap, C.white);
 		}
 		// temp_range() in temp.c
 		function tempPct() {
 			var t = temp(weather.TEMP), min = temp(weather.TEMP_MIN), max = temp(weather.TEMP_MAX);
 			return max > min ? clamp(Math.round((t - min) * 100 / (max - min))) : 50;
 		}
-		// comp_api_draw: text like heart rate, bar like rain, the name for an icon; gauge like temperature, "NAME value"
+		// comp_api_draw: text like heart rate, bar like rain, the header for an icon; gauge like temperature, "HEAD value"
 		function apiCorner(s, a) {
 			var name = { name: a.name };
 			if (a.type === 2) rangeGauge(s, a.pct, a.min, a.max, (a.name ? a.name + " " : "") + a.text);
@@ -461,7 +477,7 @@
 			if (id === 4) bar(s, weather.RAIN, C.picton, weather.RAIN + "%", "umbrella");
 			if (id === 6) calendar(s);
 			if (id === 13) bar(s, HUM, C.cyan, HUM >= 0 ? HUM + "%" : "--", "drop");
-			if (id === 14) along(settings["TEXT_" + k.slice(5)], at(s, 50), s.r, g.TEXT + 2, C.white);
+			if (id === 14) along(settings["TEXT_" + k.slice(5)], at(s, 50), s.r, fitCap(settings["TEXT_" + k.slice(5)], g.TEXT + 2, slen(s)), C.white);
 			if (id === 8) iconText(s, "heart", BPM + " BPM", C.red);
 			if (id === 9) bar(s, stepPct(), C.accent, distance() + (settings.UNITS === 1 ? "mi" : "km"), "runner");
 			if (id === 7) valueGauge(s, AQI >= 0 ? Math.trunc(AQI * 100 / 300) : 0, AQI_COLOR, "AQI", AQI >= 0 ? String(AQI) : "--");
@@ -606,11 +622,16 @@
 				text(beats(now), [c[0], c[1] - 3], ST + 2, C.white, 0);
 				text("@", [c[0], c[1] + SL], SS + 1, C.red, 0);
 			},
-			// center_wind_draw: speed over direction, the icon below
+			// center_wind_draw: direction, the speed big under it, the unit below
 			25: function (c) {
-				text(wind() >= 0 ? String(wind()) : "--", [c[0], c[1] - 7], ST + 1, C.white, 0);
-				if (wind() >= 0) text(windFrom(), [c[0], c[1] + 2], SS, C.picton, 0);
-				icon("wind", [c[0], c[1] + SL + 2], 10, C.picton);
+				if (wind() >= 0) text(windFrom(), [c[0], c[1] - g.SUB_R + 5], SS, C.picton, 0);
+				text(wind() >= 0 ? String(wind()) : "--", [c[0], c[1] + 1], ST + 3, C.white, 0);
+				text(settings.UNITS === 1 ? "mph" : "km/h", [c[0], c[1] + SL + 2], SS + 1, C.white, 0);
+			},
+			// center_calendar_plain_draw: no page, the weekday in red over the day
+			26: function (c) {
+				text(DAYS[now.getDay()], [c[0], c[1] - 9], SS + 1, C.red, 0);
+				text(String(now.getDate()), [c[0], c[1] + 4], ST + 5, C.white, 0);
 			},
 			10: function (c) {
 				var unit = settings.UNITS === 1 ? "FT" : "M", ux = c[0] + 3, ay = c[1] - 11;
@@ -675,7 +696,7 @@
 	$("caption").textContent = state.weather ? "Health and battery are sample values" : "Sample data";
 	function pickers(places, options) {
 		options = options.slice(0, -1).concat(settings.APIS.map(function (a, i) {
-			return { label: a.name || "Custom " + (i + 1), value: API_ID + i };
+			return { label: esc(a.title) || "Custom " + (i + 1), value: API_ID + i };
 		}), options.slice(-1));  // None stays last
 		return places.map(function (c) {
 			var t = "TEXT_" + c.key.split("_")[1];
@@ -696,16 +717,17 @@
 		return "<label" + (key === "min" || key === "max" ? ' data-range="' + i + '"' : "") + ">" + label +
 			'<input data-api="' + i + '" data-field="' + key + '" value="' + esc(settings.APIS[i][key]) + '" autocomplete="off" ' + attrs + "></label>";
 	}
-	// Its one line when collapsed: "KW · Gauge"
-	function apiLabel(i) { return esc(settings.APIS[i].name || "Custom " + (i + 1)) + " \u00B7 " + API_TYPES[settings.APIS[i].type]; }
-	// Cards being edited. The saved ones start collapsed; Save on a card collapses it.
+	// Its one line when collapsed: "Solar power · Gauge"
+	function apiLabel(i) { return esc(settings.APIS[i].title || "Custom " + (i + 1)) + " \u00B7 " + API_TYPES[settings.APIS[i].type]; }
+	// Cards being edited. The saved ones start collapsed.
 	var apiOpen = [];
 	function buildApis() {
 		var num = 'type="text" inputmode="decimal" pattern="-?[0-9]+(\\.[0-9]+)?|.*\\{\\{.+\\}\\}.*"';
 		$("apis").innerHTML = settings.APIS.map(function (a, i) {
 			return '<details class="card api" data-card="' + i + '"' + (apiOpen[i] ? " open" : "") + "><summary>" + apiLabel(i) + '</summary><div class="body">' +
 				field(i, "url", "URL", 'type="url" pattern="https?://.+" placeholder="https://example.com/data.json"') +
-				'<div class="grid">' + field(i, "name", "Name", 'type="text" maxlength="4" placeholder="4 letters"') +
+				field(i, "title", "Title", 'type="text" placeholder="Shown in Settings"') +
+				'<div class="grid">' + field(i, "header", "Header", 'type="text" placeholder="KW or {{unit}}"') +
 				'<label>Type<select data-api="' + i + '" data-field="type">' + API_TYPES.map(function (t, n) {
 					return '<option value="' + n + '"' + (a.type === n ? " selected" : "") + ">" + t + "</option>";
 				}).join("") + "</select></label></div>" +
@@ -713,7 +735,7 @@
 				'<div class="grid">' + field(i, "min", "Min", num) + field(i, "max", "Max", num) + "</div>" +
 				field(i, "freq", "Refresh every (minutes)", 'type="number" min="1" step="1"') +
 				'<div class="grid"><button type="button" data-api-remove="' + i + '">Remove</button>' +
-				'<button type="button" data-api-save="' + i + '">Save</button></div></div></details>';
+				'<button type="button" data-api-save="' + i + '">Save and close</button></div></div></details>';
 		}).join("");
 	}
 	buildApis();
@@ -751,13 +773,9 @@
 	document.addEventListener("input", function (e) {
 		var k = e.target.dataset.text, field = e.target.dataset.field;
 		if (field) {
-			var v = field === "name" ? clean(e.target.value, 4) : field === "type" ? +e.target.value : e.target.value;
-			settings.APIS[e.target.dataset.api][field] = v;
-			if (field === "name" || field === "type") e.target.closest("details").firstChild.innerHTML = apiLabel(e.target.dataset.api);
-			if (field === "name") {
-				if (e.target.value !== v) e.target.value = v;
-				buildPickers();  // it is the option's label
-			}
+			settings.APIS[e.target.dataset.api][field] = field === "type" ? +e.target.value : e.target.value;
+			if (field === "title" || field === "type") e.target.closest("details").firstChild.innerHTML = apiLabel(e.target.dataset.api);
+			if (field === "title") buildPickers();  // it is the option's label
 			return render();
 		}
 		if (!k) return;
@@ -780,17 +798,10 @@
 		else if (b.dataset.argb) settings[b.parentNode.dataset.color] = +b.dataset.argb;
 		else if (b.dataset.units) settings.UNITS = +b.dataset.units;
 		else if (b.id === "seconds") settings.SECONDS = settings.SECONDS ? 0 : 1;
-		else if (b.dataset.apiSave) {
-			// Collapses only when the fields are valid; the values are already in settings.
-			var card = b.closest("details");
-			if (![].every.call(card.querySelectorAll("input"), function (i) { return i.reportValidity(); })) return;
-			apiOpen[b.dataset.apiSave] = card.open = false;
-			return;
-		}
 		else if (b.id === "api-add" || b.dataset.apiRemove) {
 			if (b.id === "api-add") {
 				apiOpen[settings.APIS.length] = true;
-				settings.APIS.push({ url: "", freq: 10, type: 0, name: "", text: "", min: "0", max: "100" });
+				settings.APIS.push({ url: "", freq: 10, type: 0, title: "", header: "", text: "", min: "0", max: "100" });
 			} else {
 				// Places showing it go empty; the ones after it move down a number.
 				var gone = API_ID + +b.dataset.apiRemove;
@@ -805,7 +816,10 @@
 			buildApis();
 			buildPickers();
 		}
-		else if (b.id === "save") {
+		else if (b.id === "save" || b.dataset.apiSave) {
+			// A card's Save saves everything too, once its fields are valid: the phone
+			// only hears from this page when it closes, and only then refreshes the watch.
+			if (b.dataset.apiSave && ![].every.call(b.closest("details").querySelectorAll("input"), function (i) { return i.reportValidity(); })) return;
 			var payload = encodeURIComponent(JSON.stringify(settings));
 			location.href = returnTo ? (returnTo + payload) : ("pebblejs://close#" + payload);
 			return;

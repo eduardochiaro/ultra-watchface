@@ -50,3 +50,13 @@ void center_calendar_draw(GContext *ctx, GPoint c) {
   snprintf(buf, sizeof(buf), "%d", t->tm_mday);
   text_draw(ctx, buf, GPoint(c.x, c.y + (cut + r) / 2), SUB_TEXT + 2, fixed(GColorBlack));
 }
+
+// No page: the weekday in red (the accent in that scheme) over the day.
+void center_calendar_plain_draw(GContext *ctx, GPoint c) {
+  time_t now = time(NULL);
+  struct tm *t = localtime(&now);
+  text_draw(ctx, DAYS[t->tm_wday], GPoint(c.x, c.y - 9), SUB_SMALL + 1, GColorRed);
+  char buf[3];
+  snprintf(buf, sizeof(buf), "%d", t->tm_mday);
+  text_draw(ctx, buf, GPoint(c.x, c.y + 4), SUB_TEXT + 5, GColorWhite);
+}
