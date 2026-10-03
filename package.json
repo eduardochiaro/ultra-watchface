@@ -1,7 +1,7 @@
 {
   "name": "ultra-watchface",
   "author": "Eduardo Chiaro",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "keywords": [
     "pebble-app"
   ],
@@ -70,7 +70,11 @@
       "SUNRISE",
       "SUNSET",
       "WIND",
-      "WIND_DIR"
+      "WIND_DIR",
+      "HANDS",
+      "HAND_COLOR",
+      "SECOND_COLOR",
+      "MINUTE_COLOR"
     ],
     "resources": {
       "media": [

@@ -34,6 +34,8 @@ void slot_arc(GContext *ctx, const Slot *s, int from_pct, int to_pct, GColor col
 void slot_box(GContext *ctx, const Slot *s, int from_pct, int to_pct, int r, GColor color);
 // Antialiased disc, flat below `cut` px from the center (cut = r: whole disc).
 void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color);
+// Rounded bar on the ray from `c` at `angle`, from r0 to r1 px out, `w` wide.
+void ray_bar(GContext *ctx, GPoint c, int32_t angle, int r0, int r1, int w, GColor color);
 void slot_dot(GContext *ctx, const Slot *s, int pct, int r, GColor fill, GColor ring);
 
 // Icons are font glyphs (resources/icons, U+E000 on): draw them with

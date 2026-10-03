@@ -187,6 +187,28 @@ void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color) {
   fctx_deinit_context(&f);
 }
 
+// A capsule of 30° chords: half-circle caps around p and q, `h` the half width.
+static void capsule(FContext *f, FPoint p, FPoint q, int32_t angle, fixed_t h) {
+  for (int i = 0; i < 14; i++) {
+    FPoint pt = fpolar_f(i < 7 ? q : p, angle + (i < 7 ? i - 3 : i - 4) * TRIG_MAX_ANGLE / 12, h);
+    if (i) fctx_line_to(f, pt); else fctx_move_to(f, pt);
+  }
+  fctx_close_path(f);
+}
+
+void ray_bar(GContext *ctx, GPoint c, int32_t angle, int r0, int r1, int w, GColor color) {
+  fixed_t h = INT_TO_FIXED(w) / 2;
+  FPoint o = FPointI(c.x, c.y);
+  FPoint p = fpolar_f(o, angle, INT_TO_FIXED(r0) + h), q = fpolar_f(o, angle, INT_TO_FIXED(r1) - h);
+  FContext f;
+  fctx_init_context(&f, ctx);
+  fctx_set_fill_color(&f, theme(color));
+  fctx_begin_fill(&f);
+  capsule(&f, p, q, angle, h);
+  fctx_end_fill(&f);
+  fctx_deinit_context(&f);
+}
+
 void slot_dot(GContext *ctx, const Slot *s, int pct, int r, GColor fill, GColor ring) {
   GPoint p = slot_point(s, pct, 0);
   graphics_context_set_fill_color(ctx, theme(ring));

@@ -28,6 +28,11 @@
 #define COMP_SPAN  45   // degrees per corner complication, labels included
 #define ACCENT     GColorChromeYellow
 #define DEG(d)     DEG_TO_TRIGANGLE(d)
+// Bar and outline hands: a stem out of the pin, then the bar.
+#define HAND_STEM   12  // px from the center to the bar
+#define HAND_STEM_W 2
+#define HAND_W      8
+#define HAND_EDGE   2   // outline thickness
 
 #define PK_SETTINGS 10
 #define CACHE_HEADROOM 40000  // bytes left for fctx after the seconds cache
@@ -55,6 +60,11 @@ static void line(GContext *ctx, GPoint a, GPoint b, int width, GColor color) {
   graphics_draw_line(ctx, a, b);
 }
 
+// A picked color stays as picked; without one (0) it is `own`, which follows the scheme.
+static GColor picked(uint8_t argb, GColor own) {
+  return argb ? fixed((GColor){ .argb = argb }) : own;
+}
+
 static void draw_dial(GContext *ctx, GPoint c) {
   graphics_context_set_stroke_color(ctx, theme(GColorDarkGray));
   graphics_context_set_stroke_width(ctx, 1);
@@ -71,7 +81,7 @@ static void draw_dial(GContext *ctx, GPoint c) {
   for (int h = 1; h <= 12; h++) {
     int32_t a = DEG(h * 30);
     bool big = h % 3 == 0;
-    if (big) line(ctx, polar(c, a, DIAL_R + 1), polar(c, a, DIAL_R - 5), 3, ACCENT);
+    if (big) line(ctx, polar(c, a, DIAL_R + 1), polar(c, a, DIAL_R - 5), 3, picked(g_settings.second_color, ACCENT));
     snprintf(buf, sizeof(buf), "%d", h);
     text_draw(ctx, buf, polar(c, a, big ? NUM_R_BIG : NUM_R), big ? NUM_BIG : NUM_SMALL,
               // Dark gray is too faint on white; the palette has nothing between it and black.
@@ -86,16 +96,31 @@ static void draw_dial(GContext *ctx, GPoint c) {
   graphics_draw_circle(ctx, c, DIAL_R + 4);
 }
 
+// Hour or minute hand, `len` px long. `width` is the plain line's.
+static void draw_hand(GContext *ctx, GPoint c, int32_t angle, int len, int width, GColor color) {
+  if (g_settings.hands == HANDS_LINE) {
+    line(ctx, c, polar(c, angle, len), width, color);
+    return;
+  }
+  line(ctx, c, polar(c, angle, HAND_STEM), HAND_STEM_W, color);
+  ray_bar(ctx, c, angle, HAND_STEM, len, HAND_W, color);
+  // Outline: the background over its inside, not see-through.
+  if (g_settings.hands == HANDS_OUTLINE)
+    ray_bar(ctx, c, angle, HAND_STEM + HAND_EDGE, len - HAND_EDGE, HAND_W - 2 * HAND_EDGE, GColorBlack);
+}
+
 static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
   int32_t ha = DEG((t->tm_hour % 12) * 30 + t->tm_min / 2);
   int32_t ma = DEG(t->tm_min * 6);
-  line(ctx, c, polar(c, ha, DIAL_R * 38 / 100), 6, GColorWhite);
-  line(ctx, c, polar(c, ma, DIAL_R * 65 / 100), 3, GColorWhite);
+  GColor second = picked(g_settings.second_color, ACCENT);
+  draw_hand(ctx, c, ha, INNER_R - 4, 6, picked(g_settings.hand_color, GColorWhite));  // just short of the inner ring
+  // Up to the inner edge of 12/3/6/9.
+  draw_hand(ctx, c, ma, NUM_R_BIG - NUM_BIG / 2, 3, picked(g_settings.minute_color, GColorWhite));
   if (g_settings.seconds) {
     int32_t sa = DEG(t->tm_sec * 6);
-    line(ctx, polar(c, sa + DEG(180), DIAL_R * 25 / 100), polar(c, sa, DIAL_R - 10), 2, ACCENT);
+    line(ctx, polar(c, sa + DEG(180), DIAL_R * 25 / 100), polar(c, sa, DIAL_R - 10), 2, second);
   }
-  graphics_context_set_fill_color(ctx, theme(ACCENT));
+  graphics_context_set_fill_color(ctx, theme(second));
   graphics_fill_circle(ctx, c, 5);
   graphics_context_set_fill_color(ctx, theme(GColorBlack));
   graphics_fill_circle(ctx, c, 2);
@@ -200,6 +225,11 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     if ((t = dict_find(iter, MESSAGE_KEY_SCHEME))) g_settings.scheme = clamp_i32(t->value->int32, 0, 4);
     if ((t = dict_find(iter, MESSAGE_KEY_BG_COLOR))) g_settings.bg = t->value->int32 | 0xC0;  // opaque
     if ((t = dict_find(iter, MESSAGE_KEY_ACCENT_COLOR))) g_settings.accent = t->value->int32 | 0xC0;
+    if ((t = dict_find(iter, MESSAGE_KEY_HANDS))) g_settings.hands = clamp_i32(t->value->int32, 0, HANDS_COUNT - 1);
+    // 0 stays 0: the scheme's color.
+    if ((t = dict_find(iter, MESSAGE_KEY_HAND_COLOR))) g_settings.hand_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
+    if ((t = dict_find(iter, MESSAGE_KEY_MINUTE_COLOR))) g_settings.minute_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
+    if ((t = dict_find(iter, MESSAGE_KEY_SECOND_COLOR))) g_settings.second_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
     persist_write_data(PK_SETTINGS, &g_settings, sizeof(g_settings));
     subscribe_ticks();
   }

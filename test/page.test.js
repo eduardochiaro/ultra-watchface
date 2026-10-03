@@ -8,7 +8,7 @@ var config = require('../src/pkjs/config');
 // Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
 assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6,
-  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8,
+  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
 // Text: only glyphs the watch font has, 12 max
 var texts = config.withDefaults({ TEXT_TL: 'Héllo <b>&"x" 12:30 and more', TEXT_B: 'Hello' });
@@ -87,6 +87,27 @@ clicks[0]({ target: { closest: function () { return save; } } });
 var sent = JSON.parse(decodeURIComponent(ctx.location.href.split('#')[1]));
 assert.strictEqual(sent.SCHEME, 1);
 assert.strictEqual(sent.SLOT_BR, 6);
+
+// Hands: outline style in picked colors, fixed in any scheme; picking a scheme resets the colors
+ctx = load({ settings: { SCHEME: 1, HANDS: 2, HAND_COLOR: 0xF0, MINUTE_COLOR: 0xC3, SECOND_COLOR: 0xCC, SECONDS: 1 }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('fill="#ffffff" stroke="#ff0000" stroke-width="2"/>') > 0 && svg.indexOf('fill="#ffffff" stroke="#0000ff" stroke-width="2"/>') > 0, 'outline hour and minute hands, a color each, the background inside');
+assert.ok(svg.indexOf('stroke="#00ff00" stroke-width="2"') > 0 && svg.indexOf('r="5" fill="#00ff00"') > 0, 'seconds hand and pin');
+assert.strictEqual(svg.split('stroke="#00ff00" stroke-width="3"').length - 1, 4, '12/3/6/9 notches in the seconds color');
+assert.ok(els.hands.innerHTML.indexOf('data-hands="2" aria-pressed="true"') > 0);
+var scheme = el(); scheme.dataset.scheme = '2';
+clicks[0]({ target: { closest: function () { return scheme; } } });
+assert.ok(screen().indexOf('fill="#000000" stroke="#ffffff" stroke-width="2"/>') > 0, 'scheme resets the hand colors, keeps the style');
+clicks[0]({ target: { closest: function () { return save; } } });
+sent = JSON.parse(decodeURIComponent(ctx.location.href.split('#')[1]));
+assert.deepStrictEqual([sent.SCHEME, sent.HANDS, sent.HAND_COLOR, sent.MINUTE_COLOR, sent.SECOND_COLOR], [2, 2, 0, 0, 0]);
+// Picking an accent takes the seconds color back
+ctx = load({ settings: { SCHEME: 4, SECOND_COLOR: 0xCC, HAND_COLOR: 0xF0 }, platform: 'emery' });
+var cell = el(); cell.dataset.argb = String(0xC3); cell.parentNode = { dataset: { color: 'ACCENT_COLOR' } };
+clicks[0]({ target: { closest: function () { return cell; } } });
+clicks[0]({ target: { closest: function () { return save; } } });
+sent = JSON.parse(decodeURIComponent(ctx.location.href.split('#')[1]));
+assert.deepStrictEqual([sent.ACCENT_COLOR, sent.SECOND_COLOR, sent.HAND_COLOR], [0xC3, 0, 0xF0]);
 
 // Accent scheme on a light background: black text, accent fills, bg for black
 ctx = load({ settings: { SCHEME: 4, BG_COLOR: 0xFF, ACCENT_COLOR: 0xF0, SLOT_TL: 8, CENTER_T: 8, SLOT_TR: 14, CENTER_B: 14, CENTER_L: 14, TEXT_TR: 'Hello <i>', TEXT_B: 'Hello', TEXT_L: 'EC' }, platform: 'emery' });

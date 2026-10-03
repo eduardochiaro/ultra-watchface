@@ -10,6 +10,10 @@ typedef enum { CENTER_POS_T, CENTER_POS_L, CENTER_POS_R, CENTER_POS_B, CENTER_PO
 // SCHEME_ACCENT is a value, not a bit: custom background + accent colors.
 enum { SCHEME_LIGHT = 1, SCHEME_MONO = 2, SCHEME_ACCENT = 4 };
 
+// Hour and minute hands: plain lines, or a thin stem and a rounded bar, solid or
+// an outline around the background color.
+typedef enum { HANDS_LINE, HANDS_BAR, HANDS_OUTLINE, HANDS_COUNT } HandStyle;
+
 typedef struct {
   uint8_t slots[SLOT_POS_COUNT];   // ComplicationId per corner
   bool seconds;
@@ -22,6 +26,11 @@ typedef struct {
   // COMP_CUSTOM text per corner and subdial; font glyphs only (config.js cleans it).
   char slot_text[SLOT_POS_COUNT][13];
   char center_text[CENTER_POS_COUNT][5];  // a monogram: 4 at most
+  // Appended: 0 on older saves.
+  uint8_t hands;                   // HandStyle
+  // GColor8 argb, fixed in any scheme; 0 = the scheme's own. hand_color is the
+  // hour hand's; second_color is also the pin's and the 12/3/6/9 notches'.
+  uint8_t hand_color, second_color, minute_color;
 } Settings;
 
 extern Settings g_settings;
