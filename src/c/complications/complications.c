@@ -20,6 +20,7 @@ static const ComplicationDraw DRAW[COMP_COUNT] = {
   [COMP_AQI_GAUGE] = comp_aqi_gauge_draw,
   [COMP_UV_GAUGE] = comp_uv_gauge_draw,
   [COMP_CALORIES] = comp_calories_draw,
+  [COMP_CALORIES_ACTIVE] = comp_calories_active_draw,
 };
 
 void complication_draw(ComplicationId id, GContext *ctx, const Slot *s) {

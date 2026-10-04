@@ -8,7 +8,7 @@ var config = require('../src/pkjs/config');
 // Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
 assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6,
-  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
+  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
 // Text: only glyphs the watch font has, 12 max
 var texts = config.withDefaults({ TEXT_TL: 'Héllo <b>&"x" 12:30 and more', TEXT_B: 'Hello' });
@@ -117,6 +117,21 @@ assert.deepStrictEqual([sent.ACCENT_COLOR, sent.SECOND_COLOR, sent.HAND_COLOR], 
   assert.ok(els.hands.innerHTML.split('data-hands=').length - 1 === 6, 'six hand styles');
 });
 
+// Rings: minimal has ticks only and the subdials grown into the larger center; chronograph a white band,
+// 00..55 on it and the accent ring inside, a rim around the minute hand over it
+ctx = load({ settings: { RING: 1 }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('>12</text>') < 0 && svg.indexOf('r="94"') < 0 && svg.indexOf('scale(1.59)') > 0, 'minimal: no numerals or circles, subdials 86/54 the size');
+assert.strictEqual(svg.split('stroke="#ffffff" stroke-width="3"').length - 1, 13, 'minimal: 12 hour ticks, and the minute hand');
+ctx = load({ settings: { RING: 2, HANDS: 3 }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('r="87" fill="none" stroke="#ffffff" stroke-width="22"') > 0 && svg.indexOf('r="74" fill="none" stroke="#ffaa00" stroke-width="4"') > 0, 'chronograph: band and inset ring');
+assert.ok(svg.indexOf('>00</text>') > 0 && svg.indexOf('>55</text>') > 0 && svg.indexOf('>60</text>') < 0, 'chronograph numerals');
+assert.strictEqual(svg.split('<polygon').length - 1, 6, 'chronograph: the minute hand and its 4 rim copies, the hour hand');
+assert.ok(els.rings.innerHTML.indexOf('data-ring="2" aria-pressed="true"') > 0);
+load({ settings: { RING: 2, SCHEME: 2, HANDS: 3 }, platform: 'emery' });
+assert.strictEqual(screen().split('stroke="#000000" stroke-width="3"').length - 1, 12, 'mono: hour ticks black on the white band');
+
 // Accent scheme on a light background: black text, accent fills, bg for black
 ctx = load({ settings: { SCHEME: 4, BG_COLOR: 0xFF, ACCENT_COLOR: 0xF0, SLOT_TL: 8, CENTER_T: 8, SLOT_TR: 14, CENTER_B: 14, CENTER_L: 14, TEXT_TR: 'Hello <i>', TEXT_B: 'Hello', TEXT_L: 'EC' }, platform: 'emery' });
 svg = screen();
@@ -212,6 +227,10 @@ assert.ok(screen().indexOf('>--</text>') > 0, 'weather saved before wind has non
 ctx = load({ settings: { CENTER_T: 26, CENTER_B: 0 }, platform: 'emery' });
 svg = screen();
 assert.ok(/fill="#ff0000"[^>]*>(SUN|MON|TUE|WED|THU|FRI|SAT)<\/text>/.test(svg) && !/Z" fill="#ff0000"/.test(svg), 'plain calendar');
+
+// Active calories: its own complication, corner and subdial
+load({ settings: { SLOT_TL: 30, CENTER_T: 30 }, platform: 'emery' });
+assert.ok(screen().indexOf('>310 KCAL</text>') > 0 && screen().indexOf('>310</text>') > 0 && screen().indexOf('1480') < 0, 'active calories');
 
 console.log('ok');
 

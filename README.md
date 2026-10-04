@@ -33,6 +33,7 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 | Text | Pick **Text** in any slot to show your own label: up to 12 characters in a corner, 4 in a subdial. |
 | Custom complications | Show a value from any JSON API. Create up to 8, then pick them in any corner or subdial. See below. |
 | Color scheme | Black, White, White on black, Black on white, or Accent. Accent adds a background and an accent color picker. |
+| Ring | Default, Minimal (ticks only, no numerals) or Chronograph (a white band of minute numerals over an accent ring). Minimal and Chronograph leave a larger center: the subdials grow to fill it and the hands run longer. |
 | Hands | Line, Bar, Outline, Pointer, Sword or Dauphine for the hour and minute hands, and a color each for the hour, minute and seconds hands. The seconds color is also the 12, 3, 6 and 9 notches'. Picking a color scheme resets the colors; picking an accent resets the seconds color. |
 | Units | °C, km and km/h, or °F, miles and mph. |
 | Daily step goal | 1,000 to 30,000 steps. Fills the steps and distance gauges. |
@@ -67,6 +68,7 @@ Limits:
 
 ### Good to know
 - Weather, rain, humidity, wind, air quality, UV, elevation and sunrise/sunset need location access for the Pebble app and a connection to your phone.
+- Calories come as a total (active and resting, so it grows even with no steps) or active only.
 - Steps, distance, calories and heart rate come from Pebble Health, so it has to be turned on. Heart rate needs a watch with a sensor.
 
 ## Development

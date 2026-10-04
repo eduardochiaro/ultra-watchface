@@ -25,6 +25,14 @@
 #define COMP_T     6
 #endif
 
+// Minimal and chronograph rings. Their outer edge is the default's outer circle.
+#define RING_OUT   (DIAL_R + 4)
+#define MIN_TICK   8    // minimal's ticks
+#define CHR_BAND   22   // chronograph's white band
+#define CHR_INSET  4    // the accent ring inside it
+#define CHR_NUM_R  (RING_OUT - 15)
+#define CHR_NUM    (NUM_SMALL - 2)  // its numerals
+
 #define COMP_SPAN  45   // degrees per corner complication, labels included
 #define ACCENT     GColorChromeYellow
 #define DEG(d)     DEG_TO_TRIGANGLE(d)
@@ -65,7 +73,61 @@ static GColor picked(uint8_t argb, GColor own) {
   return argb ? fixed((GColor){ .argb = argb }) : own;
 }
 
+// Per ring: the radius of the empty center the subdials fill, and how far each hand runs.
+typedef struct { int16_t center, hour, minute, second; } Reach;
+
+static Reach reach(void) {
+  if (g_settings.ring == RING_MINIMAL) {
+    // Minute hand to the ticks, the hour hand 10px short of them.
+    int in = RING_OUT - MIN_TICK;
+    return (Reach){ in - 4, in - 10, in, RING_OUT - MIN_TICK / 2 };
+  }
+  if (g_settings.ring == RING_CHRONO) {
+    // Hour hand just short of the inset ring, the minute hand over the band, seconds to its outer edge.
+    int in = RING_OUT - CHR_BAND - CHR_INSET;
+    return (Reach){ in, in - 3, RING_OUT - 4, RING_OUT };
+  }
+  // Hour hand just short of the inner ring, the minute hand up to the inner edge of 12/3/6/9.
+  return (Reach){ INNER_R, INNER_R - 8, NUM_R_BIG - NUM_BIG / 2, DIAL_R - 10 };
+}
+
+static void ring_fill(GContext *ctx, GPoint c, int r, int thickness, GColor color) {
+  graphics_context_set_fill_color(ctx, theme(color));
+  graphics_fill_radial(ctx, GRect(c.x - r, c.y - r, 2 * r + 1, 2 * r + 1), GOvalScaleModeFitCircle, thickness, 0, TRIG_MAX_ANGLE);
+}
+
+// Ticks only: light gray minutes, white hours.
+static void draw_minimal(GContext *ctx, GPoint c) {
+  for (int i = 0; i < 60; i++) {
+    bool hour = i % 5 == 0;
+    line(ctx, polar(c, DEG(i * 6), RING_OUT - MIN_TICK), polar(c, DEG(i * 6), RING_OUT), hour ? 3 : 1,
+         hour ? GColorWhite : GColorLightGray);
+  }
+}
+
+// A white band: ticks for the half minutes, minutes and, in the accent, hours;
+// 00..55 along it, upright at 00 and 30. An accent ring inside it.
+static void draw_chrono(GContext *ctx, GPoint c) {
+  GColor accent = picked(g_settings.second_color, ACCENT);
+  ring_fill(ctx, c, RING_OUT, CHR_BAND, GColorWhite);
+  ring_fill(ctx, c, RING_OUT - CHR_BAND, CHR_INSET, accent);
+  // Mono schemes: the accent is the band's own white.
+  if (gcolor_equal(theme(accent), theme(GColorWhite))) accent = GColorBlack;
+  for (int i = 0; i < 120; i++) {
+    bool hour = i % 10 == 0;
+    line(ctx, polar(c, DEG(i * 3), RING_OUT - 1), polar(c, DEG(i * 3), RING_OUT - (hour ? 10 : i % 2 ? 4 : 7)),
+         hour ? 3 : 1, hour ? accent : GColorBlack);
+  }
+  char buf[3];
+  for (int m = 0; m < 60; m += 5) {
+    snprintf(buf, sizeof(buf), "%02d", m);
+    text_draw_arc(ctx, buf, c, DEG(m * 6), CHR_NUM_R, CHR_NUM, GColorBlack);
+  }
+}
+
 static void draw_dial(GContext *ctx, GPoint c) {
+  if (g_settings.ring == RING_MINIMAL) return draw_minimal(ctx, c);
+  if (g_settings.ring == RING_CHRONO) return draw_chrono(ctx, c);
   graphics_context_set_stroke_color(ctx, theme(GColorDarkGray));
   graphics_context_set_stroke_width(ctx, 1);
   graphics_draw_circle(ctx, c, INNER_R);
@@ -143,12 +205,16 @@ static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
   int32_t ha = DEG((t->tm_hour % 12) * 30 + t->tm_min / 2);
   int32_t ma = DEG(t->tm_min * 6);
   GColor second = picked(g_settings.second_color, ACCENT);
-  draw_hand(ctx, c, ha, INNER_R - 8, 6, picked(g_settings.hand_color, GColorWhite));  // just short of the inner ring
-  // Up to the inner edge of 12/3/6/9.
-  draw_hand(ctx, c, ma, NUM_R_BIG - NUM_BIG / 2, 3, picked(g_settings.minute_color, GColorWhite));
+  Reach r = reach();
+  draw_hand(ctx, c, ha, r.hour, 6, picked(g_settings.hand_color, GColorWhite));
+  // Chronograph: a 1px rim of background, so a white hand shows over the white band.
+  static const int8_t RIM[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+  for (int i = 0; g_settings.ring == RING_CHRONO && i < 4; i++)
+    draw_hand(ctx, GPoint(c.x + RIM[i][0], c.y + RIM[i][1]), ma, r.minute, 3, GColorBlack);
+  draw_hand(ctx, c, ma, r.minute, 3, picked(g_settings.minute_color, GColorWhite));
   if (g_settings.seconds) {
     int32_t sa = DEG(t->tm_sec * 6);
-    line(ctx, polar(c, sa + DEG(180), DIAL_R * 25 / 100), polar(c, sa, DIAL_R - 10), 2, second);
+    line(ctx, polar(c, sa + DEG(180), DIAL_R * 25 / 100), polar(c, sa, r.second), 2, second);
   }
   graphics_context_set_fill_color(ctx, theme(second));
   graphics_fill_circle(ctx, c, 5);
@@ -193,7 +259,9 @@ static void draw_face(GContext *ctx, GRect b, GPoint c) {
   }
 
   draw_dial(ctx, c);
+  draw_zoom(c, reach().center * 100 / INNER_R);
   center_draw(ctx, c);
+  draw_zoom(c, 100);
 }
 
 static void update_proc(Layer *layer, GContext *ctx) {
@@ -256,6 +324,7 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     if ((t = dict_find(iter, MESSAGE_KEY_BG_COLOR))) g_settings.bg = t->value->int32 | 0xC0;  // opaque
     if ((t = dict_find(iter, MESSAGE_KEY_ACCENT_COLOR))) g_settings.accent = t->value->int32 | 0xC0;
     if ((t = dict_find(iter, MESSAGE_KEY_HANDS))) g_settings.hands = clamp_i32(t->value->int32, 0, HANDS_COUNT - 1);
+    if ((t = dict_find(iter, MESSAGE_KEY_RING))) g_settings.ring = clamp_i32(t->value->int32, 0, RING_COUNT - 1);
     // 0 stays 0: the scheme's color.
     if ((t = dict_find(iter, MESSAGE_KEY_HAND_COLOR))) g_settings.hand_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
     if ((t = dict_find(iter, MESSAGE_KEY_MINUTE_COLOR))) g_settings.minute_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;

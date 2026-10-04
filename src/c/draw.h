@@ -17,6 +17,10 @@ typedef struct {
 void draw_init(GSize screen);  // loads the vector font
 void draw_deinit(void);
 
+// Until set back to 100, text_draw, rect_fill and the slot_* and disc_fill shapes
+// come out `pct` % the size, around `pivot`: the subdials in a larger center.
+void draw_zoom(GPoint pivot, int pct);
+
 GPoint polar(GPoint c, int32_t angle, int r);  // r px from c at a TRIG angle
 GPoint slot_point(const Slot *s, int pct, int dr);
 int slot_len(const Slot *s);  // px along the centerline
@@ -34,6 +38,8 @@ void slot_arc(GContext *ctx, const Slot *s, int from_pct, int to_pct, GColor col
 void slot_box(GContext *ctx, const Slot *s, int from_pct, int to_pct, int r, GColor color);
 // Antialiased disc, flat below `cut` px from the center (cut = r: whole disc).
 void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color);
+// graphics_fill_rect, themed; `r` rounds the corners.
+void rect_fill(GContext *ctx, GRect rect, int r, GColor color);
 // Rounded bar on the ray from `c` at `angle`, from r0 to r1 px out, `w` wide.
 void ray_bar(GContext *ctx, GPoint c, int32_t angle, int r0, int r1, int w, GColor color);
 // Polygon on that ray: each point is (px out along it, px across it).
@@ -80,6 +86,10 @@ void text_draw(GContext *ctx, const char *txt, GPoint c, int size, GColor color)
 // Same, curved along the circle around `center` (edge labels). Not clamped.
 void text_draw_along(GContext *ctx, const char *txt, GPoint c, GPoint center, int size,
                      GColor color);
+// Same, centered at TRIG angle `a`, `r` px from `center`: exact, where a whole-pixel
+// `c` is up to a pixel off the angle and the radius.
+void text_draw_arc(GContext *ctx, const char *txt, GPoint center, int32_t a, int r, int size,
+                   GColor color);
 int text_width(GContext *ctx, const char *txt, int size);
 
 // Maps a color from the black scheme (what all drawing code is written in) to

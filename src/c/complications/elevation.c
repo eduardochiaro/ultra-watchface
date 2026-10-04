@@ -28,14 +28,12 @@ void center_elevation_draw(GContext *ctx, GPoint c) {
   int ux = c.x + 3, ax = ux - text_width(ctx, unit, SUB_SMALL) / 2 - 5, ay = c.y - 11;
   text_draw(ctx, ICON_ARROW, GPoint(ax, ay), 11, GColorRed);
   text_draw(ctx, unit, GPoint(ux, ay), SUB_SMALL, GColorWhite);
-  graphics_context_set_fill_color(ctx, theme(GColorRed));
-  graphics_fill_rect(ctx, GRect(c.x - SUB_R + 1, c.y - 5, 2 * SUB_R - 2, 12), 4, GCornersAll);
+  rect_fill(ctx, GRect(c.x - SUB_R + 1, c.y - 5, 2 * SUB_R - 2, 12), 4, GColorRed);
   text_draw(ctx, buf, GPoint(c.x, c.y + 1), SUB_TEXT, ink_on(GColorRed));
   static const struct { int8_t hw; uint8_t argb; } BARS[] = {
     { 10, GColorDarkCandyAppleRedARGB8 }, { 7, GColorBulgarianRoseARGB8 },
   };
   for (unsigned i = 0; i < ARRAY_LENGTH(BARS); i++) {
-    graphics_context_set_fill_color(ctx, theme((GColor){ .argb = BARS[i].argb }));
-    graphics_fill_rect(ctx, GRect(c.x - BARS[i].hw, c.y + 10 + 3 * i, 2 * BARS[i].hw, 2), 0, GCornerNone);
+    rect_fill(ctx, GRect(c.x - BARS[i].hw, c.y + 10 + 3 * i, 2 * BARS[i].hw, 2), 0, (GColor){ .argb = BARS[i].argb });
   }
 }

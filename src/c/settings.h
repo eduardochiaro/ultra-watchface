@@ -16,6 +16,11 @@ enum { SCHEME_LIGHT = 1, SCHEME_MONO = 2, SCHEME_ACCENT = 4 };
 // Dauphine: no stem, a long kite out of the pin, one half of it shaded.
 typedef enum { HANDS_LINE, HANDS_BAR, HANDS_OUTLINE, HANDS_POINTER, HANDS_SWORD, HANDS_DAUPHINE, HANDS_COUNT } HandStyle;
 
+// The dial's ring. Minimal: ticks only, no numerals. Chronograph: a white band of
+// minute numerals over an accent ring. Both leave a larger center: the subdials
+// grow to fill it and the hands run longer.
+typedef enum { RING_DEFAULT, RING_MINIMAL, RING_CHRONO, RING_COUNT } RingStyle;
+
 typedef struct {
   uint8_t slots[SLOT_POS_COUNT];   // ComplicationId per corner
   bool seconds;
@@ -33,6 +38,7 @@ typedef struct {
   // GColor8 argb, fixed in any scheme; 0 = the scheme's own. hand_color is the
   // hour hand's; second_color is also the pin's and the 12/3/6/9 notches'.
   uint8_t hand_color, second_color, minute_color;
+  uint8_t ring;                    // RingStyle
 } Settings;
 
 extern Settings g_settings;

@@ -15,7 +15,8 @@ var COMPLICATIONS = [
   { label: 'Calendar', value: 6 },
   { label: 'Heart rate', value: 8 },
   { label: 'Distance', value: 9 },
-  { label: 'Calories', value: 29 },
+  { label: 'Calories (total)', value: 29 },
+  { label: 'Calories (active)', value: 30 },
   { label: 'Air quality', value: 7 },
   { label: 'Air quality (gauge)', value: 27 },
   { label: 'UV index', value: 11 },
@@ -43,7 +44,8 @@ var CENTER_COMPLICATIONS = [
   { label: 'Battery', value: 3 },
   { label: 'Heart rate', value: 8 },
   { label: 'Distance', value: 9 },
-  { label: 'Calories', value: 29 },
+  { label: 'Calories (total)', value: 29 },
+  { label: 'Calories (active)', value: 30 },
   { label: 'Elevation', value: 10 },
   { label: 'Sunrise / sunset', value: 23 },
   { label: '.beat time', value: 24 },
@@ -77,11 +79,14 @@ var SCHEME_ACCENT = 4;
 // Index = HANDS value, see HandStyle in src/c/settings.h
 var HANDS = ['Line', 'Bar', 'Outline', 'Pointer', 'Sword', 'Dauphine'];
 
+// Index = RING value, see RingStyle in src/c/settings.h
+var RINGS = ['Default', 'Minimal', 'Chronograph'];
+
 // Mirrors g_settings in C. weather.js asks Open-Meteo for the chosen
 // temperature unit; the watch converts distance and elevation. Colors are GColor8 argb (0xC0 = black,
 // 0xF8 = chrome yellow); a hand color of 0 follows the scheme.
 var DEFAULTS = { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6, SCHEME: 0, UNITS: 0, STEP_GOAL: 10000, SECONDS: 0,
-  BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
+  BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   // The Text complication's text, per place: TEXT_ + the SLOT_/CENTER_ suffix.
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '',
   // Custom API complications. Stays on the phone: the watch gets what to draw (api.js).
@@ -144,7 +149,7 @@ function toMessage(settings) {
 if (typeof module === 'object') {
   module.exports = {
     SETTINGS_KEY: SETTINGS_KEY, COMPLICATIONS: COMPLICATIONS, CENTER_COMPLICATIONS: CENTER_COMPLICATIONS,
-    CORNERS: CORNERS, CENTERS: CENTERS, SCHEMES: SCHEMES, SCHEME_ACCENT: SCHEME_ACCENT, HANDS: HANDS,
+    CORNERS: CORNERS, CENTERS: CENTERS, SCHEMES: SCHEMES, SCHEME_ACCENT: SCHEME_ACCENT, HANDS: HANDS, RINGS: RINGS,
     API_ID: API_ID, API_MAX: API_MAX, API_TYPES: API_TYPES,
     DEFAULTS: DEFAULTS, clean: clean, cleanText: cleanText, withDefaults: withDefaults, savedSettings: savedSettings, toMessage: toMessage
   };

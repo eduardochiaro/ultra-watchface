@@ -74,7 +74,8 @@
       "HANDS",
       "HAND_COLOR",
       "SECOND_COLOR",
-      "MINUTE_COLOR"
+      "MINUTE_COLOR",
+      "RING"
     ],
     "resources": {
       "media": [

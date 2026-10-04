@@ -36,7 +36,8 @@ typedef enum {
   COMP_CALENDAR_PLAIN, // subdial only: no page behind it
   COMP_AQI_GAUGE, // the AQI and UV as range gauges, not sections
   COMP_UV_GAUGE,
-  COMP_CALORIES,
+  COMP_CALORIES,  // active and resting
+  COMP_CALORIES_ACTIVE,
   COMP_COUNT
 } ComplicationId;
 
@@ -72,6 +73,7 @@ void comp_wind_draw(GContext *ctx, const Slot *s);
 void comp_aqi_gauge_draw(GContext *ctx, const Slot *s);
 void comp_uv_gauge_draw(GContext *ctx, const Slot *s);
 void comp_calories_draw(GContext *ctx, const Slot *s);
+void comp_calories_active_draw(GContext *ctx, const Slot *s);
 void comp_custom_draw(GContext *ctx, const Slot *s, const char *txt);  // not in the tables: needs its text
 void comp_api_draw(GContext *ctx, const Slot *s, int i);  // i: 0..API_MAX-1
 
@@ -124,6 +126,7 @@ void center_wind_draw(GContext *ctx, GPoint c);
 void center_aqi_gauge_draw(GContext *ctx, GPoint c);
 void center_uv_gauge_draw(GContext *ctx, GPoint c);
 void center_calories_draw(GContext *ctx, GPoint c);
+void center_calories_active_draw(GContext *ctx, GPoint c);
 void center_custom_draw(GContext *ctx, GPoint c, const char *txt);
 void center_api_draw(GContext *ctx, GPoint c, int i);
 // `size`, or the largest below it at which `txt` fits `width` px.

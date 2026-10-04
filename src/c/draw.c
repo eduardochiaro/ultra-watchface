@@ -8,6 +8,30 @@
 static FFont *s_font;
 static GSize s_screen;
 
+// draw_zoom()
+static int s_zoom = 100;
+static GPoint s_pivot;
+
+void draw_zoom(GPoint pivot, int pct) {
+  s_pivot = pivot;
+  s_zoom = pct;
+}
+
+static int32_t zoom(int32_t v) {
+  return v * s_zoom / 100;
+}
+
+static GPoint zoom_point(GPoint p) {
+  return GPoint(s_pivot.x + zoom(p.x - s_pivot.x), s_pivot.y + zoom(p.y - s_pivot.y));
+}
+
+// For a path in screen coordinates.
+static void zoom_path(FContext *f) {
+  fctx_set_scale(f, FPoint(100, 100), FPoint(s_zoom, s_zoom));
+  fctx_set_offset(f, FPoint(INT_TO_FIXED(s_pivot.x) - zoom(INT_TO_FIXED(s_pivot.x)),
+                            INT_TO_FIXED(s_pivot.y) - zoom(INT_TO_FIXED(s_pivot.y))));
+}
+
 void draw_init(GSize screen) {
   s_screen = screen;
   s_font = ffont_create_from_resource(RESOURCE_ID_FONT);
@@ -131,6 +155,7 @@ void slot_arc(GContext *ctx, const Slot *s, int from_pct, int to_pct, GColor col
   const int32_t STEP = TRIG_MAX_ANGLE / 12;  // 30° around a cap
   FContext f;
   fctx_init_context(&f, ctx);
+  zoom_path(&f);
   fctx_set_fill_color(&f, theme(color));
   fctx_begin_fill(&f);
   fctx_move_to(&f, fpolar_f(c, a, r + h));
@@ -154,6 +179,7 @@ void slot_box(GContext *ctx, const Slot *s, int from_pct, int to_pct, int r, GCo
   GPoint c = s->center;
   FContext f;
   fctx_init_context(&f, ctx);
+  zoom_path(&f);
   fctx_set_fill_color(&f, theme(color));
   fctx_begin_fill(&f);
   fctx_move_to(&f, fpolar(c, a + io, outer));
@@ -175,6 +201,7 @@ void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color) {
   fixed_t max_y = INT_TO_FIXED(c.y + cut);
   FContext f;
   fctx_init_context(&f, ctx);
+  zoom_path(&f);
   fctx_set_fill_color(&f, theme(color));
   fctx_begin_fill(&f);
   for (int i = 0; i < 36; i++) {
@@ -194,6 +221,12 @@ static void capsule(FContext *f, FPoint p, FPoint q, int32_t angle, fixed_t h) {
     if (i) fctx_line_to(f, pt); else fctx_move_to(f, pt);
   }
   fctx_close_path(f);
+}
+
+void rect_fill(GContext *ctx, GRect rect, int r, GColor color) {
+  graphics_context_set_fill_color(ctx, theme(color));
+  graphics_fill_rect(ctx, (GRect){ zoom_point(rect.origin), GSize(zoom(rect.size.w), zoom(rect.size.h)) },
+                     zoom(r), r ? GCornersAll : GCornerNone);
 }
 
 void ray_bar(GContext *ctx, GPoint c, int32_t angle, int r0, int r1, int w, GColor color) {
@@ -226,13 +259,14 @@ void ray_poly(GContext *ctx, GPoint c, int32_t angle, const GPoint *pts, int n, 
 
 // fctx, not graphics_fill_circle: that one snaps to a pixel, off the arc's centerline.
 void slot_dot(GContext *ctx, const Slot *s, int pct, int r, int edge, GColor fill, GColor ring) {
-  FPoint p = fpolar(s->center, slot_angle(s, pct), s->radius);
+  FPoint p = fpolar(s->center, slot_angle(s, pct), s->radius), o = FPointI(s_pivot.x, s_pivot.y);
+  p = FPoint(o.x + zoom(p.x - o.x), o.y + zoom(p.y - o.y));
   FContext f;
   fctx_init_context(&f, ctx);
   for (int i = 0; i < 2; i++) {
     fctx_set_fill_color(&f, theme(i ? fill : ring));
     fctx_begin_fill(&f);
-    fctx_plot_circle(&f, &p, INT_TO_FIXED(i ? r : r + edge));
+    fctx_plot_circle(&f, &p, zoom(INT_TO_FIXED(i ? r : r + edge)));
     fctx_end_fill(&f);
   }
   fctx_deinit_context(&f);
@@ -259,6 +293,8 @@ static GPoint clamp_to_screen(GPoint c, int hw, int hh) {
 
 void text_draw(GContext *ctx, const char *txt, GPoint c, int size, GColor color) {
   if (!s_font || !txt[0]) return;
+  c = zoom_point(c);
+  size = zoom(size);
   FContext f;
   fctx_init_context(&f, ctx);
   fctx_set_text_cap_height(&f, s_font, size);
@@ -278,11 +314,13 @@ void text_draw(GContext *ctx, const char *txt, GPoint c, int size, GColor color)
 // ponytail: per-glyph widths, no kerning; fine for digits and %.
 void text_draw_along(GContext *ctx, const char *txt, GPoint c, GPoint center, int size,
                      GColor color) {
-  if (!s_font) return;
   int dx = c.x - center.x, dy = c.y - center.y;
-  int r = isqrt(dx * dx + dy * dy);
-  if (r == 0) return;
-  int32_t a = atan2_lookup(dx, -dy);
+  text_draw_arc(ctx, txt, center, atan2_lookup(dx, -dy), isqrt(dx * dx + dy * dy), size, color);
+}
+
+void text_draw_arc(GContext *ctx, const char *txt, GPoint center, int32_t a, int r, int size,
+                   GColor color) {
+  if (!s_font || r == 0) return;
   bool top = cos_lookup(a) >= 0;
   FContext f;
   fctx_init_context(&f, ctx);
