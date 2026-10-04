@@ -4,7 +4,8 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 
 - **Eight slots, your pick.** Steps, distance, calories, heart rate, battery, calendar, temperature, rain, humidity, wind, air quality and UV index (as sections or a gauge), elevation, sunrise and sunset, .beat time, current weather, your own text, or a value from any JSON API.
 - **Five color schemes.** Black, White, two monochromes, or Accent: any background and accent from the watch's 64 colors.
-- **Four rings, six hands.** Default, Minimal, Sport or Chronograph ring; Line, Bar, Outline, Pointer, Sword or Dauphine hands, each in its own color.
+- **Four rings** Default, Minimal, Sport or Chronograph ring.
+- **Six hands.** Line, Bar, Outline, Pointer, Sword or Dauphine hands, each in its own color.
 - **Live preview.** The settings page draws the face as you change it.
 - **No account, no API key.** Weather and air quality come from [Open-Meteo](https://open-meteo.com), refreshed every 30 minutes.
 
