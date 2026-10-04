@@ -728,8 +728,10 @@
 			// center_sun_draw: the day around the ring, the next of sunrise and sunset in the middle
 			23: function (c) {
 				var m = now.getHours() * 60 + now.getMinutes(), up = weather.SUNRISE, down = weather.SUNSET, day = SUN && m >= up && m < down;
-				gauge(c, day ? (m - up) * 100 / (down - up) : 0, C.yellow);
-				if (day) thumb(c, (m - up) * 100 / (down - up), C.white);
+				// at night: the night, sunset to sunrise, dimmer
+				var pct = !SUN ? 0 : day ? (m - up) * 100 / (down - up) : (m - down + 1440) % 1440 * 100 / (up - down + 1440);
+				gauge(c, pct, day ? C.yellow : "#5555AA");
+				if (SUN) thumb(c, pct, C.white);
 				fit(SUN ? sunTime(day ? down : up) : "--", [c[0], c[1] - 1], ST, INNER, C.white);
 				icon(day ? "down" : "up", [c[0], c[1] + SL], SS + 1, C.yellow);
 			},

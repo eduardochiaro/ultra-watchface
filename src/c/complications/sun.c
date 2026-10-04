@@ -25,7 +25,8 @@ void comp_sun_draw(GContext *ctx, const Slot *s) {
 }
 
 // The day around the ring, a thumb at now; the next of the two in the middle,
-// its arrow below. At night the ring is empty.
+// its arrow below. At night the ring is the night, sunset to sunrise, dimmer.
+// ponytail: tomorrow's sunrise is taken as today's, a minute or two off.
 void center_sun_draw(GContext *ctx, GPoint c) {
   char buf[8] = "--";
   bool day = false;
@@ -34,11 +35,11 @@ void center_sun_draw(GContext *ctx, GPoint c) {
     struct tm *tm = localtime(&t);
     int now = tm->tm_hour * 60 + tm->tm_min, up = g_weather.sunrise, down = g_weather.sunset;
     day = now >= up && now < down;
-    center_gauge(ctx, c, day ? (now - up) * 100 / (down - up) : 0, GColorYellow);
-    if (day) {
-      Slot s = center_ring(c);
-      slot_dot(ctx, &s, (now - up) * 100 / (down - up), SUB_T / 2 + 1, 1, GColorWhite, GColorBlack);
-    }
+    int pct = day ? (now - up) * 100 / (down - up)
+                  : ((now - down + 1440) % 1440) * 100 / (up - down + 1440);
+    Slot s = center_ring(c);
+    center_gauge(ctx, c, pct, day ? GColorYellow : GColorLiberty);
+    slot_dot(ctx, &s, pct, SUB_T / 2 + 1, 1, GColorWhite, GColorBlack);
     sun_time(buf, sizeof(buf), day ? down : up);
   } else {
     center_gauge(ctx, c, 0, GColorYellow);
