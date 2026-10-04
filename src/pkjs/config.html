@@ -77,6 +77,8 @@
 	.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; }
 	details.row { display: block; padding: 6px 16px; }
 	.row + .row { border-top: 1px solid var(--line); }
+	.row[hidden] { display: none; }
+	#zone-name { min-height: 44px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--ground); font-weight: 700; }
 	.row b, .row label { font-size: 15px; font-weight: 700; }
 	.row small { display: block; font-size: 13px; color: var(--soft); }
 	.goal { flex-direction: column; align-items: stretch; gap: 10px; }
@@ -174,6 +176,12 @@
 	<section>
 		<h2>Ring</h2>
 		<div class="grid hands" id="rings" role="group" aria-label="Dial ring"></div>
+		<div class="card colors" id="band-row" hidden>
+			<details class="row">
+				<summary>Band<span class="chip" id="band-chip"></span></summary>
+				<div class="palette" data-color="BAND_COLOR" role="group" aria-label="Ring band color"></div>
+			</details>
+		</div>
 	</section>
 
 	<section>
@@ -193,7 +201,7 @@
 				<div class="palette" data-color="SECOND_COLOR" role="group" aria-label="Seconds hand and notch color"></div>
 			</details>
 		</div>
-		<p class="soft" style="margin: 8px 0 0">Picking a color scheme resets the hand colors. Picking an accent resets the seconds color.</p>
+		<p class="soft" style="margin: 8px 0 0">Picking a color scheme resets the hand and band colors. Picking an accent resets the seconds color.</p>
 	</section>
 
 	<section>
@@ -221,6 +229,14 @@
 				</div>
 				<button type="button" class="switch" id="seconds" role="switch" aria-labelledby="seconds-label"><i></i></button>
 			</div>
+			<div class="row goal" id="zone-row" hidden>
+				<label for="zone">Second time zone</label>
+				<div class="grid">
+					<input type="text" id="zone-name" maxlength="4" autocomplete="off" placeholder="Name" aria-label="Time zone name">
+					<select id="zone" aria-label="Offset from UTC"></select>
+				</div>
+				<small>A fixed offset: change it when daylight saving starts or ends.</small>
+			</div>
 		</div>
 	</section>
 
@@ -242,7 +258,7 @@
 	// Last weather sent to the watch, else a sample. Health and battery live on
 	// the watch only, so the preview always samples them.
 	var weather = state.weather || { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, SUNRISE: 390, SUNSET: 1195, WIND: 14, WIND_DIR: 315, imperial: false };
-	var STEPS = 6240, BATTERY = 82, BPM = 72, WALKED_M = 3900, KCAL = 1480, KCAL_ACTIVE = 310;
+	var STEPS = 6240, BATTERY = 82, BPM = 72, WALKED_M = 3900, KCAL = 1480, KCAL_ACTIVE = 310, SLEEP_MIN = 452, ACTIVE_MIN = 48;
 	// Custom API complication i as the watch draws it: the last message sent for
 	// it (api.js), else a sample.
 	function apiView(i) {
@@ -372,6 +388,16 @@
 	var SUN = weather.SUNRISE !== weather.SUNSET;
 	// ponytail: always 24h; the 12h setting lives on the watch
 	function sunTime(m) { return Math.trunc(m / 60) + ":" + ("0" + m % 60).slice(-2); }
+	// clock_text() in clock.c, 24h; zone_now(): the same, ZONE_OFFSET minutes from UTC
+	function clock(h, m) { return ("0" + h).slice(-2) + ":" + ("0" + m).slice(-2); }
+	function zoneClock(now) {
+		var z = new Date(now.getTime() + settings.ZONE_OFFSET * 60000);
+		return clock(z.getUTCHours(), z.getUTCMinutes());
+	}
+	// sleep_text() in sleep.c
+	function sleepText() { return SLEEP_MIN > 0 ? Math.trunc(SLEEP_MIN / 60) + "h" + ("0" + SLEEP_MIN % 60).slice(-2) : "--"; }
+	// moon_phase() in moon.c: 0 new, 0.5 full
+	function moonPhase(now) { return (Math.floor(now.getTime() / 1000) - 947182440) % 2551443 / 2551443; }
 	// beats() in beat.c
 	function beats(now) { return "." + ("00" + Math.floor((now.getTime() / 1000 + 3600) % 86400 / 86.4)).slice(-3); }
 	// wind_speed(), wind_from() in wind.c
@@ -661,7 +687,7 @@
 				bandRange(s, UV, UV_BANDS, 11, "UV");
 			}
 			if (id === 29 || id === 30) {
-				iconText(s, "flame", (id === 30 ? KCAL_ACTIVE : KCAL) + " KCAL", "#FF5500");
+				bar(s, stepPct(), "#FF5500", String(id === 30 ? KCAL_ACTIVE : KCAL), "flame");  // the step goal's progress
 			}
 			if (id === 25) {
 				iconText(s, "wind", wind() >= 0 ? wind() + (settings.UNITS === 1 ? "mph" : "km/h") + " " + windFrom() : "--", C.picton);
@@ -677,6 +703,22 @@
 					along(beats(now), at(s, 50), s.r, g.TEXT + 2, C.white);
 					text("@", corner(s, 4 + g.ICON / 2), g.ICON - 4, C.red, 0);
 				}
+			}
+			// clock.c: the time, the second zone's after its name; text only, like the Text complication
+			if (id === 31 || id === 32) {
+				var label = id === 31 ? clock(now.getHours(), now.getMinutes()) : (settings.ZONE_NAME ? settings.ZONE_NAME + " " : "") + zoneClock(now);
+				along(label, at(s, 50), s.r, fitCap(label, g.TEXT + 2, slen(s)), C.white);
+			}
+			if (id === 33) {
+				iconText(s, { name: "ZZ" }, sleepText(), "#AA55FF");
+			}
+			if (id === 34) {
+				iconText(s, "runner", ACTIVE_MIN + " MIN", C.yellow);
+			}
+			// comp_moon_draw: how much is lit, an arrow up while it grows
+			if (id === 35) {
+				var ph = moonPhase(now);
+				iconText(s, "moon", (ph < 0.5 ? "\u25B4" : "\u25BE") + Math.trunc((1 - Math.cos(2 * Math.PI * ph)) * 50) + CORNER_PCT, "#FFFFAA");
 			}
 			if (id === 23) {
 				iconText(s, "sun", SUN ? "\u25B4" + sunTime(weather.SUNRISE) + " \u25BE" + sunTime(weather.SUNSET) : "--", C.yellow);
@@ -699,22 +741,24 @@
 		} else if (banded) {
 			// draw_band: sport has the accent ring and hour ticks, 00..55 turned; chronograph black on white, a wider band, 1..12 upright
 			var band = sport ? CHR_BAND : CHR_BAND + CHR_INSET, TICK = sport ? [10, 7, 4] : [6, 5, 3];  // hour, minute, half
-			ring(OUT - band / 2, C.white, band);
+			// ticks and numerals: black or white, whichever reads on the band
+			var bandCol = handColor("BAND_COLOR", C.white), bandInk = ink(bandCol);
+			ring(OUT - band / 2, bandCol, band);
 			if (sport) {
 				ring(OUT - CHR_BAND - CHR_INSET / 2, secondCol, CHR_INSET);
 			}
-			var tick = !sport || T(secondCol) === T(C.white) ? C.black : secondCol;  // mono schemes
+			var tick = !sport || T(secondCol) === T(bandCol) ? bandInk : secondCol;  // the accent is the band's own color
 			for (i = 0; i < 120; i++) {
 				hour = i % 10 === 0;
-				stroke(seg(P(i * 3, OUT - 1), P(i * 3, OUT - TICK[hour ? 0 : i % 2 ? 2 : 1])), hour ? tick : C.black, hour ? 3 : 1);
+				stroke(seg(P(i * 3, OUT - 1), P(i * 3, OUT - TICK[hour ? 0 : i % 2 ? 2 : 1])), hour ? tick : bandInk, hour ? 3 : 1);
 			}
 			// ponytail: sport's are straight, turned as a whole; the watch curves each digit
 			for (var n = 1; n <= 12; n++) {
 				var m = n * 5 % 60;
 				if (sport) {
-					text(("0" + m).slice(-2), P(n * 30, OUT - 15), g.NUM_SMALL - 2, C.black, m <= 15 || m >= 45 ? m * 6 : m * 6 + 180);
+					text(("0" + m).slice(-2), P(n * 30, OUT - 15), g.NUM_SMALL - 2, bandInk, m <= 15 || m >= 45 ? m * 6 : m * 6 + 180);
 				} else {
-					text(String(n), P(n * 30, OUT - (TICK[0] + band) / 2), g.round ? 9 : 8, C.black, 0);  // CHRONO_NUM
+					text(String(n), P(n * 30, OUT - (TICK[0] + band) / 2), g.round ? 9 : 8, bandInk, 0);  // CHRONO_NUM
 				}
 			}
 		} else {
@@ -859,11 +903,12 @@
 			// center_band_gauge_draw: no min and max
 			27: function (c) { subRange(c, bandPct(AQI, AQI_BANDS, 500), "", "", AQI >= 0 ? String(AQI) : "--", "AQI", bandCols(AQI_BANDS)); },
 			28: function (c) { subRange(c, bandPct(UV, UV_BANDS, 11), "", "", UV >= 0 ? String(UV) : "--", "UV", bandCols(UV_BANDS)); },
-			// center_calories_draw: no ring, a flame, the value under it, the unit below
+			// center_calories_draw: the step goal around the ring, the unit over the value, a flame in the gap
 			29: function (c, t, kcal) {
-				icon("flame", [c[0], c[1] - g.SUB_R + 5], 10, "#FF5500");
-				fit(String(kcal || KCAL), [c[0], c[1] + 1], ST + 2, 2 * g.SUB_R - 4, C.white);
-				text("KCAL", [c[0], c[1] + SL + 2], SS - 1, C.white, 0);
+				gauge(c, stepPct(), "#FF5500");
+				text("KCAL", [c[0], c[1] - 7], SS - 1, C.white, 0);
+				fit(String(kcal || KCAL), [c[0], c[1] + 2], ST + 1, INNER, C.white);
+				icon("flame", [c[0], c[1] + SL + 2], 10, "#FF5500");
 			},
 			30: function (c) { SUBDIAL[29](c, "", KCAL_ACTIVE); },
 			// center_sun_draw: the day around the ring, the next of sunrise and sunset in the middle
@@ -895,6 +940,32 @@
 			26: function (c) {
 				text(DAYS[now.getDay()], [c[0], c[1] - 9], SS + 1, C.red, 0);
 				text(String(now.getDate()), [c[0], c[1] + 4], ST + 5, C.white, 0);
+			},
+			// center_time_draw, center_zone_draw: the time across the subdial, the zone's name above
+			31: function (c) { fit(clock(now.getHours(), now.getMinutes()), c, ST + 3, 2 * g.SUB_R, C.white); },
+			32: function (c) {
+				text(settings.ZONE_NAME, [c[0], c[1] - g.SUB_R + 5], SS, C.accent, 0);
+				fit(zoneClock(now), [c[0], c[1] + (settings.ZONE_NAME ? 2 : 0)], ST + 3, 2 * g.SUB_R, C.white);
+			},
+			// center_sleep_draw, center_active_draw: a caption, the value under it
+			33: function (c) {
+				text("SLEEP", [c[0], c[1] - g.SUB_R + 5], SS - 1, "#AA55FF", 0);
+				fit(sleepText(), [c[0], c[1] + 2], ST + 2, 2 * g.SUB_R - 4, C.white);
+			},
+			34: function (c) {
+				text("ACTIVE", [c[0], c[1] - g.SUB_R + 5], SS - 1, C.yellow, 0);
+				fit(String(ACTIVE_MIN), [c[0], c[1] + 1], ST + 3, 2 * g.SUB_R - 4, C.white);
+				text("MIN", [c[0], c[1] + SL + 2], SS + 1, C.white, 0);
+			},
+			// center_moon_draw, moon_fill(): the limb down the lit side, back up the terminator's half ellipse
+			35: function (c) {
+				var r = Math.trunc(g.SUB_R * 3 / 4), ph = moonPhase(now), right = ph < 0.5, k = Math.cos(2 * Math.PI * ph);
+				if (lightScheme(scheme)) {
+					disc(c, r + 1, C.lg);
+				}
+				disc(c, r, "!" + C.dg);
+				out.push('<path d="M' + c[0] + " " + (c[1] - r) + "A" + r + " " + r + " 0 0 " + (right ? 1 : 0) + " " + c[0] + " " + (c[1] + r) +
+					"A" + f(r * Math.abs(k)) + " " + r + " 0 0 " + (right === k < 0 ? 1 : 0) + " " + c[0] + " " + (c[1] - r) + 'Z" fill="#ffffff"/>');
 			},
 			10: function (c) {
 				var unit = settings.UNITS === 1 ? "FT" : "M", ux = c[0] + 3, ay = c[1] - 11;
@@ -992,6 +1063,8 @@
 		$("rings").innerHTML = RINGS.map(function (label, i) {
 			return '<button type="button" class="scheme" data-ring="' + i + '" aria-pressed="' + (settings.RING === i) + '">' + label + "</button>";
 		}).join("");
+		$("band-row").hidden = settings.RING < 2;  // sport and chronograph
+		$("band-chip").style.background = theme(handColor("BAND_COLOR", C.white), settings.SCHEME);
 		$("hand-chip").style.background = theme(handColor("HAND_COLOR", C.white), settings.SCHEME);
 		$("minute-chip").style.background = theme(handColor("MINUTE_COLOR", C.white), settings.SCHEME);
 		$("second-chip").style.background = theme(handColor("SECOND_COLOR", C.accent), settings.SCHEME);
@@ -1002,6 +1075,8 @@
 		$("goal").value = settings.STEP_GOAL;
 		$("goal-text").textContent = settings.STEP_GOAL.toLocaleString("en-US") + " steps";
 		$("seconds").setAttribute("aria-checked", !!settings.SECONDS);
+		$("zone-row").hidden = !CORNERS.concat(CENTERS).some(function (p) { return settings[p.key] === 32; });
+		$("zone").value = settings.ZONE_OFFSET;
 		[].forEach.call(document.querySelectorAll("[data-text]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== 14; });
 		[].forEach.call(document.querySelectorAll("[data-range]"), function (l) { l.hidden = settings.APIS[l.dataset.range].type === 0; });
 		$("api-add").hidden = settings.APIS.length >= API_MAX;
@@ -1115,6 +1190,24 @@
 		}
 		render();
 	});
+	// Every half hour from UTC-12 to UTC+14, and the three zones on a quarter.
+	var zones = [];
+	for (var zm = -720; zm <= 840; zm += 15) {
+		if (zm % 30 === 0 || zm === 345 || zm === 525 || zm === 765) {
+			zones.push('<option value="' + zm + '"' + (settings.ZONE_OFFSET === zm ? " selected" : "") + ">UTC" + (zm < 0 ? "\u2212" : "+") +
+				clock(Math.trunc(Math.abs(zm) / 60), Math.abs(zm) % 60) + "</option>");
+		}
+	}
+	$("zone").innerHTML = zones.join("");
+	$("zone-name").value = settings.ZONE_NAME;
+	$("zone").addEventListener("change", function (e) {
+		settings.ZONE_OFFSET = +e.target.value;
+		render();
+	});
+	$("zone-name").addEventListener("input", function (e) {
+		settings.ZONE_NAME = e.target.value = cleanText("ZONE_NAME", e.target.value);
+		render();
+	});
 	$("goal").addEventListener("input", function (e) {
 		settings.STEP_GOAL = +e.target.value;
 		render();
@@ -1132,7 +1225,7 @@
 		}
 		if (b.dataset.scheme) {
 			settings.SCHEME = +b.dataset.scheme;
-			settings.HAND_COLOR = settings.MINUTE_COLOR = settings.SECOND_COLOR = 0;  // back to the scheme's
+			settings.HAND_COLOR = settings.MINUTE_COLOR = settings.SECOND_COLOR = settings.BAND_COLOR = 0;  // back to the scheme's
 		}
 		else if (b.dataset.hands) {
 			settings.HANDS = +b.dataset.hands;

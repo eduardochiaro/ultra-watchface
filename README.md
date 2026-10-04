@@ -2,7 +2,7 @@
 
 An analog watchface for Pebble with eight complications you choose yourself. Four gauges curve around the corners, four subdials sit inside the dial, and every one is yours to swap.
 
-- **Eight slots, your pick.** Steps, distance, calories, heart rate, battery, calendar, temperature, rain, humidity, wind, air quality and UV index (as sections or a gauge), elevation, sunrise and sunset, .beat time, current weather, your own text, or a value from any JSON API.
+- **Eight slots, your pick.** Steps, distance, calories, active minutes, sleep, heart rate, battery, calendar, temperature, rain, humidity, wind, air quality and UV index (as sections or a gauge), elevation, sunrise and sunset, moon phase, digital time, a second time zone, .beat time, current weather, your own text, or a value from any JSON API.
 - **Five color schemes.** Black, White, two monochromes, or Accent: any background and accent from the watch's 64 colors.
 - **Four rings** Default, Minimal, Sport or Chronograph ring.
 - **Six hands.** Line, Bar, Outline, Pointer, Sword or Dauphine hands, each in its own color.
@@ -37,10 +37,10 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 | Text | Pick **Text** in any slot to show your own label: up to 12 characters in a corner, 4 in a subdial. |
 | Custom complications | Show a value from any JSON API. Create up to 8, then pick them in any corner or subdial. See below. |
 | Color scheme | Black, White, White on black, Black on white, or Accent. Accent adds a background and an accent color picker. |
-| Ring | Default, Minimal (ticks only, no numerals), Sport (a white band of minute numerals over an accent ring) or Chronograph (the white band alone, black on white, hours 1 to 12). All but Default leave a larger center: the subdials grow to fill it and the hands run longer. |
+| Ring | Default, Minimal (ticks only, no numerals), Sport (a white band of minute numerals over an accent ring) or Chronograph (the white band alone, black on white, hours 1 to 12). All but Default leave a larger center: the subdials grow to fill it and the hands run longer. Sport and Chronograph take a band color; ticks and numerals turn black or white to stay readable on it. Picking a color scheme resets it. |
 | Hands | Line, Bar, Outline, Pointer, Sword or Dauphine for the hour and minute hands, and a color each for the hour, minute and seconds hands. The seconds color is also the 12, 3, 6 and 9 notches'. Picking a color scheme resets the colors; picking an accent resets the seconds color. |
 | Units | °C, km and km/h, or °F, miles and mph. |
-| Daily step goal | 1,000 to 30,000 steps. Fills the steps and distance gauges. |
+| Daily step goal | 1,000 to 30,000 steps. Fills the steps, distance and calories gauges. |
 | Seconds hand | Off by default. Uses more battery. |
 
 Pick **None** to leave a slot empty.
@@ -73,7 +73,9 @@ Limits:
 ### Good to know
 - Weather, rain, humidity, wind, air quality, UV, elevation and sunrise/sunset need location access for the Pebble app and a connection to your phone.
 - Calories come as a total (active and resting, so it grows even with no steps) or active only.
-- Steps, distance, calories and heart rate come from Pebble Health, so it has to be turned on. Heart rate needs a watch with a sensor.
+- The second time zone is a fixed offset from UTC with a name of up to 4 characters; change the offset when daylight saving starts or ends.
+- The moon is drawn as seen from the northern hemisphere, from the mean lunar cycle: up to half a day off.
+- Steps, distance, calories, active minutes, sleep and heart rate come from Pebble Health, so it has to be turned on. Heart rate needs a watch with a sensor.
 
 ## Development
 ```sh

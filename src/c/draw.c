@@ -241,6 +241,37 @@ void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color) {
   fctx_deinit_context(&f);
 }
 
+// The limb down the lit side in 15° chords, then back up the terminator: the
+// same half ellipse squeezed by cos(phase), on the dark side once past half.
+void moon_fill(GContext *ctx, GPoint c, int r, int32_t phase, GColor color) {
+  const int N = 12;
+  int side = phase < TRIG_MAX_ANGLE / 2 ? 1 : -1;
+  int32_t k = cos_lookup(phase);
+  FPoint o = FPointI(c.x, c.y);
+  fixed_t R = INT_TO_FIXED(r);
+  FContext f;
+  fctx_init_context(&f, ctx);
+  zoom_path(&f);
+  fctx_set_fill_color(&f, theme(color));
+  fctx_begin_fill(&f);
+  for (int i = 0; i < 2 * N; i++) {
+    int32_t a = (i <= N ? i : 2 * N - i) * TRIG_MAX_ANGLE / (2 * N);
+    fixed_t w = R * sin_lookup(a) / TRIG_MAX_RATIO;
+    if (i > N) {
+      w = w * k / TRIG_MAX_RATIO;
+    }
+    FPoint p = FPoint(o.x + side * w, o.y - R * cos_lookup(a) / TRIG_MAX_RATIO);
+    if (i) {
+      fctx_line_to(&f, p);
+    } else {
+      fctx_move_to(&f, p);
+    }
+  }
+  fctx_close_path(&f);
+  fctx_end_fill(&f);
+  fctx_deinit_context(&f);
+}
+
 // A capsule of 30° chords: half-circle caps around p and q, `h` the half width.
 static void capsule(FContext *f, FPoint p, FPoint q, int32_t angle, fixed_t h) {
   for (int i = 0; i < 14; i++) {

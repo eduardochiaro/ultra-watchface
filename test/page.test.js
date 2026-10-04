@@ -8,7 +8,7 @@ var config = require('../src/pkjs/config');
 // Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
 assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6,
-  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
+  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0, ZONE_OFFSET: 0, ZONE_NAME: 'UTC',
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
 // Text: only glyphs the watch font has, 12 max
 var texts = config.withDefaults({ TEXT_TL: 'Héllo <b>&"x" 12:30 and more', TEXT_B: 'Hello' });
@@ -145,6 +145,20 @@ assert.ok(/y="32" font-size="11.43" fill="#000000" transform="rotate\(0 [^>]*>12
 assert.strictEqual(svg.split('stroke="#000000" stroke-width="3"').length - 1, 12, 'chronograph: hour ticks black');
 assert.ok(els.rings.innerHTML.split('data-ring=').length - 1 === 4 && els.rings.innerHTML.indexOf('data-ring="3" aria-pressed="true">Chronograph') > 0, 'four rings');
 
+// Band color: fixed in any scheme, its ticks and numerals white on a dark one; the picker shows for banded rings only
+ctx = load({ settings: { RING: 2, BAND_COLOR: 0xF0, HANDS: 3 }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('stroke="#ff0000" stroke-width="22"') > 0 && /fill="#ffffff"[^>]*>00<\/text>/.test(svg) && svg.indexOf('stroke="#ffffff" stroke-width="1"') > 0, 'red band, white numerals and ticks');
+assert.strictEqual(els['band-row'].hidden, false);
+var white = el(); white.dataset.scheme = '1';
+clicks[0]({ target: { closest: function () { return white; } } });
+assert.ok(screen().indexOf('stroke="#000000" stroke-width="22"') > 0, 'a scheme takes the band color back');
+load({ settings: { RING: 1, BAND_COLOR: 0xF0 }, platform: 'emery' });
+assert.strictEqual(els['band-row'].hidden, true);
+// Sport's accent picked the same as the band: hour ticks in the band's ink
+load({ settings: { RING: 2, BAND_COLOR: 0xF0, SECOND_COLOR: 0xF0, HANDS: 3 }, platform: 'emery' });
+assert.strictEqual(screen().split('stroke="#ffffff" stroke-width="3"').length - 1, 12, 'hour ticks white on a red band with a red accent');
+
 // Accent scheme on a light background: black text, accent fills, bg for black
 ctx = load({ settings: { SCHEME: 4, BG_COLOR: 0xFF, ACCENT_COLOR: 0xF0, SLOT_TL: 8, CENTER_T: 8, SLOT_TR: 14, CENTER_B: 14, CENTER_L: 14, TEXT_TR: 'Hello <i>', TEXT_B: 'Hello', TEXT_L: 'EC' }, platform: 'emery' });
 svg = screen();
@@ -243,14 +257,28 @@ assert.ok(/fill="#ff0000"[^>]*>(SUN|MON|TUE|WED|THU|FRI|SAT)<\/text>/.test(svg) 
 
 // Active calories: its own complication, corner and subdial
 load({ settings: { SLOT_TL: 30, CENTER_T: 30 }, platform: 'emery' });
-assert.ok(screen().indexOf('>310 KCAL</text>') > 0 && screen().indexOf('>310</text>') > 0 && screen().indexOf('1480') < 0, 'active calories');
+assert.ok(screen().split('>310</text>').length - 1 === 2 && screen().indexOf('1480') < 0, 'active calories');
+
+// Digital time, second time zone, sleep, active minutes, moon phase: corners and subdials
+ctx = load({ settings: { SLOT_TL: 31, SLOT_TR: 32, SLOT_BL: 33, SLOT_BR: 34, CENTER_T: 31, CENTER_L: 32, CENTER_R: 33, CENTER_B: 34, ZONE_OFFSET: 330, ZONE_NAME: 'Delhi!' }, platform: 'emery' });
+svg = screen();
+assert.strictEqual(svg.split(/>\d\d:\d\d<\/text>/).length - 1, 3, 'local time in a corner and a subdial, the zone time in its subdial');
+var zone = new Date(Date.now() + 330 * 60000).toISOString().slice(11, 16);
+assert.ok(svg.indexOf('>Delh ' + zone + '</text>') > 0 && svg.indexOf('>Delh</text>') > 0, 'second zone: its name cut to 4, then its time');
+assert.ok(svg.indexOf('>ZZ</text>') > 0 && svg.split('>7h32</text>').length - 1 === 2 && svg.indexOf('>SLEEP</text>') > 0, 'sleep');
+assert.ok(svg.indexOf('>48 MIN</text>') > 0 && svg.indexOf('>48</text>') > 0 && svg.indexOf('>ACTIVE</text>') > 0, 'active minutes');
+assert.ok(els['zone-row'].hidden === false && els.zone.innerHTML.indexOf('<option value="330" selected>UTC+05:30</option>') > 0 && els.zone.innerHTML.split('<option').length - 1 === 56, 'zone picker shown, 56 offsets');
+ctx = load({ settings: { SLOT_TL: 35, CENTER_T: 35 }, platform: 'emery' });
+svg = screen();
+assert.ok(/>[\u25B4\u25BE]\d+%<\/text>/.test(svg) && svg.split(ctx.ICONS.moon).length - 1 === 1 && /A12 12 0 0 [01] 100 95A[\d.]+ 12 0 0 [01] 100 71Z" fill="#ffffff"/.test(svg), 'moon: lit share in the corner, its shape in the subdial');
+assert.strictEqual(els['zone-row'].hidden, true);
 
 console.log('ok');
 
 // AQI and UV as range gauges, calories: corners and subdials
 load({ settings: { SLOT_TL: 27, SLOT_TR: 28, SLOT_BL: 29, CENTER_T: 27, CENTER_L: 28, CENTER_R: 29 }, weather: { AQI: 75, UV: 6 }, platform: 'emery' });
 svg = screen();
-assert.ok(svg.indexOf('>AQI 75</text>') < 0 && svg.indexOf('>1480 KCAL</text>') > 0, 'gauge corner: caption and value apart; calories corner');
+assert.ok(svg.indexOf('>AQI 75</text>') < 0 && svg.split('>1480</text>').length - 1 === 2 && svg.indexOf('stroke="#ff5500" stroke-width="6"') > 0, 'gauge corner: caption and value apart; calories corner and subdial, a bar of the step goal');
 assert.ok(svg.indexOf('>500</text>') < 0 && svg.split('>AQI</text>').length - 1 === 2 && svg.split('>75</text>').length - 1 === 2, 'AQI gauge: no min and max, caption and value in corner and subdial');
 load({ settings: { SLOT_TL: 27 }, weather: { AQI: 75 }, platform: 'gabbro' });
 assert.ok(screen().indexOf('>AQI 75</text>') > 0 && screen().indexOf('stroke="#aa0000"') > 0, 'gabbro gauge corner: the value leads the arc');

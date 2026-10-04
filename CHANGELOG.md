@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.6.0
+
+- **Band color:** pick the band's color on the Sport and Chronograph rings. Ticks and numerals turn black or white to stay readable on it.
+- **Calories bar:** both calories complications now show a bar, in corners and subdials. Like distance, it fills with progress toward the daily step goal.
+- **New complications:** digital time, second time zone (pick a UTC offset and a short name), sleep last night, active minutes and moon phase. All in corners and subdials.
+
 ## 1.5.0
 
 - **Ring styles:** new Ring setting with Default, Minimal (ticks only), Sport (white band, minute numerals, accent ring) and Chronograph (black-and-white band, hours 1 to 12).

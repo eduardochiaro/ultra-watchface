@@ -55,6 +55,7 @@ Settings g_settings = {
   .accent = GColorChromeYellowARGB8,
   .center = { COMP_CUSTOM, COMP_ELEVATION, COMP_WEATHER, COMP_CALENDAR },
   .center_text = { "PB" },
+  .zone_name = "UTC",
 };
 
 static Window *s_window;
@@ -111,34 +112,35 @@ static void draw_minimal(GContext *ctx, GPoint c) {
 
 // A white band, ticks for the half minutes, minutes and hours. Sport: the hour
 // ticks and a ring inside the band in the accent, 00..55 along it, upright at 00
-// and 30. Chronograph: black on white only, the band out to where the accent ring
+// and 30. Chronograph: one ink on the band only, the band out to where the accent ring
 // would end, 1..12 upright. Its ticks are shorter and its numerals sit midway
 // between them and the band's inner edge, clear of both: "10", the widest across
 // its radius, spans about twice its cap height.
 static void draw_band(GContext *ctx, GPoint c) {
   bool sport = g_settings.ring == RING_SPORT;
   static const uint8_t TICK[2][3] = { { 6, 5, 3 }, { 10, 7, 4 } };  // hour, minute, half; [sport]
-  GColor hours = GColorBlack;
-  ring_fill(ctx, c, RING_OUT, sport ? CHR_BAND : CHR_BAND + CHR_INSET, GColorWhite);
+  // Ticks and numerals are black or white, whichever reads on the band.
+  GColor band = picked(g_settings.band_color, GColorWhite), ink = ink_on(band), hours = ink;
+  ring_fill(ctx, c, RING_OUT, sport ? CHR_BAND : CHR_BAND + CHR_INSET, band);
   if (sport) {
     hours = picked(g_settings.second_color, ACCENT);
     ring_fill(ctx, c, RING_OUT - CHR_BAND, CHR_INSET, hours);
-    // Mono schemes: the accent is the band's own white.
-    if (gcolor_equal(theme(hours), theme(GColorWhite))) {
-      hours = GColorBlack;
+    // The accent is the band's own color: a mono scheme, or picked the same.
+    if (gcolor_equal(theme(hours), theme(band))) {
+      hours = ink;
     }
   }
   // The hours go over their minute ticks.
-  ray_ticks(ctx, c, DEG(3), 60, RING_OUT - TICK[sport][2], RING_OUT - 1, 1, GColorBlack);
-  ray_ticks(ctx, c, 0, 60, RING_OUT - TICK[sport][1], RING_OUT - 1, 1, GColorBlack);
+  ray_ticks(ctx, c, DEG(3), 60, RING_OUT - TICK[sport][2], RING_OUT - 1, 1, ink);
+  ray_ticks(ctx, c, 0, 60, RING_OUT - TICK[sport][1], RING_OUT - 1, 1, ink);
   ray_ticks(ctx, c, 0, 12, RING_OUT - TICK[sport][0], RING_OUT - 1, 3, hours);
   char buf[3];
   for (int h = 1; h <= 12; h++) {
     snprintf(buf, sizeof(buf), sport ? "%02d" : "%d", sport ? h * 5 % 60 : h);
     if (sport) {
-      text_draw_arc(ctx, buf, c, DEG(h * 30), CHR_NUM_R, CHR_NUM, GColorBlack);
+      text_draw_arc(ctx, buf, c, DEG(h * 30), CHR_NUM_R, CHR_NUM, ink);
     } else {
-      text_draw(ctx, buf, polar(c, DEG(h * 30), RING_OUT - (TICK[0][0] + CHR_BAND + CHR_INSET) / 2), CHRONO_NUM, GColorBlack);
+      text_draw(ctx, buf, polar(c, DEG(h * 30), RING_OUT - (TICK[0][0] + CHR_BAND + CHR_INSET) / 2), CHRONO_NUM, ink);
     }
   }
 }
@@ -391,6 +393,15 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     }
     if ((t = dict_find(iter, MESSAGE_KEY_SECOND_COLOR))) {
       g_settings.second_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_ZONE_OFFSET))) {
+      g_settings.zone_offset = t->value->int32;
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_ZONE_NAME)) && t->type == TUPLE_CSTRING) {
+      strncpy(g_settings.zone_name, t->value->cstring, sizeof(g_settings.zone_name) - 1);
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_BAND_COLOR))) {
+      g_settings.band_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
     }
     persist_write_data(PK_SETTINGS, &g_settings, sizeof(g_settings));
     subscribe_ticks();

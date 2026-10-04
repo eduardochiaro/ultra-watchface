@@ -1,7 +1,7 @@
 {
   "name": "ultra-watchface",
   "author": "Eduardo Chiaro",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "keywords": [
     "pebble-app"
   ],
@@ -75,7 +75,10 @@
       "HAND_COLOR",
       "SECOND_COLOR",
       "MINUTE_COLOR",
-      "RING"
+      "RING",
+      "BAND_COLOR",
+      "ZONE_OFFSET",
+      "ZONE_NAME"
     ],
     "resources": {
       "media": [

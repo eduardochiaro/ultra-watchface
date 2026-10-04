@@ -40,6 +40,9 @@ void slot_box(GContext *ctx, const Slot *s, int from_pct, int to_pct, int r, GCo
 void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color);
 // graphics_fill_rect, themed; `r` rounds the corners.
 void rect_fill(GContext *ctx, GRect rect, int r, GColor color);
+// The lit part of a moon of radius `r`: `phase` is a TRIG angle, 0 new, half the
+// circle full. Lit on the right while it grows.
+void moon_fill(GContext *ctx, GPoint c, int r, int32_t phase, GColor color);
 // Rounded bar on the ray from `c` at `angle`, from r0 to r1 px out, `w` wide.
 void ray_bar(GContext *ctx, GPoint c, int32_t angle, int r0, int r1, int w, GColor color);
 // `n` square-ended ticks evenly around `c`, the first at `a0`, from r0 to r1 px out,

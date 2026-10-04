@@ -17,12 +17,17 @@ var COMPLICATIONS = [
   { label: 'Distance', value: 9 },
   { label: 'Calories (total)', value: 29 },
   { label: 'Calories (active)', value: 30 },
+  { label: 'Active minutes', value: 34 },
+  { label: 'Sleep', value: 33 },
   { label: 'Air quality', value: 7 },
   { label: 'Air quality (gauge)', value: 27 },
   { label: 'UV index', value: 11 },
   { label: 'UV index (gauge)', value: 28 },
   { label: 'Elevation', value: 10 },
   { label: 'Sunrise / sunset', value: 23 },
+  { label: 'Moon phase', value: 35 },
+  { label: 'Digital time', value: 31 },
+  { label: 'Second time zone', value: 32 },
   { label: '.beat time', value: 24 },
   { label: 'Text', value: 14 },
   { label: 'None', value: 0 }
@@ -46,8 +51,13 @@ var CENTER_COMPLICATIONS = [
   { label: 'Distance', value: 9 },
   { label: 'Calories (total)', value: 29 },
   { label: 'Calories (active)', value: 30 },
+  { label: 'Active minutes', value: 34 },
+  { label: 'Sleep', value: 33 },
   { label: 'Elevation', value: 10 },
   { label: 'Sunrise / sunset', value: 23 },
+  { label: 'Moon phase', value: 35 },
+  { label: 'Digital time', value: 31 },
+  { label: 'Second time zone', value: 32 },
   { label: '.beat time', value: 24 },
   { label: 'Text', value: 14 },
   { label: 'None', value: 0 }
@@ -84,9 +94,11 @@ var RINGS = ['Default', 'Minimal', 'Sport', 'Chronograph'];
 
 // Mirrors g_settings in C. weather.js asks Open-Meteo for the chosen
 // temperature unit; the watch converts distance and elevation. Colors are GColor8 argb (0xC0 = black,
-// 0xF8 = chrome yellow); a hand color of 0 follows the scheme.
+// 0xF8 = chrome yellow); a hand or band color of 0 follows the scheme.
 var DEFAULTS = { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6, SCHEME: 0, UNITS: 0, STEP_GOAL: 10000, SECONDS: 0,
-  BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
+  BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
+  // The second time zone complication: minutes from UTC, and its name on the face.
+  ZONE_OFFSET: 0, ZONE_NAME: 'UTC',
   // The Text complication's text, per place: TEXT_ + the SLOT_/CENTER_ suffix.
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '',
   // Custom API complications. Stays on the phone: the watch gets what to draw (api.js).
@@ -97,9 +109,9 @@ function clean(s, n) {
   return String(s).replace(/[^ %,\-./0-9:A-Za-z]/g, '').slice(0, n);
 }
 
-// Corners fit 12, subdials 4 (TEXT_T etc.).
+// Corners fit 12, subdials 4 (TEXT_T etc.), like the time zone's name.
 function cleanText(k, s) {
-  return clean(s, k.length === 6 ? 4 : 12);
+  return clean(s, k.length === 6 || k === 'ZONE_NAME' ? 4 : 12);
 }
 
 // header, text, min and max may hold {{path.to[0].value}} patterns, filled from

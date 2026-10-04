@@ -40,6 +40,10 @@ typedef struct {
   // hour hand's; second_color is also the pin's and the 12/3/6/9 notches'.
   uint8_t hand_color, second_color, minute_color;
   uint8_t ring;                    // RingStyle
+  uint8_t band_color;              // sport's and chronograph's band; 0 = the scheme's white
+  // COMP_ZONE: minutes from UTC, and what to call it.
+  int16_t zone_offset;
+  char zone_name[5];
 } Settings;
 
 extern Settings g_settings;
