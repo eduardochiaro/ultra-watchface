@@ -124,7 +124,9 @@ static void draw_band(GContext *ctx, GPoint c) {
     hours = picked(g_settings.second_color, ACCENT);
     ring_fill(ctx, c, RING_OUT - CHR_BAND, CHR_INSET, hours);
     // Mono schemes: the accent is the band's own white.
-    if (gcolor_equal(theme(hours), theme(GColorWhite))) hours = GColorBlack;
+    if (gcolor_equal(theme(hours), theme(GColorWhite))) {
+      hours = GColorBlack;
+    }
   }
   // The hours go over their minute ticks.
   ray_ticks(ctx, c, DEG(3), 60, RING_OUT - TICK[sport][2], RING_OUT - 1, 1, GColorBlack);
@@ -133,14 +135,21 @@ static void draw_band(GContext *ctx, GPoint c) {
   char buf[3];
   for (int h = 1; h <= 12; h++) {
     snprintf(buf, sizeof(buf), sport ? "%02d" : "%d", sport ? h * 5 % 60 : h);
-    if (sport) text_draw_arc(ctx, buf, c, DEG(h * 30), CHR_NUM_R, CHR_NUM, GColorBlack);
-    else text_draw(ctx, buf, polar(c, DEG(h * 30), RING_OUT - (TICK[0][0] + CHR_BAND + CHR_INSET) / 2), CHRONO_NUM, GColorBlack);
+    if (sport) {
+      text_draw_arc(ctx, buf, c, DEG(h * 30), CHR_NUM_R, CHR_NUM, GColorBlack);
+    } else {
+      text_draw(ctx, buf, polar(c, DEG(h * 30), RING_OUT - (TICK[0][0] + CHR_BAND + CHR_INSET) / 2), CHRONO_NUM, GColorBlack);
+    }
   }
 }
 
 static void draw_dial(GContext *ctx, GPoint c) {
-  if (g_settings.ring == RING_MINIMAL) return draw_minimal(ctx, c);
-  if (banded()) return draw_band(ctx, c);
+  if (g_settings.ring == RING_MINIMAL) {
+    return draw_minimal(ctx, c);
+  }
+  if (banded()) {
+    return draw_band(ctx, c);
+  }
   graphics_context_set_stroke_color(ctx, theme(GColorDarkGray));
   graphics_context_set_stroke_width(ctx, 1);
   graphics_draw_circle(ctx, c, INNER_R);
@@ -156,7 +165,9 @@ static void draw_dial(GContext *ctx, GPoint c) {
   for (int h = 1; h <= 12; h++) {
     int32_t a = DEG(h * 30);
     bool big = h % 3 == 0;
-    if (big) line(ctx, polar(c, a, DIAL_R + 1), polar(c, a, DIAL_R - 5), 3, picked(g_settings.second_color, ACCENT));
+    if (big) {
+      line(ctx, polar(c, a, DIAL_R + 1), polar(c, a, DIAL_R - 5), 3, picked(g_settings.second_color, ACCENT));
+    }
     snprintf(buf, sizeof(buf), "%d", h);
     text_draw(ctx, buf, polar(c, a, big ? NUM_R_BIG : NUM_R), big ? NUM_BIG : NUM_SMALL,
               // Dark gray is too faint on white; the palette has nothing between it and black.
@@ -173,9 +184,15 @@ static void draw_dial(GContext *ctx, GPoint c) {
 
 // A step darker per channel: the dauphine hand's shaded facet.
 static GColor shade(GColor c) {
-  if (c.r) c.r--;
-  if (c.g) c.g--;
-  if (c.b) c.b--;
+  if (c.r) {
+    c.r--;
+  }
+  if (c.g) {
+    c.g--;
+  }
+  if (c.b) {
+    c.b--;
+  }
   return c;
 }
 
@@ -210,8 +227,9 @@ static void draw_hand(GContext *ctx, GPoint c, int32_t angle, int len, int width
   }
   ray_bar(ctx, c, angle, HAND_STEM, len, HAND_W, color);
   // Outline: the background over its inside, not see-through.
-  if (g_settings.hands == HANDS_OUTLINE)
+  if (g_settings.hands == HANDS_OUTLINE) {
     ray_bar(ctx, c, angle, HAND_STEM + HAND_EDGE, len - HAND_EDGE, HAND_W - 2 * HAND_EDGE, GColorBlack);
+  }
 }
 
 static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
@@ -222,8 +240,9 @@ static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
   draw_hand(ctx, c, ha, r.hour, 6, picked(g_settings.hand_color, GColorWhite));
   // A 1px rim of background, so a white hand shows over the white band.
   static const int8_t RIM[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
-  for (int i = 0; banded() && i < 4; i++)
+  for (int i = 0; banded() && i < 4; i++) {
     draw_hand(ctx, GPoint(c.x + RIM[i][0], c.y + RIM[i][1]), ma, r.minute, 3, GColorBlack);
+  }
   draw_hand(ctx, c, ma, r.minute, 3, picked(g_settings.minute_color, GColorWhite));
   if (g_settings.seconds) {
     int32_t sa = DEG(t->tm_sec * 6);
@@ -237,13 +256,16 @@ static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
 
 static void save_cache(GContext *ctx) {
   GBitmap *fb = graphics_capture_frame_buffer(ctx);
-  if (!fb) return;
+  if (!fb) {
+    return;
+  }
   GRect r = gbitmap_get_bounds(fb);
   // fctx allocates while drawing text: leave it room. Emery keeps ~48KB with
   // the cache; gabbro's 67KB cache would leave ~26KB and crash it.
   // ponytail: gabbro gets no cache; cache only the corners if it needs one.
-  if (!s_cache && (int)heap_bytes_free() > r.size.w * r.size.h + CACHE_HEADROOM)
+  if (!s_cache && (int)heap_bytes_free() > r.size.w * r.size.h + CACHE_HEADROOM) {
     s_cache = gbitmap_create_blank(r.size, gbitmap_get_format(fb));
+  }
   // 8-bit formats: a byte per pixel. Rows are clipped on round screens.
   for (int y = 0; s_cache && y < r.size.h; y++) {
     GBitmapDataRowInfo src = gbitmap_get_data_row_info(fb, y), dst = gbitmap_get_data_row_info(s_cache, y);
@@ -267,8 +289,11 @@ static void draw_face(GContext *ctx, GRect b, GPoint c) {
       .a1 = DEG(SIDE[i] + DIR[i] * COMP_SPAN),
     };
     // Text needs its slot's string; the rest draw from what they measure.
-    if (g_settings.slots[i] == COMP_CUSTOM) comp_custom_draw(ctx, &s, g_settings.slot_text[i]);
-    else complication_draw(g_settings.slots[i], ctx, &s);
+    if (g_settings.slots[i] == COMP_CUSTOM) {
+      comp_custom_draw(ctx, &s, g_settings.slot_text[i]);
+    } else {
+      complication_draw(g_settings.slots[i], ctx, &s);
+    }
   }
 
   draw_dial(ctx, c);
@@ -326,22 +351,47 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     };
     Tuple *t;
     for (unsigned i = 0; i < ARRAY_LENGTH(places); i++) {
-      if ((t = dict_find(iter, places[i].key))) *places[i].id = clamp_i32(t->value->int32, 0, COMP_COUNT - 1);
-      if ((t = dict_find(iter, places[i].text_key)) && t->type == TUPLE_CSTRING)
+      if ((t = dict_find(iter, places[i].key))) {
+        *places[i].id = clamp_i32(t->value->int32, 0, COMP_COUNT - 1);
+      }
+      if ((t = dict_find(iter, places[i].text_key)) && t->type == TUPLE_CSTRING) {
         strncpy(places[i].text, t->value->cstring, places[i].size - 1);
+      }
     }
-    if ((t = dict_find(iter, MESSAGE_KEY_SECONDS))) g_settings.seconds = t->value->int32;
-    if ((t = dict_find(iter, MESSAGE_KEY_UNITS))) g_settings.imperial = t->value->int32;
-    if ((t = dict_find(iter, MESSAGE_KEY_STEP_GOAL))) g_settings.step_goal = t->value->int32;
-    if ((t = dict_find(iter, MESSAGE_KEY_SCHEME))) g_settings.scheme = clamp_i32(t->value->int32, 0, 4);
-    if ((t = dict_find(iter, MESSAGE_KEY_BG_COLOR))) g_settings.bg = t->value->int32 | 0xC0;  // opaque
-    if ((t = dict_find(iter, MESSAGE_KEY_ACCENT_COLOR))) g_settings.accent = t->value->int32 | 0xC0;
-    if ((t = dict_find(iter, MESSAGE_KEY_HANDS))) g_settings.hands = clamp_i32(t->value->int32, 0, HANDS_COUNT - 1);
-    if ((t = dict_find(iter, MESSAGE_KEY_RING))) g_settings.ring = clamp_i32(t->value->int32, 0, RING_COUNT - 1);
+    if ((t = dict_find(iter, MESSAGE_KEY_SECONDS))) {
+      g_settings.seconds = t->value->int32;
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_UNITS))) {
+      g_settings.imperial = t->value->int32;
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_STEP_GOAL))) {
+      g_settings.step_goal = t->value->int32;
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_SCHEME))) {
+      g_settings.scheme = clamp_i32(t->value->int32, 0, 4);
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_BG_COLOR))) {
+      g_settings.bg = t->value->int32 | 0xC0;  // opaque
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_ACCENT_COLOR))) {
+      g_settings.accent = t->value->int32 | 0xC0;
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_HANDS))) {
+      g_settings.hands = clamp_i32(t->value->int32, 0, HANDS_COUNT - 1);
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_RING))) {
+      g_settings.ring = clamp_i32(t->value->int32, 0, RING_COUNT - 1);
+    }
     // 0 stays 0: the scheme's color.
-    if ((t = dict_find(iter, MESSAGE_KEY_HAND_COLOR))) g_settings.hand_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
-    if ((t = dict_find(iter, MESSAGE_KEY_MINUTE_COLOR))) g_settings.minute_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
-    if ((t = dict_find(iter, MESSAGE_KEY_SECOND_COLOR))) g_settings.second_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
+    if ((t = dict_find(iter, MESSAGE_KEY_HAND_COLOR))) {
+      g_settings.hand_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_MINUTE_COLOR))) {
+      g_settings.minute_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_SECOND_COLOR))) {
+      g_settings.second_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
+    }
     persist_write_data(PK_SETTINGS, &g_settings, sizeof(g_settings));
     subscribe_ticks();
   }
@@ -360,13 +410,17 @@ static void window_load(Window *window) {
 
 static void window_unload(Window *window) {
   layer_destroy(s_layer);
-  if (s_cache) gbitmap_destroy(s_cache);
+  if (s_cache) {
+    gbitmap_destroy(s_cache);
+  }
   s_cache = NULL;
   draw_deinit();
 }
 
 int main(void) {
-  if (persist_exists(PK_SETTINGS)) persist_read_data(PK_SETTINGS, &g_settings, sizeof(g_settings));
+  if (persist_exists(PK_SETTINGS)) {
+    persist_read_data(PK_SETTINGS, &g_settings, sizeof(g_settings));
+  }
   weather_init();
   api_init();
 

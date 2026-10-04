@@ -13,7 +13,9 @@ void weather_init(void) {
 
 bool weather_handle_message(DictionaryIterator *iter) {
   Tuple *t = dict_find(iter, MESSAGE_KEY_TEMP);
-  if (!t) return false;
+  if (!t) {
+    return false;
+  }
   g_weather.temp = t->value->int32;
   const struct { uint32_t key; int16_t *dst; } fields[] = {
     { MESSAGE_KEY_TEMP_MIN, &g_weather.temp_min },
@@ -31,7 +33,9 @@ bool weather_handle_message(DictionaryIterator *iter) {
   };
   for (unsigned i = 0; i < ARRAY_LENGTH(fields); i++) {
     Tuple *f = dict_find(iter, fields[i].key);
-    if (f) *fields[i].dst = f->value->int32;
+    if (f) {
+      *fields[i].dst = f->value->int32;
+    }
   }
   g_weather.valid = true;
   persist_write_data(PK_WEATHER, &g_weather, sizeof(g_weather));

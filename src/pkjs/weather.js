@@ -21,13 +21,27 @@ function aqiUrl(lat, lon) {
 
 // WMO weather code -> icon index on the watch (ICON_SUN.. in draw.h), -1 = unknown.
 function condition(code, day) {
-  if (code === 0) return day ? 0 : 1;               // clear
-  if (code === 1 || code === 2) return day ? 2 : 3; // partly cloudy
-  if (code === 3) return 4;                          // overcast
-  if (code === 45 || code === 48) return 5;          // fog
-  if (code >= 95) return 8;                          // thunderstorm
-  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return 7;  // snow
-  if (code >= 51 && code <= 82) return 6;            // drizzle, rain, showers
+  if (code === 0) {
+    return day ? 0 : 1;               // clear
+  }
+  if (code === 1 || code === 2) {
+    return day ? 2 : 3; // partly cloudy
+  }
+  if (code === 3) {
+    return 4;                          // overcast
+  }
+  if (code === 45 || code === 48) {
+    return 5;          // fog
+  }
+  if (code >= 95) {
+    return 8;                          // thunderstorm
+  }
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) {
+    return 7;  // snow
+  }
+  if (code >= 51 && code <= 82) {
+    return 6;            // drizzle, rain, showers
+  }
   return -1;
 }
 

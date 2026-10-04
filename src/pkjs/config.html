@@ -282,22 +282,33 @@
 	// theme_light() / theme() in draw.c
 	function lightScheme(scheme) { return scheme === SCHEME_ACCENT ? isLight(settings.BG_COLOR) : !!(scheme & 1); }
 	function theme(hex, scheme) {
-		if (hex[0] === "!") return hex.slice(1);  // fixed()
+		if (hex[0] === "!") {
+			return hex.slice(1);  // fixed()
+		}
 		var v = hexChans(hex);
 		var gray = v[0] === v[1] && v[1] === v[2];
 		var bright = v[0] >= 2 || v[1] >= 2 || v[2] >= 2;  // fills vs tracks
 		var light = lightScheme(scheme);
 		if (scheme === SCHEME_ACCENT) {
-			if (!gray && bright) return css(chans(settings.ACCENT_COLOR));
-			if (gray && v[0] === 0) return css(chans(settings.BG_COLOR));
-			if (!gray) v = [1, 1, 1];
+			if (!gray && bright) {
+				return css(chans(settings.ACCENT_COLOR));
+			}
+			if (gray && v[0] === 0) {
+				return css(chans(settings.BG_COLOR));
+			}
+			if (!gray) {
+				v = [1, 1, 1];
+			}
 			gray = true;
 		} else if ((scheme & 2) && !gray) {
 			v = bright ? [3, 3, 3] : [1, 1, 1];
 			gray = true;
 		}
-		if (light && gray) v = [3 - v[0], 3 - v[0], 3 - v[0]];
-		else if (light && v.join() === "3,3,0") v = [3, 2, 0];  // yellow washes out
+		if (light && gray) {
+			v = [3 - v[0], 3 - v[0], 3 - v[0]];
+		} else if (light && v.join() === "3,3,0") {
+			v = [3, 2, 0];  // yellow washes out
+		}
 		return css(v);
 	}
 
@@ -346,7 +357,9 @@
 	// band_pct() in complications.c: where v falls along the bands at even widths; `top` ends the last
 	function bandPct(v, bands, top) {
 		var i = bandAt(v, bands);
-		if (i < 0) return -1;
+		if (i < 0) {
+			return -1;
+		}
 		var lo = i ? bands[i - 1][0] : 0, hi = isFinite(bands[i][0]) ? bands[i][0] : top;
 		return Math.max(0, Math.min(100, Math.trunc((i * 100 + Math.trunc((v - lo) * 100 / (hi - lo))) / bands.length)));
 	}
@@ -419,7 +432,12 @@
 		function leftEnd(s) { return P(s.a0, s.r)[0] <= P(s.a1, s.r)[0] ? 0 : 100; }
 		function deg(s, px) { return px / s.r * 180 / Math.PI * (s.a1 > s.a0 ? 1 : -1); }
 		function past(s, end, px) { return end === 0 ? s.a0 - deg(s, px) : s.a1 + deg(s, px); }
-		function trim(s, end, px) { if (end === 0) s.a0 += deg(s, px); else s.a1 -= deg(s, px); }
+		function trim(s, end, px) { if (end === 0) {
+			s.a0 += deg(s, px);
+		} else {
+			s.a1 -= deg(s, px);
+		}
+		}
 		function sarc(s, p0, p1, c) { stroke(arc(s.r, at(s, p0), at(s, p1)), c, s.t); }
 		// slot_dot on a corner gauge: as wide as the bar, a 2px ring around it
 		function dot(s, p) {
@@ -448,16 +466,22 @@
 		function bar(s0, pct, c, label, ic) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
 			pct = clamp(pct);
-			if (ic) compIcon(s, ic, c);
+			if (ic) {
+				compIcon(s, ic, c);
+			}
 			endLabel(s, left, label, fitCap(label, g.TEXT, slen(s) / 2));
 			sarc(s, 0, 100, C.track);
-			if (pct > 0) sarc(s, left, left ? 100 - pct : pct, c);
+			if (pct > 0) {
+				sarc(s, left, left ? 100 - pct : pct, c);
+			}
 		}
 		// shaded_arc(): each shade runs on to pct, over the one before
 		function shadedArc(s, flip, pct, cols) {
 			cols.forEach(function (c, i) {
 				var p = Math.trunc(i * 100 / cols.length);
-				if (p < pct && (!i || c !== cols[i - 1])) sarc(s, flip ? 100 - p : p, flip ? 100 - pct : pct, c);
+				if (p < pct && (!i || c !== cols[i - 1])) {
+					sarc(s, flip ? 100 - p : p, flip ? 100 - pct : pct, c);
+				}
 			});
 		}
 		// comp_icon(): toward the corner; round: along the arc at its left end, which is trimmed.
@@ -470,8 +494,11 @@
 				return named ? text(ic.name, p, g.TEXT, c, 0) : icon(ic, p, g.ICON, c);
 			}
 			var end = leftEnd(s), a = past(s, end, -w / 2);
-			if (named) along(ic.name, a, s.r, g.TEXT, c);
-			else icon(ic, P(a, s.r), g.ICON, c, Math.cos(rad(a)) >= 0 ? a : a + 180);
+			if (named) {
+				along(ic.name, a, s.r, g.TEXT, c);
+			} else {
+				icon(ic, P(a, s.r), g.ICON, c, Math.cos(rad(a)) >= 0 ? a : a + 180);
+			}
 			trim(s, end, w + (named ? 8 : 4));
 		}
 		// comp_icon_text: no bar, text on the arc's middle, icon toward the corner; round: "ICON 72 BPM" centered
@@ -501,22 +528,30 @@
 			var label = g.round ? caption + " " + value : caption;
 			endLabel(s, left, label, fitCap(label, g.TEXT, slen(s) / 2));
 			sections(s.a0, s.a1, s.r, s.t, left, v, bands);
-			if (!g.round) along(value, at(s0, 50), s0.r + g.THUMB, g.TEXT + 2, C.white);
+			if (!g.round) {
+				along(value, at(s0, 50), s0.r + g.THUMB, g.TEXT + 2, C.white);
+			}
 		}
 		// comp_band_gauge_draw: laid out like bandGauge, the sections one shaded arc with a thumb
 		function bandRange(s0, v, bands, top, caption) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s), value = v >= 0 ? String(v) : "--", pct = bandPct(v, bands, top);
 			var label = g.round ? caption + " " + value : caption;
 			endLabel(s, left, label, fitCap(label, g.TEXT, slen(s) / 2));
-			if (!g.round) along(value, at(s0, 50), s0.r + g.THUMB, g.TEXT + 2, C.white);
-			if (pct < 0) return sarc(s, 0, 100, C.track);
+			if (!g.round) {
+				along(value, at(s0, 50), s0.r + g.THUMB, g.TEXT + 2, C.white);
+			}
+			if (pct < 0) {
+				return sarc(s, 0, 100, C.track);
+			}
 			shadedArc(s, left, 100, bandCols(bands));
 			dot(s, left ? 100 - pct : pct);
 		}
 		// comp_range_draw: min on the left end, max on the right, thumb at pct (< 0: bare track), value centered
 		function rangeGauge(s0, pct, min, max, value, cols) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, lo = leftEnd(s), cap = fitCap(value, g.TEXT + 2, slen(s0));
-			if (g.round) return along(value, at(s, 50), s.r, cap, C.white);  // no gauge, just the value
+			if (g.round) {
+				return along(value, at(s, 50), s.r, cap, C.white);  // no gauge, just the value
+			}
 			if (pct < 0) {
 				sarc(s, 0, 100, C.track);
 			} else {
@@ -535,9 +570,13 @@
 		// comp_api_draw: text like heart rate, bar like rain, the header for an icon; gauge like temperature, "HEAD value"
 		function apiCorner(s, a) {
 			var name = { name: a.name };
-			if (a.type === 2) rangeGauge(s, a.pct, a.min, a.max, (a.name ? a.name + " " : "") + a.text, [C.accent]);
-			else if (a.type === 1) bar(s, a.pct, C.accent, a.text, name);
-			else iconText(s, name, a.text, C.accent);
+			if (a.type === 2) {
+				rangeGauge(s, a.pct, a.min, a.max, (a.name ? a.name + " " : "") + a.text, [C.accent]);
+			} else if (a.type === 1) {
+				bar(s, a.pct, C.accent, a.text, name);
+			} else {
+				iconText(s, name, a.text, C.accent);
+			}
 		}
 
 		// comp_battery_draw: like bar(), "BOLT 82% BAR", the bolt in its own color
@@ -547,14 +586,19 @@
 			compIcon(s, "bolt", C.white);
 			endLabel(s, left, BATTERY + CORNER_PCT);
 			sarc(s, 0, 100, C.track);
-			if (BATTERY > 0) sarc(s, left, left ? 100 - BATTERY : BATTERY, batteryColor());
+			if (BATTERY > 0) {
+				sarc(s, left, left ? 100 - BATTERY : BATTERY, batteryColor());
+			}
 		}
 		// comp_calendar_draw: weekday outside, yesterday/today/tomorrow boxes
 		function calendar(s0) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
 			// round: the weekday leads the boxes, which share what is left of the arc
-			if (g.round) endLabel(s, left, DAYS[now.getDay()]);
-			else along(DAYS[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
+			if (g.round) {
+				endLabel(s, left, DAYS[now.getDay()]);
+			} else {
+				along(DAYS[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
+			}
 			s.t = g.TEXT + 5;
 			var today = ink(C.melon), step = g.round ? 34 : 22, half = g.round ? 14 : 9;
 			[-1, 0, 1].forEach(function (d) {
@@ -571,34 +615,72 @@
 		for (var k in SIDE) {
 			var s = { a0: SIDE[k], a1: SIDE[k] + DIR[k] * 45, r: g.COMP_R, t: g.COMP_T };
 			var id = settings[k];
-			if (id === 1) bar(s, stepPct(), C.green, String(STEPS), "runner");
+			if (id === 1) {
+				bar(s, stepPct(), C.green, String(STEPS), "runner");
+			}
 			// comp_temp_draw: round has no gauge, the conditions icon leads the value
-			if (id === 2 && g.round && CONDITION_ICON) iconText(s, CONDITION_ICON, temp(weather.TEMP) + "°", C.white);
-			else if (id === 2) rangeGauge(s, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°", TEMP_COLOR);
-			if (isApi(id)) apiCorner(s, apiView(id - API_ID));
-			if (id === 3) battery(s);
-			if (id === 4) bar(s, weather.RAIN, C.picton, weather.RAIN + CORNER_PCT, "umbrella");
-			if (id === 6) calendar(s);
-			if (id === 13) bar(s, HUM, C.cyan, HUM >= 0 ? HUM + CORNER_PCT : "--", "drop");
-			if (id === 14) along(settings["TEXT_" + k.slice(5)], at(s, 50), s.r, fitCap(settings["TEXT_" + k.slice(5)], g.TEXT + 2, slen(s)), C.white);
-			if (id === 8) iconText(s, "heart", BPM + " BPM", C.red);
-			if (id === 9) bar(s, stepPct(), C.forest, distance() + (settings.UNITS === 1 ? "mi" : "km"), "runner");
-			if (id === 7) bandGauge(s, AQI, AQI_BANDS, "AQI");
-			if (id === 11) bandGauge(s, UV, UV_BANDS, "UV");
-			if (id === 27) bandRange(s, AQI, AQI_BANDS, 500, "AQI");
-			if (id === 28) bandRange(s, UV, UV_BANDS, 11, "UV");
-			if (id === 29 || id === 30) iconText(s, "flame", (id === 30 ? KCAL_ACTIVE : KCAL) + " KCAL", "#FF5500");
-			if (id === 25) iconText(s, "wind", wind() >= 0 ? wind() + (settings.UNITS === 1 ? "mph" : "km/h") + " " + windFrom() : "--", C.picton);
-			if (id === 10) iconText(s, "arrow", elevation() + (settings.UNITS === 1 ? "ft" : "m"), C.red);
+			if (id === 2 && g.round && CONDITION_ICON) {
+				iconText(s, CONDITION_ICON, temp(weather.TEMP) + "°", C.white);
+			} else if (id === 2) {
+				rangeGauge(s, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°", TEMP_COLOR);
+			}
+			if (isApi(id)) {
+				apiCorner(s, apiView(id - API_ID));
+			}
+			if (id === 3) {
+				battery(s);
+			}
+			if (id === 4) {
+				bar(s, weather.RAIN, C.picton, weather.RAIN + CORNER_PCT, "umbrella");
+			}
+			if (id === 6) {
+				calendar(s);
+			}
+			if (id === 13) {
+				bar(s, HUM, C.cyan, HUM >= 0 ? HUM + CORNER_PCT : "--", "drop");
+			}
+			if (id === 14) {
+				along(settings["TEXT_" + k.slice(5)], at(s, 50), s.r, fitCap(settings["TEXT_" + k.slice(5)], g.TEXT + 2, slen(s)), C.white);
+			}
+			if (id === 8) {
+				iconText(s, "heart", BPM + " BPM", C.red);
+			}
+			if (id === 9) {
+				bar(s, stepPct(), C.forest, distance() + (settings.UNITS === 1 ? "mi" : "km"), "runner");
+			}
+			if (id === 7) {
+				bandGauge(s, AQI, AQI_BANDS, "AQI");
+			}
+			if (id === 11) {
+				bandGauge(s, UV, UV_BANDS, "UV");
+			}
+			if (id === 27) {
+				bandRange(s, AQI, AQI_BANDS, 500, "AQI");
+			}
+			if (id === 28) {
+				bandRange(s, UV, UV_BANDS, 11, "UV");
+			}
+			if (id === 29 || id === 30) {
+				iconText(s, "flame", (id === 30 ? KCAL_ACTIVE : KCAL) + " KCAL", "#FF5500");
+			}
+			if (id === 25) {
+				iconText(s, "wind", wind() >= 0 ? wind() + (settings.UNITS === 1 ? "mph" : "km/h") + " " + windFrom() : "--", C.picton);
+			}
+			if (id === 10) {
+				iconText(s, "arrow", elevation() + (settings.UNITS === 1 ? "ft" : "m"), C.red);
+			}
 			// comp_beat_draw: like the heart, a big @ for an icon
 			if (id === 24) {
-				if (g.round) iconText(s, { name: "@" }, beats(now), C.red);
-				else {
+				if (g.round) {
+					iconText(s, { name: "@" }, beats(now), C.red);
+				} else {
 					along(beats(now), at(s, 50), s.r, g.TEXT + 2, C.white);
 					text("@", corner(s, 4 + g.ICON / 2), g.ICON - 4, C.red, 0);
 				}
 			}
-			if (id === 23) iconText(s, "sun", SUN ? "\u25B4" + sunTime(weather.SUNRISE) + " \u25BE" + sunTime(weather.SUNSET) : "--", C.yellow);
+			if (id === 23) {
+				iconText(s, "sun", SUN ? "\u25B4" + sunTime(weather.SUNRISE) + " \u25BE" + sunTime(weather.SUNSET) : "--", C.yellow);
+			}
 		}
 
 		// RING_OUT.. and reach() in ultra-watchface.c: the empty center's radius and how far each hand runs, per ring
@@ -618,7 +700,9 @@
 			// draw_band: sport has the accent ring and hour ticks, 00..55 turned; chronograph black on white, a wider band, 1..12 upright
 			var band = sport ? CHR_BAND : CHR_BAND + CHR_INSET, TICK = sport ? [10, 7, 4] : [6, 5, 3];  // hour, minute, half
 			ring(OUT - band / 2, C.white, band);
-			if (sport) ring(OUT - CHR_BAND - CHR_INSET / 2, secondCol, CHR_INSET);
+			if (sport) {
+				ring(OUT - CHR_BAND - CHR_INSET / 2, secondCol, CHR_INSET);
+			}
 			var tick = !sport || T(secondCol) === T(C.white) ? C.black : secondCol;  // mono schemes
 			for (i = 0; i < 120; i++) {
 				hour = i % 10 === 0;
@@ -627,8 +711,11 @@
 			// ponytail: sport's are straight, turned as a whole; the watch curves each digit
 			for (var n = 1; n <= 12; n++) {
 				var m = n * 5 % 60;
-				if (sport) text(("0" + m).slice(-2), P(n * 30, OUT - 15), g.NUM_SMALL - 2, C.black, m <= 15 || m >= 45 ? m * 6 : m * 6 + 180);
-				else text(String(n), P(n * 30, OUT - (TICK[0] + band) / 2), g.round ? 9 : 8, C.black, 0);  // CHRONO_NUM
+				if (sport) {
+					text(("0" + m).slice(-2), P(n * 30, OUT - 15), g.NUM_SMALL - 2, C.black, m <= 15 || m >= 45 ? m * 6 : m * 6 + 180);
+				} else {
+					text(String(n), P(n * 30, OUT - (TICK[0] + band) / 2), g.round ? 9 : 8, C.black, 0);  // CHRONO_NUM
+				}
 			}
 		} else {
 			// draw_dial
@@ -639,7 +726,9 @@
 			}
 			for (var h = 1; h <= 12; h++) {
 				var big = h % 3 === 0;
-				if (big) stroke(seg(P(h * 30, g.DIAL_R + 1), P(h * 30, g.DIAL_R - 5)), secondCol, 3);
+				if (big) {
+					stroke(seg(P(h * 30, g.DIAL_R + 1), P(h * 30, g.DIAL_R - 5)), secondCol, 3);
+				}
 				text(String(h), P(h * 30, big ? g.NUM_R_BIG : g.NUM_R), big ? g.NUM_BIG : g.NUM_SMALL,
 					big || lightScheme(scheme) ? C.white : C.lg, 0);
 			}
@@ -652,19 +741,25 @@
 		function subShaded(c, pct, cols) {
 			cols.forEach(function (col, i) {
 				var p = Math.trunc(i * 100 / cols.length);
-				if (p < pct && (!i || col !== cols[i - 1])) subArc(c, -120 + 2.4 * p, -120 + 2.4 * pct, col);
+				if (p < pct && (!i || col !== cols[i - 1])) {
+					subArc(c, -120 + 2.4 * p, -120 + 2.4 * pct, col);
+				}
 			});
 		}
 		function gauge(c, pct, col) {
 			subArc(c, -120, 120, C.track);
 			pct = clamp(pct);
-			if (pct > 0) subArc(c, -120, -120 + 2.4 * pct, col);
+			if (pct > 0) {
+				subArc(c, -120, -120 + 2.4 * pct, col);
+			}
 		}
 		function thumb(c, pct, fill) { disc(P(-120 + 2.4 * clamp(pct), g.SUB_R, c), 2, fill, C.black); }
 		var ST = g.SUB_TEXT, SS = g.SUB_SMALL, SL = g.SUB_LOW, INNER = 2 * g.SUB_R - 7;
 		// center_fit_text: `cap` at most, shrunk to fit `width`
 		function fit(t, p, cap, width, col) {
-			if (t) text(t, p, Math.min(cap, width * 0.7 / (t.length * 0.6)), col, 0);
+			if (t) {
+				text(t, p, Math.min(cap, width * 0.7 / (t.length * 0.6)), col, 0);
+			}
 		}
 		// center_range_draw: min and max under the value, a name above it
 		function subRange(c, pct, min, max, value, name, cols) {
@@ -678,12 +773,16 @@
 					text(max, [c[0] + 7, c[1] + SL], SS, C.lg, 0);
 				}
 			}
-			if (name) text(name, [c[0], c[1] - 7], SS - 1, C.white, 0);
+			if (name) {
+				text(name, [c[0], c[1] - 7], SS - 1, C.white, 0);
+			}
 			fit(value, [c[0], c[1] + (name ? 2 : -1)], ST, INNER, C.white);
 		}
 		// center_api_draw
 		function apiSubdial(c, a) {
-			if (a.type === 2) return subRange(c, a.pct, a.min, a.max, a.text, a.name, [C.accent]);
+			if (a.type === 2) {
+				return subRange(c, a.pct, a.min, a.max, a.text, a.name, [C.accent]);
+			}
 			if (a.type === 1) {
 				gauge(c, a.pct, C.accent);
 				fit(a.text, [c[0], c[1] - 1], ST + 2, INNER, C.white);
@@ -719,8 +818,11 @@
 			12: function (c) {
 				var name = CONDITION_ICON;
 				var col = scheme === SCHEME_ACCENT ? C.accent : C.white;
-				if (name) icon(name, c, Math.trunc(7 * g.SUB_R / 4), col);
-				else text("--", c, ST, col, 0);
+				if (name) {
+					icon(name, c, Math.trunc(7 * g.SUB_R / 4), col);
+				} else {
+					text("--", c, ST, col, 0);
+				}
 			},
 			11: function (c) {
 				sections(-120, 120, g.SUB_R, 3, false, UV, UV_BANDS, c);
@@ -730,7 +832,9 @@
 			// Tear-off page: red header above a flat cut, black on white below in any scheme
 			6: function (c) {
 				var dr = g.SUB_R + 1, cut = Math.trunc(-dr / 3), hw = f(Math.sqrt(dr * dr - cut * cut));
-				if (lightScheme(scheme)) disc(c, dr + 1, C.lg);
+				if (lightScheme(scheme)) {
+					disc(c, dr + 1, C.lg);
+				}
 				disc(c, dr, "!" + C.white);
 				out.push('<path d="M' + f(c[0] - hw) + " " + (c[1] + cut) + "A" + dr + " " + dr + " 0 0 1 " + f(c[0] + hw) + " " + (c[1] + cut) + 'Z" fill="' + T(C.red) + '"/>');
 				text(DAYS[now.getDay()], [c[0], c[1] + Math.trunc((cut - dr) / 2)], SS - 1, ink(C.red), 0);
@@ -768,7 +872,9 @@
 				// at night: the night, sunset to sunrise, dimmer
 				var pct = !SUN ? 0 : day ? (m - up) * 100 / (down - up) : (m - down + 1440) % 1440 * 100 / (up - down + 1440);
 				gauge(c, pct, day ? C.yellow : "#5555AA");
-				if (SUN) thumb(c, pct, C.white);
+				if (SUN) {
+					thumb(c, pct, C.white);
+				}
 				fit(SUN ? sunTime(day ? down : up) : "--", [c[0], c[1] - 1], ST, INNER, C.white);
 				icon(day ? "down" : "up", [c[0], c[1] + SL], SS + 1, C.yellow);
 			},
@@ -779,7 +885,9 @@
 			},
 			// center_wind_draw: direction, the speed big under it, the unit below
 			25: function (c) {
-				if (wind() >= 0) text(windFrom(), [c[0], c[1] - g.SUB_R + 5], SS, C.picton, 0);
+				if (wind() >= 0) {
+					text(windFrom(), [c[0], c[1] - g.SUB_R + 5], SS, C.picton, 0);
+				}
 				text(wind() >= 0 ? String(wind()) : "--", [c[0], c[1] + 1], ST + 3, C.white, 0);
 				text(settings.UNITS === 1 ? "mph" : "km/h", [c[0], c[1] + SL + 2], SS + 1, C.white, 0);
 			},
@@ -804,8 +912,11 @@
 		// draw_zoom(): grown around the face center to fill the ring's
 		out.push('<g transform="translate(' + cx + " " + cy + ") scale(" + f(reach.center / g.INNER_R) + ") translate(" + -cx + " " + -cy + ')">');
 		for (var pos in SUBDIAL_AT) {
-			if (isApi(settings[pos])) apiSubdial(SUBDIAL_AT[pos], apiView(settings[pos] - API_ID));
-			else if (SUBDIAL[settings[pos]]) SUBDIAL[settings[pos]](SUBDIAL_AT[pos], settings["TEXT_" + pos.slice(7)]);
+			if (isApi(settings[pos])) {
+				apiSubdial(SUBDIAL_AT[pos], apiView(settings[pos] - API_ID));
+			} else if (SUBDIAL[settings[pos]]) {
+				SUBDIAL[settings[pos]](SUBDIAL_AT[pos], settings["TEXT_" + pos.slice(7)]);
+			}
 		}
 		out.push("</g>");
 
@@ -813,7 +924,9 @@
 		var ha = (now.getHours() % 12) * 30 + now.getMinutes() / 2, ma = now.getMinutes() * 6, sa = now.getSeconds() * 6;
 		// draw_hand: a line `w` wide, or a stem and ray_bar() or ray_poly(), drawn pointing up and turned
 		function hand(a, len, w, handCol) {
-			if (!settings.HANDS) return stroke(seg([cx, cy], P(a, len)), handCol, w);
+			if (!settings.HANDS) {
+				return stroke(seg([cx, cy], P(a, len)), handCol, w);
+			}
 			var e = settings.HANDS === 2 ? HAND_EDGE : 0, col = T(handCol);
 			// ray_poly(): points as [px out, px across]
 			var s = HAND_STEM, h = HAND_W / 2, W = HAND_W;
@@ -829,20 +942,26 @@
 			stroke(seg([cx, cy], P(a, HAND_STEM)), handCol, HAND_STEM_W);
 			var pts = settings.HANDS === 3 ? [[s, 2 - h], [s + 2, -h], [len - W, -h], [len, 0], [len - W, h], [s + 2, h], [s, h - 2]] :
 				settings.HANDS === 4 ? [[s, 0], [s + W, -h - 1], [len, -1], [len, 1], [s + W, h + 1]] : null;
-			if (pts) return poly(pts, handCol);
+			if (pts) {
+				return poly(pts, handCol);
+			}
 			out.push('<rect x="' + (cx - (HAND_W - e) / 2) + '" y="' + f(cy - len + e / 2) + '" width="' + (HAND_W - e) + '" height="' + f(len - HAND_STEM - e) +
 				'" rx="' + (HAND_W - e) / 2 + '" transform="rotate(' + f(a) + " " + cx + " " + cy + ')" ' +
 				(e ? 'fill="' + T(C.black) + '" stroke="' + col + '" stroke-width="' + e + '"' : 'fill="' + col + '"') + "/>");
 		}
 		hand(ha, reach.hour, 6, handColor("HAND_COLOR", C.white));
 		// A 1px rim of background, so a white hand shows over the white band
-		if (banded) [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+		if (banded) {
+			[[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
 			out.push('<g transform="translate(' + d + ')">');
 			hand(ma, reach.minute, 3, C.black);
 			out.push("</g>");
 		});
+		}
 		hand(ma, reach.minute, 3, handColor("MINUTE_COLOR", C.white));
-		if (settings.SECONDS) stroke(seg(P(sa + 180, g.DIAL_R * 0.25), P(sa, reach.second)), secondCol, 2);
+		if (settings.SECONDS) {
+			stroke(seg(P(sa + 180, g.DIAL_R * 0.25), P(sa, reach.second)), secondCol, 2);
+		}
 		disc([cx, cy], 5, secondCol);
 		disc([cx, cy], 2, C.black);
 
@@ -889,7 +1008,9 @@
 	}
 
 	// Built once; render() flips state and redraws the preview and scheme swatches
-	if (g.round) $("bezel").classList.add("round");
+	if (g.round) {
+		$("bezel").classList.add("round");
+	}
 	$("caption").textContent = state.weather ? "Health and battery are sample values" : "Sample data";
 	function pickers(places, options) {
 		options = options.slice(0, -1).concat(settings.APIS.map(function (a, i) {
@@ -946,7 +1067,11 @@
 		return h < 0 ? h + 2 * Math.PI : h;
 	}
 	var hued = [];
-	for (var a = 0xC0; a <= 0xFF; a++) if (total(a) % 3 || chans(a)[0] !== chans(a)[1] || chans(a)[1] !== chans(a)[2]) hued.push(a);
+	for (var a = 0xC0; a <= 0xFF; a++) {
+		if (total(a) % 3 || chans(a)[0] !== chans(a)[1] || chans(a)[1] !== chans(a)[2]) {
+			hued.push(a);
+		}
+	}
 	hued.sort(function (a, b) { return total(a) - total(b); });
 	for (var ring = 1; ring <= 4; ring++) {
 		var cells = hued.splice(0, 6 * ring).sort(function (a, b) { return hue(a) - hue(b); });
@@ -964,20 +1089,30 @@
 	});
 
 	document.addEventListener("change", function (e) {
-		if (e.target.dataset.slot) settings[e.target.dataset.slot] = +e.target.value;
+		if (e.target.dataset.slot) {
+			settings[e.target.dataset.slot] = +e.target.value;
+		}
 		render();
 	});
 	document.addEventListener("input", function (e) {
 		var k = e.target.dataset.text, field = e.target.dataset.field;
 		if (field) {
 			settings.APIS[e.target.dataset.api][field] = field === "type" ? +e.target.value : e.target.value;
-			if (field === "title" || field === "type") e.target.closest("details").firstChild.innerHTML = apiLabel(e.target.dataset.api);
-			if (field === "title") buildPickers();  // it is the option's label
+			if (field === "title" || field === "type") {
+				e.target.closest("details").firstChild.innerHTML = apiLabel(e.target.dataset.api);
+			}
+			if (field === "title") {
+				buildPickers();  // it is the option's label
+			}
 			return render();
 		}
-		if (!k) return;
+		if (!k) {
+			return;
+		}
 		settings[k] = cleanText(k, e.target.value);
-		if (e.target.value !== settings[k]) e.target.value = settings[k];
+		if (e.target.value !== settings[k]) {
+			e.target.value = settings[k];
+		}
 		render();
 	});
 	$("goal").addEventListener("input", function (e) {
@@ -986,24 +1121,34 @@
 	});
 	// toggle doesn't bubble: capture. Keeps apiOpen right when the summary is clicked.
 	document.addEventListener("toggle", function (e) {
-		if (e.target.dataset && e.target.dataset.card) apiOpen[e.target.dataset.card] = e.target.open;
+		if (e.target.dataset && e.target.dataset.card) {
+			apiOpen[e.target.dataset.card] = e.target.open;
+		}
 	}, true);
 	document.addEventListener("click", function (e) {
 		var b = e.target.closest("button");
-		if (!b) return;
+		if (!b) {
+			return;
+		}
 		if (b.dataset.scheme) {
 			settings.SCHEME = +b.dataset.scheme;
 			settings.HAND_COLOR = settings.MINUTE_COLOR = settings.SECOND_COLOR = 0;  // back to the scheme's
 		}
-		else if (b.dataset.hands) settings.HANDS = +b.dataset.hands;
-		else if (b.dataset.ring) settings.RING = +b.dataset.ring;
-		else if (b.dataset.argb) {
+		else if (b.dataset.hands) {
+			settings.HANDS = +b.dataset.hands;
+		} else if (b.dataset.ring) {
+			settings.RING = +b.dataset.ring;
+		} else if (b.dataset.argb) {
 			settings[b.parentNode.dataset.color] = +b.dataset.argb;
-			if (b.parentNode.dataset.color === "ACCENT_COLOR") settings.SECOND_COLOR = 0;  // the accent takes over
+			if (b.parentNode.dataset.color === "ACCENT_COLOR") {
+				settings.SECOND_COLOR = 0;  // the accent takes over
+			}
 		}
-		else if (b.dataset.units) settings.UNITS = +b.dataset.units;
-		else if (b.id === "seconds") settings.SECONDS = settings.SECONDS ? 0 : 1;
-		else if (b.id === "api-add" || b.dataset.apiRemove) {
+		else if (b.dataset.units) {
+			settings.UNITS = +b.dataset.units;
+		} else if (b.id === "seconds") {
+			settings.SECONDS = settings.SECONDS ? 0 : 1;
+		} else if (b.id === "api-add" || b.dataset.apiRemove) {
 			if (b.id === "api-add") {
 				apiOpen[settings.APIS.length] = true;
 				settings.APIS.push({ url: "", freq: 10, type: 0, title: "", header: "", text: "", min: "0", max: "100" });
@@ -1011,11 +1156,16 @@
 				// Places showing it go empty; the ones after it move down a number.
 				var gone = API_ID + +b.dataset.apiRemove;
 				settings.APIS.splice(b.dataset.apiRemove, 1);
-				if (state.api) state.api.splice(b.dataset.apiRemove, 1);
+				if (state.api) {
+					state.api.splice(b.dataset.apiRemove, 1);
+				}
 				apiOpen.splice(b.dataset.apiRemove, 1);
 				CORNERS.concat(CENTERS).forEach(function (p) {
-					if (settings[p.key] === gone) settings[p.key] = 0;
-					else if (isApi(settings[p.key]) && settings[p.key] > gone) settings[p.key]--;
+					if (settings[p.key] === gone) {
+						settings[p.key] = 0;
+					} else if (isApi(settings[p.key]) && settings[p.key] > gone) {
+						settings[p.key]--;
+					}
 				});
 			}
 			buildApis();
@@ -1024,12 +1174,16 @@
 		else if (b.id === "save" || b.dataset.apiSave) {
 			// A card's Save saves everything too, once its fields are valid: the phone
 			// only hears from this page when it closes, and only then refreshes the watch.
-			if (b.dataset.apiSave && ![].every.call(b.closest("details").querySelectorAll("input"), function (i) { return i.reportValidity(); })) return;
+			if (b.dataset.apiSave && ![].every.call(b.closest("details").querySelectorAll("input"), function (i) { return i.reportValidity(); })) {
+				return;
+			}
 			var payload = encodeURIComponent(JSON.stringify(settings));
 			location.href = returnTo ? (returnTo + payload) : ("pebblejs://close#" + payload);
 			return;
 		}
-		else return;
+		else {
+			return;
+		}
 		render();
 	});
 

@@ -122,13 +122,17 @@ function cleanApis(list) {
 }
 
 function value(k, v) {
-  if (k === 'APIS') return cleanApis(v);
+  if (k === 'APIS') {
+    return cleanApis(v);
+  }
   return typeof DEFAULTS[k] === 'string' ? cleanText(k, v) : Number(v);
 }
 
 function withDefaults(saved) {
   var s = {};
-  for (var k in DEFAULTS) s[k] = value(k, saved && saved[k] !== undefined ? saved[k] : DEFAULTS[k]);
+  for (var k in DEFAULTS) {
+    s[k] = value(k, saved && saved[k] !== undefined ? saved[k] : DEFAULTS[k]);
+  }
   return s;
 }
 
@@ -142,7 +146,11 @@ function savedSettings() {
 
 function toMessage(settings) {
   var msg = {};
-  for (var k in DEFAULTS) if (k !== 'APIS') msg[k] = value(k, settings[k]);
+  for (var k in DEFAULTS) {
+    if (k !== 'APIS') {
+      msg[k] = value(k, settings[k]);
+    }
+  }
   return msg;
 }
 

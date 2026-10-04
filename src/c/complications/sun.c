@@ -8,7 +8,9 @@ static bool sun_known(void) {
 // "6:30", in the watch's 12 or 24h style. No am/pm: the arrow says which.
 static void sun_time(char *buf, size_t n, int min) {
   int h = min / 60;
-  if (!clock_is_24h_style()) h = (h + 11) % 12 + 1;
+  if (!clock_is_24h_style()) {
+    h = (h + 11) % 12 + 1;
+  }
   snprintf(buf, n, "%d:%02d", h, min % 60);
 }
 

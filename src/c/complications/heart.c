@@ -14,7 +14,9 @@ static int heart_bpm(void) {
 void comp_heart_draw(GContext *ctx, const Slot *s) {
   int bpm = heart_bpm();
   char buf[16] = "-- BPM";
-  if (bpm > 0) snprintf(buf, sizeof(buf), "%d BPM", bpm);
+  if (bpm > 0) {
+    snprintf(buf, sizeof(buf), "%d BPM", bpm);
+  }
   comp_icon_text(ctx, s, ICON_HEART, GColorRed, buf);
 }
 
@@ -22,7 +24,9 @@ void comp_heart_draw(GContext *ctx, const Slot *s) {
 void center_heart_draw(GContext *ctx, GPoint c) {
   int bpm = heart_bpm();
   char buf[12] = "--";
-  if (bpm > 0) snprintf(buf, sizeof(buf), "%d", bpm);
+  if (bpm > 0) {
+    snprintf(buf, sizeof(buf), "%d", bpm);
+  }
   text_draw(ctx, "BPM", GPoint(c.x, c.y - SUB_R + 5), SUB_SMALL - 1, GColorMelon);
   text_draw(ctx, ICON_HEART, c, SUB_R + 4, GColorRed);
   text_draw(ctx, buf, GPoint(c.x, c.y + SUB_R / 2 + 1), SUB_TEXT, GColorWhite);

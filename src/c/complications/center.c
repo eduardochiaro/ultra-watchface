@@ -10,7 +10,9 @@ Slot center_ring(GPoint c) {
 void center_gauge(GContext *ctx, GPoint c, int pct, GColor fill) {
   Slot s = center_ring(c);
   slot_arc(ctx, &s, 0, 100, COMP_TRACK);
-  if (pct > 0) slot_arc(ctx, &s, 0, clamp_i32(pct, 0, 100), fill);
+  if (pct > 0) {
+    slot_arc(ctx, &s, 0, clamp_i32(pct, 0, 100), fill);
+  }
 }
 
 // Conditions now as one icon, no ring: text color, the accent in that scheme.
@@ -18,8 +20,11 @@ static void conditions(GContext *ctx, GPoint c) {
   const char *icon = weather_icon();
   // Any bright color themes to the accent; white stays the text color.
   GColor color = g_settings.scheme == SCHEME_ACCENT ? GColorChromeYellow : GColorWhite;
-  if (icon) text_draw(ctx, icon, c, 7 * SUB_R / 4, color);  // 28px on emery
-  else text_draw(ctx, "--", c, SUB_TEXT, color);
+  if (icon) {
+    text_draw(ctx, icon, c, 7 * SUB_R / 4, color);  // 28px on emery
+  } else {
+    text_draw(ctx, "--", c, SUB_TEXT, color);
+  }
 }
 
 typedef void (*Subdial)(GContext *ctx, GPoint c);
@@ -41,8 +46,12 @@ void center_draw(GContext *ctx, GPoint c) {
   };
   for (int i = 0; i < CENTER_POS_COUNT; i++) {
     uint8_t id = g_settings.center[i];
-    if (id == COMP_CUSTOM) center_custom_draw(ctx, at[i], g_settings.center_text[i]);
-    else if (id >= COMP_API && id <= COMP_API_LAST) center_api_draw(ctx, at[i], id - COMP_API);
-    else if (id < COMP_COUNT && SUBDIAL[id]) SUBDIAL[id](ctx, at[i]);
+    if (id == COMP_CUSTOM) {
+      center_custom_draw(ctx, at[i], g_settings.center_text[i]);
+    } else if (id >= COMP_API && id <= COMP_API_LAST) {
+      center_api_draw(ctx, at[i], id - COMP_API);
+    } else if (id < COMP_COUNT && SUBDIAL[id]) {
+      SUBDIAL[id](ctx, at[i]);
+    }
   }
 }

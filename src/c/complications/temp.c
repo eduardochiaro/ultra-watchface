@@ -25,7 +25,9 @@ static void temp_shades(uint8_t out[STOPS]) {
 // Today's range as min and max, the thumb and the label at the current temperature.
 static int temp_range(char min[8], char max[8], char now[8]) {
   const Weather *w = &g_weather;
-  if (!w->valid) return -1;
+  if (!w->valid) {
+    return -1;
+  }
   int span = w->temp_max - w->temp_min;
   snprintf(min, 8, "%d", w->temp_min);
   snprintf(max, 8, "%d", w->temp_max);

@@ -5,7 +5,9 @@ static void calories_text(char *buf, size_t n, const char *unit, bool resting) {
   int kcal = 0;
 #if defined(PBL_HEALTH)
   kcal = health_service_sum_today(HealthMetricActiveKCalories);
-  if (resting) kcal += health_service_sum_today(HealthMetricRestingKCalories);
+  if (resting) {
+    kcal += health_service_sum_today(HealthMetricRestingKCalories);
+  }
 #endif
   snprintf(buf, n, "%d%s", kcal, unit);
 }

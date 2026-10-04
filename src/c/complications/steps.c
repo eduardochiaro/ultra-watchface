@@ -17,7 +17,10 @@ int step_pct(void) {
 void comp_steps_draw(GContext *ctx, const Slot *s) {
   int32_t steps = steps_today();
   char buf[12];
-  if (steps >= 1000) snprintf(buf, sizeof(buf), "%d,%03d", (int)(steps / 1000), (int)(steps % 1000));
-  else snprintf(buf, sizeof(buf), "%d", (int)steps);
+  if (steps >= 1000) {
+    snprintf(buf, sizeof(buf), "%d,%03d", (int)(steps / 1000), (int)(steps % 1000));
+  } else {
+    snprintf(buf, sizeof(buf), "%d", (int)steps);
+  }
   comp_fill_gauge(ctx, s, step_pct(), GColorGreen, COMP_TRACK, buf, ICON_RUNNER);
 }

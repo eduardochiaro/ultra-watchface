@@ -24,8 +24,11 @@ static const ComplicationDraw DRAW[COMP_COUNT] = {
 };
 
 void complication_draw(ComplicationId id, GContext *ctx, const Slot *s) {
-  if (id >= COMP_API && id <= COMP_API_LAST) comp_api_draw(ctx, s, id - COMP_API);
-  else if (id < COMP_COUNT && DRAW[id]) DRAW[id](ctx, s);
+  if (id >= COMP_API && id <= COMP_API_LAST) {
+    comp_api_draw(ctx, s, id - COMP_API);
+  } else if (id < COMP_COUNT && DRAW[id]) {
+    DRAW[id](ctx, s);
+  }
 }
 
 // Icons are private-use glyphs (U+E000 on, 0xEE in UTF-8); anything else is a
@@ -60,10 +63,14 @@ void comp_fill_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, GColor 
   pct = clamp_i32(pct, 0, 100);
   int left = slot_left_end(s);
   Slot b = *s;
-  if (icon) comp_icon(ctx, &b, icon, fill);
+  if (icon) {
+    comp_icon(ctx, &b, icon, fill);
+  }
   end_label(ctx, &b, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&b) / 2));
   slot_arc(ctx, &b, 0, 100, track);
-  if (pct > 0) slot_arc(ctx, &b, left, left ? 100 - pct : pct, fill);
+  if (pct > 0) {
+    slot_arc(ctx, &b, left, left ? 100 - pct : pct, fill);
+  }
 }
 
 // Each shade runs on to `pct` over the one before, so its cap rounds the join.
@@ -72,8 +79,12 @@ void comp_fill_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, GColor 
 static void shaded_arc(GContext *ctx, const Slot *s, bool flip, int pct, const uint8_t *fill, int n) {
   for (int i = 0; i < n; i++) {
     int p = i * 100 / n;
-    if (p >= pct) break;
-    if (i && fill[i] == fill[i - 1]) continue;
+    if (p >= pct) {
+      break;
+    }
+    if (i && fill[i] == fill[i - 1]) {
+      continue;
+    }
     slot_arc(ctx, s, flip ? 100 - p : p, flip ? 100 - pct : pct, (GColor){ .argb = fill[i] });
   }
 }
@@ -113,7 +124,9 @@ void center_range_draw(GContext *ctx, GPoint c, int pct, const char *min, const 
       text_draw(ctx, max, GPoint(c.x + 7, c.y + SUB_LOW), SUB_SMALL, GColorLightGray);
     }
   }
-  if (name) text_draw(ctx, name, GPoint(c.x, c.y - 7), SUB_SMALL - 1, GColorWhite);
+  if (name) {
+    text_draw(ctx, name, GPoint(c.x, c.y - 7), SUB_SMALL - 1, GColorWhite);
+  }
   center_fit_text(ctx, value, GPoint(c.x, c.y + (name ? 2 : -1)), SUB_TEXT, 2 * SUB_R - SUB_T - 4, GColorWhite);
 }
 
@@ -121,10 +134,14 @@ void center_range_draw(GContext *ctx, GPoint c, int pct, const char *min, const 
 // in, the rest track. `flip`: the first is at the 100 end.
 static void band_sections(GContext *ctx, const Slot *s, bool flip, int v, const Band *bands) {
   int n = 1, lit = -1;
-  while (bands[n - 1].to != INT16_MAX) n++;
+  while (bands[n - 1].to != INT16_MAX) {
+    n++;
+  }
   if (v >= 0) {
     lit = 0;
-    while (v > bands[lit].to) lit++;
+    while (v > bands[lit].to) {
+      lit++;
+    }
   }
   int32_t span = s->a1 - s->a0;
   int32_t inset = span * (s->thickness + 2) / (2 * slot_len(s));  // its cap and half the gap
@@ -141,7 +158,9 @@ static void band_sections(GContext *ctx, const Slot *s, bool flip, int v, const 
 // has no room beside the arc: caption and value both lead, "AQI 42 SECTIONS".
 void comp_band_draw(GContext *ctx, const Slot *slot, int v, const Band *bands, const char *caption) {
   char value[12] = "--";
-  if (v >= 0) snprintf(value, sizeof(value), "%d", v);
+  if (v >= 0) {
+    snprintf(value, sizeof(value), "%d", v);
+  }
   Slot s = *slot;
   int left = slot_left_end(&s);
 #if defined(PBL_PLATFORM_GABBRO)
@@ -157,7 +176,9 @@ void comp_band_draw(GContext *ctx, const Slot *slot, int v, const Band *bands, c
 
 void center_band_draw(GContext *ctx, GPoint c, int v, const Band *bands, const char *caption) {
   char buf[12] = "--";
-  if (v >= 0) snprintf(buf, sizeof(buf), "%d", v);
+  if (v >= 0) {
+    snprintf(buf, sizeof(buf), "%d", v);
+  }
   Slot s = center_ring(c);
   band_sections(ctx, &s, false, v, bands);
   text_draw(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT, GColorWhite);
@@ -170,11 +191,17 @@ void center_band_draw(GContext *ctx, GPoint c, int v, const Band *bands, const c
 // them at even widths, in %, -1 for unknown.
 static int band_pct(int v, const Band *bands, int top, uint8_t fill[BANDS_MAX], int *n) {
   int count = 0;
-  do fill[count] = bands[count].argb; while (bands[count++].to != INT16_MAX && count < BANDS_MAX);
+  do {
+    fill[count] = bands[count].argb;
+  } while (bands[count++].to != INT16_MAX && count < BANDS_MAX);
   *n = count;
-  if (v < 0) return -1;
+  if (v < 0) {
+    return -1;
+  }
   int i = 0, lo = 0;
-  while (v > bands[i].to) lo = bands[i++].to;
+  while (v > bands[i].to) {
+    lo = bands[i++].to;
+  }
   int hi = bands[i].to == INT16_MAX ? top : bands[i].to;
   return clamp_i32((i * 100 + (v - lo) * 100 / (hi - lo)) / count, 0, 100);
 }
@@ -184,7 +211,9 @@ void comp_band_gauge_draw(GContext *ctx, const Slot *slot, int v, const Band *ba
   uint8_t fill[BANDS_MAX];
   int n, pct = band_pct(v, bands, top, fill, &n);
   char value[12] = "--";
-  if (v >= 0) snprintf(value, sizeof(value), "%d", v);
+  if (v >= 0) {
+    snprintf(value, sizeof(value), "%d", v);
+  }
   Slot s = *slot;
   int left = slot_left_end(&s);
 #if defined(PBL_PLATFORM_GABBRO)
@@ -208,7 +237,9 @@ void center_band_gauge_draw(GContext *ctx, GPoint c, int v, const Band *bands, i
   uint8_t fill[BANDS_MAX];
   int n, pct = band_pct(v, bands, top, fill, &n);
   char value[8] = "--";
-  if (v >= 0) snprintf(value, sizeof(value), "%d", v);
+  if (v >= 0) {
+    snprintf(value, sizeof(value), "%d", v);
+  }
   center_range_draw(ctx, c, pct, "", "", value, caption, fill, n);
 }
 

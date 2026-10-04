@@ -47,10 +47,16 @@ function el() {
 var els, clicks;
 var document = {
   getElementById: function (id) {
-    if (!els[id]) { els[id] = el(); if (id === 'schemes' || id === 'units') els[id].children = [el(), el(), el(), el()].slice(0, id === 'units' ? 2 : 4); }
+    if (!els[id]) { els[id] = el(); if (id === 'schemes' || id === 'units') {
+      els[id].children = [el(), el(), el(), el()].slice(0, id === 'units' ? 2 : 4);
+    }
+    }
     return els[id];
   },
-  addEventListener: function (type, fn) { if (type === 'click') clicks.push(fn); },
+  addEventListener: function (type, fn) { if (type === 'click') {
+    clicks.push(fn);
+  }
+  },
   querySelectorAll: function () { return []; }
 };
 // Runs the page with `state` written in, on a fresh stub DOM; returns its globals.

@@ -15,7 +15,9 @@ static bool elevation_text(char *buf, size_t n) {
 // No bar, there is nothing to fill against: the arrow and "290m", like the heart.
 void comp_elevation_draw(GContext *ctx, const Slot *s) {
   char buf[12];
-  if (elevation_text(buf, sizeof(buf) - 2)) strcat(buf, g_settings.imperial ? "ft" : "m");
+  if (elevation_text(buf, sizeof(buf) - 2)) {
+    strcat(buf, g_settings.imperial ? "ft" : "m");
+  }
   comp_icon_text(ctx, s, ICON_ARROW, GColorRed, buf);
 }
 

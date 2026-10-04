@@ -47,7 +47,9 @@ static bool color_light(GColor c) {
 }
 
 bool theme_light(void) {
-  if (g_settings.scheme != SCHEME_ACCENT) return g_settings.scheme & SCHEME_LIGHT;
+  if (g_settings.scheme != SCHEME_ACCENT) {
+    return g_settings.scheme & SCHEME_LIGHT;
+  }
   return color_light((GColor){ .argb = g_settings.bg });
 }
 
@@ -66,17 +68,26 @@ GColor theme(GColor c) {
   bool gray = c.r == c.g && c.g == c.b;
   bool bright = c.r >= 2 || c.g >= 2 || c.b >= 2;  // fills vs tracks
   if (g_settings.scheme == SCHEME_ACCENT) {
-    if (!gray && bright) return (GColor){ .argb = g_settings.accent };
-    if (gray && c.r == 0) return (GColor){ .argb = g_settings.bg };
-    if (!gray) c = GColorDarkGray;
+    if (!gray && bright) {
+      return (GColor){ .argb = g_settings.accent };
+    }
+    if (gray && c.r == 0) {
+      return (GColor){ .argb = g_settings.bg };
+    }
+    if (!gray) {
+      c = GColorDarkGray;
+    }
     gray = true;
   } else if ((g_settings.scheme & SCHEME_MONO) && !gray) {
     c = bright ? GColorWhite : GColorDarkGray;
     gray = true;
   }
-  if (theme_light() && gray) c.r = c.g = c.b = 3 - c.r;
-  // Bright yellow washes out on a light background.
-  else if (theme_light() && gcolor_equal(c, GColorYellow)) c = GColorChromeYellow;
+  if (theme_light() && gray) {
+    c.r = c.g = c.b = 3 - c.r;
+  } else if (theme_light() && gcolor_equal(c, GColorYellow)) {
+    // Bright yellow washes out on a light background.
+    c = GColorChromeYellow;
+  }
   return c;
 }
 
@@ -119,7 +130,9 @@ void slot_trim(Slot *s, int end, int px) {
 
 static int isqrt(int n) {
   int x = 0;
-  while ((x + 1) * (x + 1) <= n) x++;
+  while ((x + 1) * (x + 1) <= n) {
+    x++;
+  }
   return x;
 }
 
@@ -159,10 +172,18 @@ void slot_arc(GContext *ctx, const Slot *s, int from_pct, int to_pct, GColor col
   fctx_set_fill_color(&f, theme(color));
   fctx_begin_fill(&f);
   fctx_move_to(&f, fpolar_f(c, a, r + h));
-  for (int i = 1; i <= n; i++) fctx_line_to(&f, fpolar_f(c, a + (b - a) * i / n, r + h));
-  for (int k = 1; k <= 6; k++) fctx_line_to(&f, fpolar_f(fpolar_f(c, b, r), b + k * STEP, h));
-  for (int i = n - 1; i >= 0; i--) fctx_line_to(&f, fpolar_f(c, a + (b - a) * i / n, r - h));
-  for (int k = 7; k < 12; k++) fctx_line_to(&f, fpolar_f(fpolar_f(c, a, r), a + k * STEP, h));
+  for (int i = 1; i <= n; i++) {
+    fctx_line_to(&f, fpolar_f(c, a + (b - a) * i / n, r + h));
+  }
+  for (int k = 1; k <= 6; k++) {
+    fctx_line_to(&f, fpolar_f(fpolar_f(c, b, r), b + k * STEP, h));
+  }
+  for (int i = n - 1; i >= 0; i--) {
+    fctx_line_to(&f, fpolar_f(c, a + (b - a) * i / n, r - h));
+  }
+  for (int k = 7; k < 12; k++) {
+    fctx_line_to(&f, fpolar_f(fpolar_f(c, a, r), a + k * STEP, h));
+  }
   fctx_close_path(&f);
   fctx_end_fill(&f);
   fctx_deinit_context(&f);
@@ -206,8 +227,14 @@ void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color) {
   fctx_begin_fill(&f);
   for (int i = 0; i < 36; i++) {
     FPoint p = fpolar(c, i * TRIG_MAX_ANGLE / 36, r);
-    if (p.y > max_y) p.y = max_y;
-    if (i) fctx_line_to(&f, p); else fctx_move_to(&f, p);
+    if (p.y > max_y) {
+      p.y = max_y;
+    }
+    if (i) {
+      fctx_line_to(&f, p);
+    } else {
+      fctx_move_to(&f, p);
+    }
   }
   fctx_close_path(&f);
   fctx_end_fill(&f);
@@ -218,7 +245,11 @@ void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color) {
 static void capsule(FContext *f, FPoint p, FPoint q, int32_t angle, fixed_t h) {
   for (int i = 0; i < 14; i++) {
     FPoint pt = fpolar_f(i < 7 ? q : p, angle + (i < 7 ? i - 3 : i - 4) * TRIG_MAX_ANGLE / 12, h);
-    if (i) fctx_line_to(f, pt); else fctx_move_to(f, pt);
+    if (i) {
+      fctx_line_to(f, pt);
+    } else {
+      fctx_move_to(f, pt);
+    }
   }
   fctx_close_path(f);
 }
@@ -270,7 +301,11 @@ void ray_poly(GContext *ctx, GPoint c, int32_t angle, const GPoint *pts, int n, 
   fctx_begin_fill(&f);
   for (int i = 0; i < n; i++) {
     FPoint p = fpolar_f(fpolar_f(o, angle, INT_TO_FIXED(pts[i].x)), angle + TRIG_MAX_ANGLE / 4, INT_TO_FIXED(pts[i].y));
-    if (i) fctx_line_to(&f, p); else fctx_move_to(&f, p);
+    if (i) {
+      fctx_line_to(&f, p);
+    } else {
+      fctx_move_to(&f, p);
+    }
   }
   fctx_close_path(&f);
   fctx_end_fill(&f);
@@ -300,7 +335,9 @@ static GPoint clamp_to_screen(GPoint c, int hw, int hh) {
   int dx = c.x - cx, dy = c.y - cy;
   for (int i = 0; i < 32; i++) {
     int ex = abs(dx) + hw, ey = abs(dy) + hh;
-    if (ex * ex + ey * ey <= r * r) break;
+    if (ex * ex + ey * ey <= r * r) {
+      break;
+    }
     dx = dx * 15 / 16;
     dy = dy * 15 / 16;
   }
@@ -312,7 +349,9 @@ static GPoint clamp_to_screen(GPoint c, int hw, int hh) {
 }
 
 void text_draw(GContext *ctx, const char *txt, GPoint c, int size, GColor color) {
-  if (!s_font || !txt[0]) return;
+  if (!s_font || !txt[0]) {
+    return;
+  }
   c = zoom_point(c);
   size = zoom(size);
   FContext f;
@@ -340,7 +379,9 @@ void text_draw_along(GContext *ctx, const char *txt, GPoint c, GPoint center, in
 
 void text_draw_arc(GContext *ctx, const char *txt, GPoint center, int32_t a, int r, int size,
                    GColor color) {
-  if (!s_font || r == 0) return;
+  if (!s_font || r == 0) {
+    return;
+  }
   bool top = cos_lookup(a) >= 0;
   FContext f;
   fctx_init_context(&f, ctx);
@@ -350,7 +391,9 @@ void text_draw_arc(GContext *ctx, const char *txt, GPoint center, int32_t a, int
   for (const char *p = txt; *p;) {
     char ch[5];
     int n = 1;
-    while (n < 4 && (p[n] & 0xC0) == 0x80) n++;  // one UTF-8 char
+    while (n < 4 && (p[n] & 0xC0) == 0x80) {
+      n++;  // one UTF-8 char
+    }
     memcpy(ch, p, n);
     ch[n] = '\0';
     p += n;
@@ -368,7 +411,9 @@ void text_draw_arc(GContext *ctx, const char *txt, GPoint center, int32_t a, int
 }
 
 int text_width(GContext *ctx, const char *txt, int size) {
-  if (!s_font) return 0;
+  if (!s_font) {
+    return 0;
+  }
   FContext f;
   fctx_init_context(&f, ctx);
   fctx_set_text_cap_height(&f, s_font, size);

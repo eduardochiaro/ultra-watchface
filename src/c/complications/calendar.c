@@ -42,7 +42,9 @@ void center_calendar_draw(GContext *ctx, GPoint c) {
   time_t now = time(NULL);
   struct tm *t = localtime(&now);
   int r = SUB_R + SUB_T / 2, cut = -r / 3;
-  if (theme_light()) disc_fill(ctx, c, r + 1, r + 1, GColorLightGray);  // edge on white
+  if (theme_light()) {
+    disc_fill(ctx, c, r + 1, r + 1, GColorLightGray);  // edge on white
+  }
   disc_fill(ctx, c, r, r, fixed(GColorWhite));
   disc_fill(ctx, c, r, cut, GColorRed);
   text_draw(ctx, DAYS[t->tm_wday], GPoint(c.x, c.y + (cut - r) / 2), SUB_SMALL - 1, ink_on(GColorRed));

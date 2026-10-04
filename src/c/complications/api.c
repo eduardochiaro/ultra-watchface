@@ -18,17 +18,27 @@ typedef struct {
 static Api s_api[API_MAX];
 
 void api_init(void) {
-  for (int i = 0; i < API_MAX; i++) persist_read_data(PK_API + i, &s_api[i], sizeof(Api));
+  for (int i = 0; i < API_MAX; i++) {
+    persist_read_data(PK_API + i, &s_api[i], sizeof(Api));
+  }
 }
 
 bool api_handle_message(DictionaryIterator *iter) {
   Tuple *t = dict_find(iter, MESSAGE_KEY_API_INDEX);
-  if (!t) return false;
+  if (!t) {
+    return false;
+  }
   int i = t->value->int32;
-  if (i < 0 || i >= API_MAX) return true;
+  if (i < 0 || i >= API_MAX) {
+    return true;
+  }
   Api *a = &s_api[i];
-  if ((t = dict_find(iter, MESSAGE_KEY_API_TYPE))) a->type = t->value->int32;
-  if ((t = dict_find(iter, MESSAGE_KEY_API_PCT))) a->pct = clamp_i32(t->value->int32, -1, 100);
+  if ((t = dict_find(iter, MESSAGE_KEY_API_TYPE))) {
+    a->type = t->value->int32;
+  }
+  if ((t = dict_find(iter, MESSAGE_KEY_API_PCT))) {
+    a->pct = clamp_i32(t->value->int32, -1, 100);
+  }
   const struct { uint32_t key; char *dst; size_t size; } texts[] = {
     { MESSAGE_KEY_API_NAME, a->name, sizeof(a->name) },
     { MESSAGE_KEY_API_TEXT, a->text, sizeof(a->text) },
@@ -36,8 +46,9 @@ bool api_handle_message(DictionaryIterator *iter) {
     { MESSAGE_KEY_API_MAX,  a->max,  sizeof(a->max) },
   };
   for (unsigned n = 0; n < ARRAY_LENGTH(texts); n++) {
-    if ((t = dict_find(iter, texts[n].key)) && t->type == TUPLE_CSTRING)
+    if ((t = dict_find(iter, texts[n].key)) && t->type == TUPLE_CSTRING) {
       strncpy(texts[n].dst, t->value->cstring, texts[n].size - 1);  // the last byte stays 0
+    }
   }
   persist_write_data(PK_API + i, a, sizeof(Api));
   return true;
@@ -58,8 +69,11 @@ void comp_api_draw(GContext *ctx, const Slot *s, int i) {
     snprintf(buf, sizeof(buf), "%s%s%s", a->name, a->name[0] ? " " : "", api_text(a));
     comp_range_draw(ctx, s, a->pct, a->min, a->max, buf, &FILL, 1);
   }
-  else if (a->type == API_BAR) comp_fill_gauge(ctx, s, a->pct, GColorChromeYellow, COMP_TRACK, api_text(a), a->name);
-  else comp_icon_text(ctx, s, a->name, GColorChromeYellow, api_text(a));
+  else if (a->type == API_BAR) {
+    comp_fill_gauge(ctx, s, a->pct, GColorChromeYellow, COMP_TRACK, api_text(a), a->name);
+  } else {
+    comp_icon_text(ctx, s, a->name, GColorChromeYellow, api_text(a));
+  }
 }
 
 void center_api_draw(GContext *ctx, GPoint c, int i) {

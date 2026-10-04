@@ -8,7 +8,9 @@ import { readFileSync, readdirSync, writeFileSync } from "node:fs";
 const read = (name) => readFileSync(new URL(`../src/pkjs/${name}`, import.meta.url), "utf8");
 const tag = '<script src="config.js"></script>';
 const html = read("config.html");
-if (!html.includes(tag)) throw new Error(`config.html lost its ${tag}`);
+if (!html.includes(tag)) {
+  throw new Error(`config.html lost its ${tag}`);
+}
 
 const iconDir = new URL("../resources/icons/", import.meta.url);
 const icons = Object.fromEntries(readdirSync(iconDir).filter((f) => f.endsWith(".svg")).map((f) =>

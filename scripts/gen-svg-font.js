@@ -55,7 +55,9 @@ function esc(s) {
 const glyphs = [];
 for (const ch of chars) {
   const g = font.charToGlyph(ch);
-  if (!g || g.index === 0) continue;            // skip .notdef
+  if (!g || g.index === 0) {
+    continue;            // skip .notdef
+  }
   const adv = Math.round(g.advanceWidth || em / 2);
   glyphs.push(`    <glyph unicode="${esc(ch)}" horiz-adv-x="${adv}" d="${pathData(g, 1)}"/>`);
 }
@@ -68,13 +70,26 @@ function iconPath(d) {
   const at = { x: 0, y: 0 }, start = { x: 0, y: 0 };
   return parsePath(d).map((c) => {
     if (c.relative) {  // to absolute, against the pen
-      for (const k of ['x', 'x1', 'x2']) if (k in c) c[k] += at.x;
-      for (const k of ['y', 'y1', 'y2']) if (k in c) c[k] += at.y;
+      for (const k of ['x', 'x1', 'x2']) {
+        if (k in c) {
+          c[k] += at.x;
+        }
+      }
+      for (const k of ['y', 'y1', 'y2']) {
+        if (k in c) {
+          c[k] += at.y;
+        }
+      }
     }
     c.code = c.code.toUpperCase();
-    if (c.code === 'Z') Object.assign(at, start);
-    else Object.assign(at, { x: 'x' in c ? c.x : at.x, y: 'y' in c ? c.y : at.y });
-    if (c.code === 'M') Object.assign(start, at);
+    if (c.code === 'Z') {
+      Object.assign(at, start);
+    } else {
+      Object.assign(at, { x: 'x' in c ? c.x : at.x, y: 'y' in c ? c.y : at.y });
+    }
+    if (c.code === 'M') {
+      Object.assign(start, at);
+    }
     switch (c.code) {
       case 'M': case 'L': case 'T': return `${c.code}${X(c.x)} ${Y(c.y)}`;
       case 'H': return `H${X(c.x)}`;
