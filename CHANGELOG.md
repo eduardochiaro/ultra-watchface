@@ -31,7 +31,7 @@
 
 ## 1.0.0
 
-- First release: an analog face for Pebble Time 2 (emery) and Pebble Round 2 (gabbro).
+- First release: an analog face for Pebble Time 2 (emery) and Pebble Time Round 2 (gabbro).
 - **Eight slots:** four corner gauges and four subdials.
 - **Complications:** steps, distance, heart rate, battery, calendar, temperature, chance of rain, humidity, air quality, UV index, elevation, current weather and your own text.
 - **Color schemes:** Black, White, White on black, Black on white, or Accent with your own background and accent colors.
