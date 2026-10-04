@@ -603,8 +603,9 @@
 
 		// RING_OUT.. and reach() in ultra-watchface.c: the empty center's radius and how far each hand runs, per ring
 		var OUT = g.DIAL_R + 4, MIN_TICK = 8, CHR_BAND = 22, CHR_INSET = 4, secondCol = handColor("SECOND_COLOR", C.accent);
+		var sport = settings.RING === 2, banded = sport || settings.RING === 3;
 		var reach = settings.RING === 1 ? { center: OUT - MIN_TICK - 4, hour: OUT - MIN_TICK - 10, minute: OUT - MIN_TICK, second: OUT - MIN_TICK / 2 } :
-			settings.RING === 2 ? { center: OUT - CHR_BAND - CHR_INSET, hour: OUT - CHR_BAND - CHR_INSET - 3, minute: OUT - 4, second: OUT } :
+			banded ? { center: OUT - CHR_BAND - CHR_INSET, hour: OUT - CHR_BAND - CHR_INSET - 3, minute: OUT - 4, second: OUT } :
 			{ center: g.INNER_R, hour: g.INNER_R - 8, minute: g.NUM_R_BIG - g.NUM_BIG / 2, second: g.DIAL_R - 10 };
 		var i, hour;
 		if (settings.RING === 1) {
@@ -613,17 +614,22 @@
 				hour = i % 5 === 0;
 				stroke(seg(P(i * 6, OUT - MIN_TICK), P(i * 6, OUT)), hour ? C.white : C.lg, hour ? 3 : 1);
 			}
-		} else if (settings.RING === 2) {
-			// draw_chrono
-			ring(OUT - CHR_BAND / 2, C.white, CHR_BAND);
-			ring(OUT - CHR_BAND - CHR_INSET / 2, secondCol, CHR_INSET);
-			var tick = T(secondCol) === T(C.white) ? C.black : secondCol;  // mono schemes
+		} else if (banded) {
+			// draw_band: sport has the accent ring and hour ticks, 00..55 turned; chronograph black on white, a wider band, 1..12 upright
+			var band = sport ? CHR_BAND : CHR_BAND + CHR_INSET, TICK = sport ? [10, 7, 4] : [6, 5, 3];  // hour, minute, half
+			ring(OUT - band / 2, C.white, band);
+			if (sport) ring(OUT - CHR_BAND - CHR_INSET / 2, secondCol, CHR_INSET);
+			var tick = !sport || T(secondCol) === T(C.white) ? C.black : secondCol;  // mono schemes
 			for (i = 0; i < 120; i++) {
 				hour = i % 10 === 0;
-				stroke(seg(P(i * 3, OUT - 1), P(i * 3, OUT - (hour ? 10 : i % 2 ? 4 : 7))), hour ? tick : C.black, hour ? 3 : 1);
+				stroke(seg(P(i * 3, OUT - 1), P(i * 3, OUT - TICK[hour ? 0 : i % 2 ? 2 : 1])), hour ? tick : C.black, hour ? 3 : 1);
 			}
-			// ponytail: straight, turned as a whole; the watch curves each digit
-			for (var m = 0; m < 60; m += 5) text(("0" + m).slice(-2), P(m * 6, OUT - 15), g.NUM_SMALL - 2, C.black, m <= 15 || m >= 45 ? m * 6 : m * 6 + 180);
+			// ponytail: sport's are straight, turned as a whole; the watch curves each digit
+			for (var n = 1; n <= 12; n++) {
+				var m = n * 5 % 60;
+				if (sport) text(("0" + m).slice(-2), P(n * 30, OUT - 15), g.NUM_SMALL - 2, C.black, m <= 15 || m >= 45 ? m * 6 : m * 6 + 180);
+				else text(String(n), P(n * 30, OUT - (TICK[0] + band) / 2), g.round ? 9 : 8, C.black, 0);  // CHRONO_NUM
+			}
 		} else {
 			// draw_dial
 			ring(g.INNER_R, C.dg, 1);
@@ -829,8 +835,8 @@
 				(e ? 'fill="' + T(C.black) + '" stroke="' + col + '" stroke-width="' + e + '"' : 'fill="' + col + '"') + "/>");
 		}
 		hand(ha, reach.hour, 6, handColor("HAND_COLOR", C.white));
-		// Chronograph: a 1px rim of background, so a white hand shows over the white band
-		if (settings.RING === 2) [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+		// A 1px rim of background, so a white hand shows over the white band
+		if (banded) [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
 			out.push('<g transform="translate(' + d + ')">');
 			hand(ma, reach.minute, 3, C.black);
 			out.push("</g>");

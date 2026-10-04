@@ -42,6 +42,9 @@ void disc_fill(GContext *ctx, GPoint c, int r, int cut, GColor color);
 void rect_fill(GContext *ctx, GRect rect, int r, GColor color);
 // Rounded bar on the ray from `c` at `angle`, from r0 to r1 px out, `w` wide.
 void ray_bar(GContext *ctx, GPoint c, int32_t angle, int r0, int r1, int w, GColor color);
+// `n` square-ended ticks evenly around `c`, the first at `a0`, from r0 to r1 px out,
+// `w` wide. Subpixel: a short graphics_draw_line between whole pixels slants.
+void ray_ticks(GContext *ctx, GPoint c, int32_t a0, int n, int r0, int r1, int w, GColor color);
 // Polygon on that ray: each point is (px out along it, px across it).
 void ray_poly(GContext *ctx, GPoint c, int32_t angle, const GPoint *pts, int n, GColor color);
 // `r` is the fill's radius, `edge` the px of `ring` around it.

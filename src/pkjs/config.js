@@ -80,7 +80,7 @@ var SCHEME_ACCENT = 4;
 var HANDS = ['Line', 'Bar', 'Outline', 'Pointer', 'Sword', 'Dauphine'];
 
 // Index = RING value, see RingStyle in src/c/settings.h
-var RINGS = ['Default', 'Minimal', 'Chronograph'];
+var RINGS = ['Default', 'Minimal', 'Sport', 'Chronograph'];
 
 // Mirrors g_settings in C. weather.js asks Open-Meteo for the chosen
 // temperature unit; the watch converts distance and elevation. Colors are GColor8 argb (0xC0 = black,

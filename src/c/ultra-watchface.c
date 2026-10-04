@@ -12,6 +12,7 @@
 #define NUM_BIG    18
 #define NUM_SMALL  12
 #define INNER_R    59   // ring around the subdials
+#define CHRONO_NUM 9    // chronograph ring's hours
 #define COMP_R     118
 #define COMP_T     6
 #else                              // emery 200x228: dial fills the width, arcs in the corners
@@ -21,17 +22,18 @@
 #define NUM_BIG    14
 #define NUM_SMALL  9
 #define INNER_R    54
+#define CHRONO_NUM 8
 #define COMP_R     108
 #define COMP_T     6
 #endif
 
-// Minimal and chronograph rings. Their outer edge is the default's outer circle.
+// Minimal, sport and chronograph rings. Their outer edge is the default's outer circle.
 #define RING_OUT   (DIAL_R + 4)
 #define MIN_TICK   8    // minimal's ticks
-#define CHR_BAND   22   // chronograph's white band
-#define CHR_INSET  4    // the accent ring inside it
+#define CHR_BAND   22   // sport's white band
+#define CHR_INSET  4    // the accent ring inside it; chronograph's band is that much wider instead
 #define CHR_NUM_R  (RING_OUT - 15)
-#define CHR_NUM    (NUM_SMALL - 2)  // its numerals
+#define CHR_NUM    (NUM_SMALL - 2)  // sport's numerals
 
 #define COMP_SPAN  45   // degrees per corner complication, labels included
 #define ACCENT     GColorChromeYellow
@@ -73,6 +75,11 @@ static GColor picked(uint8_t argb, GColor own) {
   return argb ? fixed((GColor){ .argb = argb }) : own;
 }
 
+// Sport and chronograph: a white band the minute hand runs over.
+static bool banded(void) {
+  return g_settings.ring == RING_SPORT || g_settings.ring == RING_CHRONO;
+}
+
 // Per ring: the radius of the empty center the subdials fill, and how far each hand runs.
 typedef struct { int16_t center, hour, minute, second; } Reach;
 
@@ -82,8 +89,8 @@ static Reach reach(void) {
     int in = RING_OUT - MIN_TICK;
     return (Reach){ in - 4, in - 10, in, RING_OUT - MIN_TICK / 2 };
   }
-  if (g_settings.ring == RING_CHRONO) {
-    // Hour hand just short of the inset ring, the minute hand over the band, seconds to its outer edge.
+  if (banded()) {
+    // Hour hand just short of the band or its inset ring, the minute hand over the band, seconds to its outer edge.
     int in = RING_OUT - CHR_BAND - CHR_INSET;
     return (Reach){ in, in - 3, RING_OUT - 4, RING_OUT };
   }
@@ -98,36 +105,42 @@ static void ring_fill(GContext *ctx, GPoint c, int r, int thickness, GColor colo
 
 // Ticks only: light gray minutes, white hours.
 static void draw_minimal(GContext *ctx, GPoint c) {
-  for (int i = 0; i < 60; i++) {
-    bool hour = i % 5 == 0;
-    line(ctx, polar(c, DEG(i * 6), RING_OUT - MIN_TICK), polar(c, DEG(i * 6), RING_OUT), hour ? 3 : 1,
-         hour ? GColorWhite : GColorLightGray);
-  }
+  ray_ticks(ctx, c, 0, 60, RING_OUT - MIN_TICK, RING_OUT, 1, GColorLightGray);
+  ray_ticks(ctx, c, 0, 12, RING_OUT - MIN_TICK, RING_OUT, 3, GColorWhite);
 }
 
-// A white band: ticks for the half minutes, minutes and, in the accent, hours;
-// 00..55 along it, upright at 00 and 30. An accent ring inside it.
-static void draw_chrono(GContext *ctx, GPoint c) {
-  GColor accent = picked(g_settings.second_color, ACCENT);
-  ring_fill(ctx, c, RING_OUT, CHR_BAND, GColorWhite);
-  ring_fill(ctx, c, RING_OUT - CHR_BAND, CHR_INSET, accent);
-  // Mono schemes: the accent is the band's own white.
-  if (gcolor_equal(theme(accent), theme(GColorWhite))) accent = GColorBlack;
-  for (int i = 0; i < 120; i++) {
-    bool hour = i % 10 == 0;
-    line(ctx, polar(c, DEG(i * 3), RING_OUT - 1), polar(c, DEG(i * 3), RING_OUT - (hour ? 10 : i % 2 ? 4 : 7)),
-         hour ? 3 : 1, hour ? accent : GColorBlack);
+// A white band, ticks for the half minutes, minutes and hours. Sport: the hour
+// ticks and a ring inside the band in the accent, 00..55 along it, upright at 00
+// and 30. Chronograph: black on white only, the band out to where the accent ring
+// would end, 1..12 upright. Its ticks are shorter and its numerals sit midway
+// between them and the band's inner edge, clear of both: "10", the widest across
+// its radius, spans about twice its cap height.
+static void draw_band(GContext *ctx, GPoint c) {
+  bool sport = g_settings.ring == RING_SPORT;
+  static const uint8_t TICK[2][3] = { { 6, 5, 3 }, { 10, 7, 4 } };  // hour, minute, half; [sport]
+  GColor hours = GColorBlack;
+  ring_fill(ctx, c, RING_OUT, sport ? CHR_BAND : CHR_BAND + CHR_INSET, GColorWhite);
+  if (sport) {
+    hours = picked(g_settings.second_color, ACCENT);
+    ring_fill(ctx, c, RING_OUT - CHR_BAND, CHR_INSET, hours);
+    // Mono schemes: the accent is the band's own white.
+    if (gcolor_equal(theme(hours), theme(GColorWhite))) hours = GColorBlack;
   }
+  // The hours go over their minute ticks.
+  ray_ticks(ctx, c, DEG(3), 60, RING_OUT - TICK[sport][2], RING_OUT - 1, 1, GColorBlack);
+  ray_ticks(ctx, c, 0, 60, RING_OUT - TICK[sport][1], RING_OUT - 1, 1, GColorBlack);
+  ray_ticks(ctx, c, 0, 12, RING_OUT - TICK[sport][0], RING_OUT - 1, 3, hours);
   char buf[3];
-  for (int m = 0; m < 60; m += 5) {
-    snprintf(buf, sizeof(buf), "%02d", m);
-    text_draw_arc(ctx, buf, c, DEG(m * 6), CHR_NUM_R, CHR_NUM, GColorBlack);
+  for (int h = 1; h <= 12; h++) {
+    snprintf(buf, sizeof(buf), sport ? "%02d" : "%d", sport ? h * 5 % 60 : h);
+    if (sport) text_draw_arc(ctx, buf, c, DEG(h * 30), CHR_NUM_R, CHR_NUM, GColorBlack);
+    else text_draw(ctx, buf, polar(c, DEG(h * 30), RING_OUT - (TICK[0][0] + CHR_BAND + CHR_INSET) / 2), CHRONO_NUM, GColorBlack);
   }
 }
 
 static void draw_dial(GContext *ctx, GPoint c) {
   if (g_settings.ring == RING_MINIMAL) return draw_minimal(ctx, c);
-  if (g_settings.ring == RING_CHRONO) return draw_chrono(ctx, c);
+  if (banded()) return draw_band(ctx, c);
   graphics_context_set_stroke_color(ctx, theme(GColorDarkGray));
   graphics_context_set_stroke_width(ctx, 1);
   graphics_draw_circle(ctx, c, INNER_R);
@@ -207,9 +220,9 @@ static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
   GColor second = picked(g_settings.second_color, ACCENT);
   Reach r = reach();
   draw_hand(ctx, c, ha, r.hour, 6, picked(g_settings.hand_color, GColorWhite));
-  // Chronograph: a 1px rim of background, so a white hand shows over the white band.
+  // A 1px rim of background, so a white hand shows over the white band.
   static const int8_t RIM[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
-  for (int i = 0; g_settings.ring == RING_CHRONO && i < 4; i++)
+  for (int i = 0; banded() && i < 4; i++)
     draw_hand(ctx, GPoint(c.x + RIM[i][0], c.y + RIM[i][1]), ma, r.minute, 3, GColorBlack);
   draw_hand(ctx, c, ma, r.minute, 3, picked(g_settings.minute_color, GColorWhite));
   if (g_settings.seconds) {

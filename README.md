@@ -9,12 +9,14 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 
 ## Screenshots
 ### Pebble Time 2
+![Emery](assets/emery_0.gif)
 ![Emery 1](assets/emery_1.png)
 ![Emery 2](assets/emery_2.png)
 ![Emery 3](assets/emery_3.png)
 ![Emery 4](assets/emery_4.png)
 
 ### Pebble Time Round 2
+![Gabbro](assets/gabbro_0.gif)
 ![Gabbro 1](assets/gabbro_1.png)
 ![Gabbro 2](assets/gabbro_2.png)
 ![Gabbro 3](assets/gabbro_3.png)
@@ -33,7 +35,7 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 | Text | Pick **Text** in any slot to show your own label: up to 12 characters in a corner, 4 in a subdial. |
 | Custom complications | Show a value from any JSON API. Create up to 8, then pick them in any corner or subdial. See below. |
 | Color scheme | Black, White, White on black, Black on white, or Accent. Accent adds a background and an accent color picker. |
-| Ring | Default, Minimal (ticks only, no numerals) or Chronograph (a white band of minute numerals over an accent ring). Minimal and Chronograph leave a larger center: the subdials grow to fill it and the hands run longer. |
+| Ring | Default, Minimal (ticks only, no numerals), Sport (a white band of minute numerals over an accent ring) or Chronograph (the white band alone, black on white, hours 1 to 12). All but Default leave a larger center: the subdials grow to fill it and the hands run longer. |
 | Hands | Line, Bar, Outline, Pointer, Sword or Dauphine for the hour and minute hands, and a color each for the hour, minute and seconds hands. The seconds color is also the 12, 3, 6 and 9 notches'. Picking a color scheme resets the colors; picking an accent resets the seconds color. |
 | Units | °C, km and km/h, or °F, miles and mph. |
 | Daily step goal | 1,000 to 30,000 steps. Fills the steps and distance gauges. |

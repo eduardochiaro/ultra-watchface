@@ -16,10 +16,11 @@ enum { SCHEME_LIGHT = 1, SCHEME_MONO = 2, SCHEME_ACCENT = 4 };
 // Dauphine: no stem, a long kite out of the pin, one half of it shaded.
 typedef enum { HANDS_LINE, HANDS_BAR, HANDS_OUTLINE, HANDS_POINTER, HANDS_SWORD, HANDS_DAUPHINE, HANDS_COUNT } HandStyle;
 
-// The dial's ring. Minimal: ticks only, no numerals. Chronograph: a white band of
-// minute numerals over an accent ring. Both leave a larger center: the subdials
+// The dial's ring. Minimal: ticks only, no numerals. Sport: a white band of
+// minute numerals over an accent ring. Chronograph: the band alone, in black and
+// white, the hours upright on it. All three leave a larger center: the subdials
 // grow to fill it and the hands run longer.
-typedef enum { RING_DEFAULT, RING_MINIMAL, RING_CHRONO, RING_COUNT } RingStyle;
+typedef enum { RING_DEFAULT, RING_MINIMAL, RING_SPORT, RING_CHRONO, RING_COUNT } RingStyle;
 
 typedef struct {
   uint8_t slots[SLOT_POS_COUNT];   // ComplicationId per corner

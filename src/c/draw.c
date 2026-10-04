@@ -242,6 +242,26 @@ void ray_bar(GContext *ctx, GPoint c, int32_t angle, int r0, int r1, int w, GCol
   fctx_deinit_context(&f);
 }
 
+void ray_ticks(GContext *ctx, GPoint c, int32_t a0, int n, int r0, int r1, int w, GColor color) {
+  FPoint o = FPointI(c.x, c.y);
+  fixed_t h = INT_TO_FIXED(w) / 2;
+  FContext f;
+  fctx_init_context(&f, ctx);
+  fctx_set_fill_color(&f, theme(color));
+  fctx_begin_fill(&f);
+  for (int i = 0; i < n; i++) {
+    int32_t a = a0 + i * TRIG_MAX_ANGLE / n, across = a + TRIG_MAX_ANGLE / 4;
+    FPoint p = fpolar_f(o, a, INT_TO_FIXED(r0)), q = fpolar_f(o, a, INT_TO_FIXED(r1));
+    fctx_move_to(&f, fpolar_f(p, across, h));
+    fctx_line_to(&f, fpolar_f(q, across, h));
+    fctx_line_to(&f, fpolar_f(q, across, -h));
+    fctx_line_to(&f, fpolar_f(p, across, -h));
+    fctx_close_path(&f);
+  }
+  fctx_end_fill(&f);
+  fctx_deinit_context(&f);
+}
+
 void ray_poly(GContext *ctx, GPoint c, int32_t angle, const GPoint *pts, int n, GColor color) {
   FPoint o = FPointI(c.x, c.y);
   FContext f;
