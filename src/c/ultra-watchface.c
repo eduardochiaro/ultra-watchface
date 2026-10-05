@@ -47,7 +47,9 @@
 #define HAND_EDGE   2   // outline thickness
 
 #define PK_SETTINGS 10
-#define CACHE_HEADROOM 40000  // bytes left for fctx after the seconds cache
+#define CACHE_HEADROOM 4000   // bytes left free beside the face cache, and beside fctx
+#define LOW_BATTERY    20     // % and under, off the charger: no seconds hand
+#define SWEEP_MS       125    // a sweeping seconds hand's step: 8 a second, a 4 Hz movement's
 
 Settings g_settings = {
   .slots = { COMP_STEPS, COMP_TEMP, COMP_RAIN, COMP_BATTERY },
@@ -61,10 +63,24 @@ Settings g_settings = {
 
 static Window *s_window;
 static Layer *s_layer;
-// Seconds mode: the face minus the hands, drawn once a minute and copied in
-// every second. Text is the costly part to draw. NULL = no memory, draw it all.
-static GBitmap *s_cache;
-static int s_cache_min = -1;  // -1 = stale
+// The face minus the hands, copied in under them every tick and drawn again
+// only when what it shows changed: a message, or a shown complication's stamp.
+// Text is the costly part to draw. Kept as runs of one color, a row at a time:
+// a face is mostly flat, some 11KB. fctx takes a byte per screen pixel while it
+// draws, so the cache is let go before the face is drawn and made again after
+// it. Hands fctx draws need that room on every tick: emery has 24KB beside it,
+// gabbro 2KB, so there the cache is kept only with plain line hands.
+static uint8_t *s_cache;   // NULL = no room: draw it all every tick
+static bool s_stale = true;
+// The seconds hand runs: the setting, unless quiet time or a low battery has it off.
+static bool s_seconds;
+static AppTimer *s_sweep;  // the sweeping seconds hand's next step
+// The last tick: its second, and time_ms's ms then. The sweep counts on from
+// there. The clock's seconds and its ms do not turn over together (the emulator
+// is a third of a second apart), so the two read as one make the hand jump back.
+static int s_tick_sec, s_tick_ms;
+static int s_min = -1;     // the minute s_stamp was taken in
+static uint32_t s_stamp;
 
 static void line(GContext *ctx, GPoint a, GPoint b, int width, GColor color) {
   graphics_context_set_stroke_color(ctx, theme(color));
@@ -262,7 +278,8 @@ static void draw_hand(GContext *ctx, GPoint c, int32_t angle, int len, int width
   }
 }
 
-static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
+// `sa`: the seconds hand's angle.
+static void draw_hands(GContext *ctx, GPoint c, struct tm *t, int32_t sa) {
   int32_t ha = DEG((t->tm_hour % 12) * 30 + t->tm_min / 2);
   int32_t ma = DEG(t->tm_min * 6);
   GColor second = picked(g_settings.second_color, ACCENT);
@@ -275,11 +292,10 @@ static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
       draw_hand(ctx, GPoint(c.x + RIM[i][0], c.y + RIM[i][1]), ma, r.minute, 3, GColorBlack);
     }
     draw_hand(ctx, c, ma, r.minute, 3, picked(g_settings.minute_color, GColorWhite));
-  } else if (!g_settings.seconds) {
+  } else if (!s_seconds) {
     return;  // nothing to pin
   }
-  if (g_settings.seconds) {
-    int32_t sa = DEG(t->tm_sec * 6);
+  if (s_seconds) {
     line(ctx, polar(c, sa + DEG(180), DIAL_R * 25 / 100), polar(c, sa, r.second), 2, second);
   }
   graphics_context_set_fill_color(ctx, theme(second));
@@ -288,22 +304,63 @@ static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
   graphics_fill_circle(ctx, c, 2);
 }
 
+// The frame buffer as (length, color) runs, none across a row's end, into `out`
+// if there is one. Returns their size. Rows are clipped on round screens.
+static int pack(GBitmap *fb, uint8_t *out) {
+  int rows = gbitmap_get_bounds(fb).size.h, size = 0;
+  for (int y = 0; y < rows; y++) {
+    GBitmapDataRowInfo row = gbitmap_get_data_row_info(fb, y);
+    for (int x = row.min_x; x <= row.max_x; size += 2) {
+      int n = 1;
+      while (n < 255 && x + n <= row.max_x && row.data[x + n] == row.data[x]) {
+        n++;
+      }
+      if (out) {
+        out[size] = n;
+        out[size + 1] = row.data[x];
+      }
+      x += n;
+    }
+  }
+  return size;
+}
+
+// The face just drawn into s_cache, if it leaves the hands their room.
 static void save_cache(GContext *ctx) {
   GBitmap *fb = graphics_capture_frame_buffer(ctx);
   if (!fb) {
     return;
   }
-  GRect r = gbitmap_get_bounds(fb);
-  // fctx allocates while drawing text: leave it room. Emery keeps ~48KB with
-  // the cache; gabbro's 67KB cache would leave ~26KB and crash it.
-  // ponytail: gabbro gets no cache; cache only the corners if it needs one.
-  if (!s_cache && (int)heap_bytes_free() > r.size.w * r.size.h + CACHE_HEADROOM) {
-    s_cache = gbitmap_create_blank(r.size, gbitmap_get_format(fb));
+  GBitmapFormat format = gbitmap_get_format(fb);
+  // Color screens: a byte per pixel.
+  if (format == GBitmapFormat8Bit || format == GBitmapFormat8BitCircular) {
+    GSize screen = gbitmap_get_bounds(fb).size;
+    bool lines = g_settings.hands == HANDS_LINE || g_settings.hands == HANDS_NONE;
+    int size = pack(fb, NULL);
+    if ((int)heap_bytes_free() > size + CACHE_HEADROOM + (lines ? 0 : screen.w * screen.h)) {
+      s_cache = malloc(size);
+    }
+    if (s_cache) {
+      pack(fb, s_cache);
+    }
   }
-  // 8-bit formats: a byte per pixel. Rows are clipped on round screens.
-  for (int y = 0; s_cache && y < r.size.h; y++) {
-    GBitmapDataRowInfo src = gbitmap_get_data_row_info(fb, y), dst = gbitmap_get_data_row_info(s_cache, y);
-    memcpy(dst.data + src.min_x, src.data + src.min_x, src.max_x - src.min_x + 1);
+  graphics_release_frame_buffer(ctx, fb);
+}
+
+// s_cache back over the whole frame buffer.
+static void draw_cache(GContext *ctx) {
+  GBitmap *fb = graphics_capture_frame_buffer(ctx);
+  if (!fb) {
+    return;
+  }
+  const uint8_t *p = s_cache;
+  int rows = gbitmap_get_bounds(fb).size.h;
+  for (int y = 0; y < rows; y++) {
+    GBitmapDataRowInfo row = gbitmap_get_data_row_info(fb, y);
+    for (int x = row.min_x; x <= row.max_x; p += 2) {
+      memset(row.data + x, p[1], p[0]);
+      x += p[0];
+    }
   }
   graphics_release_frame_buffer(ctx, fb);
 }
@@ -338,35 +395,91 @@ static void draw_face(GContext *ctx, GRect b, GPoint c) {
   draw_zoom(c, 100);
 }
 
+// Every shown complication's stamp in one. The hour is in it: the moon moves by
+// it, and a face nothing else changes is still drawn fresh 24 times a day.
+static uint32_t face_stamp(const struct tm *t) {
+  uint32_t stamp = t->tm_hour + 1;
+  for (int i = 0; i < SLOT_POS_COUNT; i++) {
+    stamp = stamp * 31 + complication_stamp(g_settings.slots[i], t);
+  }
+  for (int i = 0; i < CENTER_POS_COUNT; i++) {
+    stamp = stamp * 31 + complication_stamp(g_settings.center[i], t);
+  }
+  return stamp;
+}
+
 static void update_proc(Layer *layer, GContext *ctx) {
   GRect b = layer_get_bounds(layer);
   GPoint c = grect_center_point(&b);
   graphics_context_set_antialiased(ctx, true);
-  time_t now = time(NULL);
+  time_t now;
+  uint16_t ms;
+  time_ms(&now, &ms);
   struct tm t = *localtime(&now);  // copied: complications call localtime too
-  if (s_cache && s_cache_min == t.tm_min) {
-    graphics_draw_bitmap_in_rect(ctx, s_cache, b);
-  } else {
-    draw_face(ctx, b, c);
-    if (g_settings.seconds) {
-      save_cache(ctx);
-      s_cache_min = t.tm_min;
-    }
+  // Once a minute, in seconds mode too: health is asked no more often.
+  if (s_min != t.tm_min) {
+    s_min = t.tm_min;
+    uint32_t stamp = face_stamp(&t);
+    s_stale = s_stale || stamp != s_stamp;
+    s_stamp = stamp;
   }
-  draw_hands(ctx, c, &t);
+  if (s_cache && !s_stale) {
+    draw_cache(ctx);
+  } else {
+    free(s_cache);
+    s_cache = NULL;
+    draw_face(ctx, b, c);
+    save_cache(ctx);
+    s_stale = false;
+  }
+  // It sweeps over the cached face only: a face drawn whole 8 times a second would stall the watch.
+  int32_t sa = DEG(t.tm_sec * 6);
+  if (g_settings.sweep && s_cache) {
+    sa = DEG(s_tick_sec * 6) + DEG(6) * ((ms - s_tick_ms + 1000) % 1000) / 1000;
+  }
+  draw_hands(ctx, c, &t, sa);
 }
 
+static bool seconds_wanted(void) {
+  if (!g_settings.seconds || quiet_time_is_active()) {
+    return false;
+  }
+  BatteryChargeState b = battery_state_service_peek();
+  return b.is_plugged || b.charge_percent > LOW_BATTERY;
+}
+
+static void subscribe_ticks(void);
+
+// Quiet time and the battery are looked at once a minute, with or without seconds.
 static void tick_handler(struct tm *t, TimeUnits changed) {
+  uint16_t ms;
+  time_ms(NULL, &ms);
+  s_tick_sec = t->tm_sec;
+  s_tick_ms = ms;
+  if ((changed & MINUTE_UNIT) && seconds_wanted() != s_seconds) {
+    subscribe_ticks();
+  }
   layer_mark_dirty(s_layer);
 }
 
-static void subscribe_ticks(void) {
-  s_cache_min = -1;
-  if (!g_settings.seconds && s_cache) {
-    gbitmap_destroy(s_cache);
-    s_cache = NULL;
+static void sweep_step(void *data) {
+  s_sweep = app_timer_register(SWEEP_MS, sweep_step, NULL);
+  if (s_cache) {
+    layer_mark_dirty(s_layer);
   }
-  tick_timer_service_subscribe(g_settings.seconds ? SECOND_UNIT : MINUTE_UNIT, tick_handler);
+}
+
+static void subscribe_ticks(void) {
+  s_seconds = seconds_wanted();
+  tick_timer_service_subscribe(s_seconds ? SECOND_UNIT : MINUTE_UNIT, tick_handler);
+  // Quiet time and a low battery stop the sweep with the seconds hand.
+  if (s_sweep) {
+    app_timer_cancel(s_sweep);
+    s_sweep = NULL;
+  }
+  if (s_seconds && g_settings.sweep) {
+    s_sweep = app_timer_register(SWEEP_MS, sweep_step, NULL);
+  }
 }
 
 // Every corner and subdial, in g_settings.zone order: its complication, its
@@ -400,6 +513,9 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     }
     if ((t = dict_find(iter, MESSAGE_KEY_SECONDS))) {
       g_settings.seconds = t->value->int32;
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_SWEEP))) {
+      g_settings.sweep = t->value->int32;
     }
     if ((t = dict_find(iter, MESSAGE_KEY_UNITS))) {
       g_settings.imperial = t->value->int32;
@@ -438,7 +554,7 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     persist_write_data(PK_SETTINGS, &g_settings, sizeof(g_settings));
     subscribe_ticks();
   }
-  s_cache_min = -1;
+  s_stale = true;
   layer_mark_dirty(s_layer);
 }
 
@@ -453,9 +569,7 @@ static void window_load(Window *window) {
 
 static void window_unload(Window *window) {
   layer_destroy(s_layer);
-  if (s_cache) {
-    gbitmap_destroy(s_cache);
-  }
+  free(s_cache);
   s_cache = NULL;
   draw_deinit();
 }

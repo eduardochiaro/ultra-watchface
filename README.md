@@ -42,7 +42,8 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 | Hands | Line, Bar, Outline, Pointer, Sword or Dauphine for the hour and minute hands, or None to hide them (the seconds hand has its own switch), and a color each for the hour, minute and seconds hands. The seconds color is also the 12, 3, 6 and 9 notches'. Picking a color scheme resets the colors; picking an accent resets the seconds color. |
 | Units | °C, km and km/h, or °F, miles and mph. |
 | Daily step goal | 1,000 to 30,000 steps. Fills the steps, distance and calories gauges. |
-| Seconds hand | Off by default. Uses more battery. |
+| Seconds hand | Off by default. Uses more battery. It rests during Quiet Time and at 20% battery or less. |
+| Sweeping seconds | With the seconds hand on: it glides instead of ticking, 8 steps a second. Drains the battery much faster. On the round watch only with Line or no hands. |
 
 Pick **None** to leave a slot empty.
 

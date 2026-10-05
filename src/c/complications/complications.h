@@ -48,6 +48,9 @@ typedef enum {
 } ComplicationId;
 
 void complication_draw(ComplicationId id, GContext *ctx, const Slot *s);
+// What its drawing hangs on that no message brings: the time, health, the
+// battery. The face is drawn again only when a shown one's stamp changes.
+uint32_t complication_stamp(ComplicationId id, const struct tm *t);
 
 // Label layout for corner complications (tune per screen).
 #if defined(PBL_PLATFORM_GABBRO)

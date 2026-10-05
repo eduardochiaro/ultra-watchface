@@ -88,7 +88,8 @@
       "ZONE_R",
       "ZONE_B",
       "LOCATION",
-      "LOCATION_CODE"
+      "LOCATION_CODE",
+      "SWEEP"
     ],
     "resources": {
       "media": [

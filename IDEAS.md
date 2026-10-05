@@ -12,6 +12,7 @@ Customizations to consider. Tick one off when it ships, and add it to [CHANGELOG
 
 ## Hands
 
+- [x] Sweeping seconds hand (1.6.0)
 - [ ] Seconds hand only for a few seconds after a tap or wrist raise
 
 ## Subdials and corners
@@ -33,11 +34,14 @@ Customizations to consider. Tick one off when it ships, and add it to [CHANGELOG
 
 - [ ] Light or dark by sunrise and sunset
 - [ ] Separate accents for the corners and the dial
-- [ ] Low-battery theme: dimmer, seconds off
+- [x] Seconds off on a low battery (1.6.0)
+- [ ] Low-battery theme: dimmer
+- [ ] No color when not illumanted, then color.
 
 ## Behavior
 
 - [ ] Vibrate when Bluetooth disconnects
-- [ ] Quiet hours: hide seconds and dim colors at night
+- [x] Seconds off during Quiet Time (1.6.0)
+- [ ] Quiet hours: dim colors at night
 - [ ] Weather refresh interval
 - [ ] Manual location for weather

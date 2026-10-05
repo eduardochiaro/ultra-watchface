@@ -36,6 +36,74 @@ void complication_draw(ComplicationId id, GContext *ctx, const Slot *s) {
   }
 }
 
+// How far a reading moves before the face is drawn again for it.
+#define HEART_STEP 3   // bpm
+#define KCAL_STEP  10  // total calories
+
+static int32_t health(HealthMetric metric) {
+#if defined(PBL_HEALTH)
+  return health_service_sum_today(metric);
+#else
+  return 0;
+#endif
+}
+
+// Weather, API values, text and the place change with a message: 0 here.
+uint32_t complication_stamp(ComplicationId id, const struct tm *t) {
+  switch (id) {
+    case COMP_TIME:
+    case COMP_ZONE:
+    case COMP_BEAT:
+    case COMP_SUN: {  // the subdial's thumb is now
+      return t->tm_hour * 60 + t->tm_min;
+    }
+    case COMP_CALENDAR:
+    case COMP_CALENDAR_PLAIN: {
+      return t->tm_mday;
+    }
+    case COMP_BATTERY: {
+      BatteryChargeState b = battery_state_service_peek();
+      return b.charge_percent | b.is_charging << 8;
+    }
+    case COMP_HEART: {
+      // A pulse wanders a beat or two every minute: the same stamp until it
+      // is HEART_STEP off the one last stamped, or comes and goes.
+      static int shown;
+      int bpm = 0;
+#if defined(PBL_HEALTH)
+      bpm = health_service_peek_current_value(HealthMetricHeartRateBPM);
+#endif
+      if (abs(bpm - shown) >= HEART_STEP || !bpm != !shown) {
+        shown = bpm;
+      }
+      return shown;
+    }
+    case COMP_STEPS: {
+      return health(HealthMetricStepCount);
+    }
+    // Distance and calories have the step goal's bar, a % at a time. The distance
+    // shows 0.1 km. Resting calories tick up all day: KCAL_STEP of them at a time.
+    case COMP_DISTANCE: {
+      return step_pct() + health(HealthMetricWalkedDistanceMeters) / 100;
+    }
+    case COMP_CALORIES: {
+      return step_pct() + (health(HealthMetricActiveKCalories) + health(HealthMetricRestingKCalories)) / KCAL_STEP;
+    }
+    case COMP_CALORIES_ACTIVE: {
+      return step_pct() + health(HealthMetricActiveKCalories);
+    }
+    case COMP_ACTIVE: {
+      return health(HealthMetricActiveSeconds) / 60;
+    }
+    case COMP_SLEEP: {
+      return health(HealthMetricSleepSeconds) / 60;
+    }
+    default: {
+      return 0;
+    }
+  }
+}
+
 // Icons are private-use glyphs (U+E000 on, 0xEE in UTF-8); anything else is a
 // name, at label size.
 static int icon_size(const char *icon) {

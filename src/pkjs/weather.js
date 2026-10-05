@@ -5,7 +5,16 @@ var config = require('./config');
 var savedSettings = config.savedSettings;
 var send = require('./send');
 var WEATHER_KEY = 'ultra-weather';  // last message sent, for the settings preview
-var LOCATION_ID = 36;  // COMP_LOCATION in src/c/complications/complications.h
+// ComplicationId in src/c/complications/complications.h
+var LOCATION_ID = 36, AQI_IDS = [7, 27];
+// Everything the weather message feeds: temperature, rain, AQI, elevation, UV, conditions, humidity, sun, wind, the place.
+var WEATHER_IDS = [2, 4, 7, 10, 11, 12, 13, 23, 25, 27, 28, LOCATION_ID];
+
+// Is one of these complications in a corner or a subdial?
+function shown(ids) {
+  var s = savedSettings();
+  return config.CORNERS.concat(config.CENTERS).some(function(p) { return ids.indexOf(s[p.key]) >= 0; });
+}
 
 function buildUrl(lat, lon, imperial) {
   return 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
@@ -123,12 +132,15 @@ function fetchJson(url, ok, fail) {
 // isn't woken over Bluetooth (and doesn't rewrite flash) for nothing. Only
 // the timer passes it: a fresh start may have lost the watch's copy.
 function getWeather(skipSame) {
+  // A face with no weather on it: no position asked, nothing fetched.
+  if (!shown(WEATHER_IDS)) { return; }
   var imperial = savedSettings().UNITS === 1;
 
   navigator.geolocation.getCurrentPosition(function(pos) {
     var lat = pos.coords.latitude, lon = pos.coords.longitude;
     fetchJson(buildUrl(lat, lon, imperial), function(data) {
-      // Air quality and the place's name are separate APIs; weather still goes out without them.
+      // Air quality and the place's name are separate APIs, asked only when shown; weather still goes out without them.
+      if (!shown(AQI_IDS)) { return namePlace(lat, lon, data, null); }
       fetchJson(aqiUrl(lat, lon), function(aqi) { namePlace(lat, lon, data, aqi); }, function(err) {
         console.log('AQI fetch failed: ' + err);
         namePlace(lat, lon, data, null);
@@ -142,9 +154,7 @@ function getWeather(skipSame) {
 
   // Asked only when a Location complication is shown: the position goes to no one else otherwise.
   function namePlace(lat, lon, data, aqi) {
-    var s = savedSettings();
-    var shown = config.CORNERS.concat(config.CENTERS).some(function(p) { return s[p.key] === LOCATION_ID; });
-    if (!shown) {
+    if (!shown([LOCATION_ID])) {
       return sendWeather(data, aqi, null);
     }
     fetchJson(placeUrl(lat, lon), function(geo) { sendWeather(data, aqi, place(geo, lat, lon)); }, function(err) {

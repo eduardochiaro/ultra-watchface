@@ -8,7 +8,7 @@ var config = require('../src/pkjs/config');
 // Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
 assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6,
-  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
+  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   ZONE_TL: 0, ZONE_TR: 0, ZONE_BL: 0, ZONE_BR: 0, ZONE_T: 0, ZONE_L: 0, ZONE_R: 0, ZONE_B: 0,
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
 // Time zone: the watch gets the offset, and the name as the text of a place showing it; an unknown zone is UTC
@@ -91,6 +91,7 @@ assert.ok(svg.indexOf('stroke="#ffaa00" stroke-width="2"') > 0, 'seconds hand');
 assert.ok(els.schemes.innerHTML.indexOf('data-scheme="1" aria-pressed="true"') > 0);
 assert.strictEqual(els.colors.hidden, true);
 assert.strictEqual(els.seconds.attrs['aria-checked'], 'true');
+assert.ok(els['sweep-row'].hidden === false && els.sweep.attrs['aria-checked'] === 'false', 'sweep: offered with the seconds hand, off');
 
 // Save navigates with the settings as payload
 var save = el(); save.id = 'save';
@@ -326,3 +327,23 @@ load({ settings: { SLOT_TL: 27 }, weather: { AQI: 75 }, platform: 'gabbro' });
 assert.ok(screen().indexOf('>AQI 75</text>') > 0 && screen().indexOf('stroke="#aa0000"') > 0, 'gabbro gauge corner: the value leads the arc');
 assert.ok(svg.indexOf('>75</text>') > 0 && svg.indexOf('>KCAL</text>') > 0 && svg.split(ctx.ICONS.flame).length - 1 === 2, 'gauge and calories subdials');
 assert.ok(svg.indexOf('stroke="#aa0000"') > 0 && svg.indexOf('>AQI</text>') > 0, 'every band color on the gauge, its caption in the subdial');
+
+// getWeather asks only what the face shows: nothing at all without a weather complication, the AQI only for its own
+function fetched(settings) {
+  var urls = [];
+  global.localStorage = { getItem: function (k) { return k === config.SETTINGS_KEY ? JSON.stringify(settings) : null; }, setItem: function () {} };
+  // node has a navigator of its own, read-only
+  Object.defineProperty(global, 'navigator', { configurable: true, value: { geolocation: { getCurrentPosition: function (ok) { urls.push('position'); ok({ coords: { latitude: 1, longitude: 2 } }); } } } });
+  global.XMLHttpRequest = function () {
+    this.open = function (m, url) { urls.push(url.split('/')[2]); };
+    this.send = function () { this.status = 200; this.responseText = '{"current":{},"daily":{"temperature_2m_min":[1],"temperature_2m_max":[2],"precipitation_probability_max":[3]}}'; this.onload(); };
+  };
+  global.Pebble = { sendAppMessage: function () {} };
+  require('../src/pkjs/weather')();
+  return urls.join(' ');
+}
+var NO_WEATHER = { SLOT_TL: 1, SLOT_TR: 3, SLOT_BL: 6, SLOT_BR: 8, CENTER_T: 14, CENTER_L: 35, CENTER_R: 31, CENTER_B: 6 };
+assert.strictEqual(fetched(NO_WEATHER), '', 'no weather complication: no position, no request');
+assert.strictEqual(fetched(Object.assign({}, NO_WEATHER, { SLOT_TL: 2 })), 'position api.open-meteo.com', 'temperature: the forecast alone');
+assert.strictEqual(fetched(Object.assign({}, NO_WEATHER, { CENTER_T: 27, CENTER_L: 36 })), 'position api.open-meteo.com air-quality-api.open-meteo.com api.bigdatacloud.net', 'AQI and location: theirs too');
+console.log('ok weather');

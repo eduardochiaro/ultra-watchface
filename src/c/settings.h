@@ -47,6 +47,7 @@ typedef struct {
   // COMP_ZONE: minutes from UTC, per corner then per subdial. Its name ("PST")
   // is that place's slot_text or center_text.
   int16_t zone[SLOT_POS_COUNT + CENTER_POS_COUNT];
+  bool sweep;                      // the seconds hand glides, not ticks; with `seconds` only
 } Settings;
 
 extern Settings g_settings;
