@@ -4,7 +4,7 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 
 - **Eight slots, your pick.** Steps, distance, calories, active minutes, sleep, heart rate, battery, calendar, temperature, rain, humidity, wind, air quality and UV index (as sections or a gauge), elevation, sunrise and sunset, moon phase, digital time, other time zones, .beat time, current weather, your own text, or a value from any JSON API.
 - **Five color schemes.** Black, White, two monochromes, or Accent: any background and accent from the watch's 64 colors.
-- **Four rings** Default, Minimal, Sport or Chronograph ring.
+- **Six rings** Default, Minimal, Sport, Chronograph, Roman or Tachymeter ring.
 - **Six hands.** Line, Bar, Outline, Pointer, Sword or Dauphine hands, each in its own color. Or none, with the time in a complication.
 - **Live preview.** The settings page draws the face as you change it.
 - **No account, no API key.** Weather and air quality come from [Open-Meteo](https://open-meteo.com), refreshed every 30 minutes. The Location complication names your city with [BigDataCloud](https://www.bigdatacloud.com), asked only while it is on the face.
@@ -38,7 +38,7 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 | Text | Pick **Text** in any slot to show your own label: up to 12 characters in a corner, 4 in a subdial. |
 | Custom complications | Show a value from any JSON API. Create up to 8, then pick them in any corner or subdial. See below. |
 | Color scheme | Black, White, White on black, Black on white, or Accent. Accent adds a background and an accent color picker. |
-| Ring | Default, Minimal (ticks only, no numerals), Sport (a white band of minute numerals over an accent ring) or Chronograph (the white band alone, black on white, hours 1 to 12). All but Default leave a larger center: the subdials grow to fill it and the hands run longer. Sport and Chronograph take a band color; ticks and numerals turn black or white to stay readable on it. Picking a color scheme resets it. |
+| Ring | Default, Minimal (ticks only, no numerals), Sport (a white band of minute numerals over an accent ring) Chronograph (the white band alone, black on white, hours 1 to 12), Roman (Default with its hours in Roman numerals, turned along the dial) or Tachymeter (seconds ticks around a colored band of 10 to 60, a dot between each). Minimal, Sport, Chronograph and Tachymeter leave a larger center: the subdials grow to fill it and the hands run longer. Sport, Chronograph and Tachymeter take a band color; ticks and numerals turn black or white to stay readable on it. Tachymeter's band follows the seconds color until it has its own. Picking a color scheme resets it. |
 | Hands | Line, Bar, Outline, Pointer, Sword or Dauphine for the hour and minute hands, or None to hide them (the seconds hand has its own switch), and a color each for the hour, minute and seconds hands. The seconds color is also the 12, 3, 6 and 9 notches'. Picking a color scheme resets the colors; picking an accent resets the seconds color. |
 | Units | °C, km and km/h, or °F, miles and mph. |
 | Daily step goal | 1,000 to 30,000 steps. Fills the steps, distance and calories gauges. |

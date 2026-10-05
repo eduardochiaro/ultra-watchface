@@ -4,10 +4,11 @@ Customizations to consider. Tick one off when it ships, and add it to [CHANGELOG
 
 ## Dial and rings
 
-- [ ] Numeral style on the Default ring: all 12, only 12/3/6/9, or none
-- [ ] Roman numerals
+- [X] Numeral style on the Default ring: all 12, only 12/3/6/9, or none
+- [x] Roman numerals (1.6.0)
 - [x] Band color for the Sport and Chronograph rings (1.6.0)
-- [ ] Tachymeter or compass-bezel ring
+- [x] Tachymeter ring (1.6.0)
+- [ ] Compass-bezel ring
 
 ## Hands
 

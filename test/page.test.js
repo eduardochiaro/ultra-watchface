@@ -155,7 +155,22 @@ svg = screen();
 assert.ok(svg.indexOf('r="85" fill="none" stroke="#ffffff" stroke-width="26"') > 0 && svg.indexOf('stroke-width="4"') < 0 && svg.indexOf('scale(1.33)') > 0, 'chronograph: wider band, no inset ring, subdials 72/54 the size');
 assert.ok(/y="32" font-size="11.43" fill="#000000" transform="rotate\(0 [^>]*>12<\/text>/.test(svg) && svg.indexOf('>00</text>') < 0, 'chronograph: hours, upright, midway between the ticks and the inner edge');
 assert.strictEqual(svg.split('stroke="#000000" stroke-width="3"').length - 1, 12, 'chronograph: hour ticks black');
-assert.ok(els.rings.innerHTML.split('data-ring=').length - 1 === 4 && els.rings.innerHTML.indexOf('data-ring="3" aria-pressed="true">Chronograph') > 0, 'four rings');
+assert.ok(els.rings.innerHTML.split('data-ring=').length - 1 === 6 && els.rings.innerHTML.indexOf('data-ring="3" aria-pressed="true">Chronograph') > 0, 'six rings');
+// Roman: the default dial, I..XII turned along it, the bottom half the other way; no band color
+ctx = load({ settings: { RING: 4 }, platform: 'emery' });
+svg = screen();
+assert.ok(/rotate\(360 [^>]*>XII<\/text>/.test(svg) && /rotate\(60 [^>]*>II<\/text>/.test(svg) && /rotate\(360 [^>]*>VI<\/text>/.test(svg) && svg.indexOf('>12</text>') < 0, 'roman numerals');
+assert.ok(svg.indexOf('r="94"') > 0 && svg.indexOf('r="54"') > 0 && els['band-row'].hidden, 'roman: the default dial and inner circle, no band color');
+
+// Tachymeter: 72 seconds and hour ticks, the accent band inside them, 10..60 and six dots on it; the band takes a color
+ctx = load({ settings: { RING: 5, HANDS: 6 }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('r="80.5" fill="none" stroke="#ffaa00" stroke-width="17"') > 0 && svg.indexOf('scale(1.33)') > 0 && els['band-row'].hidden === false, 'tachymeter: accent band, the larger center');
+assert.ok(/rotate\(360 [^>]*>60<\/text>/.test(svg) && /rotate\(360 [^>]*>30<\/text>/.test(svg) && svg.indexOf('>70</text>') < 0, 'tachymeter numerals');
+assert.strictEqual(svg.split('r="2" fill="#000000"').length - 1, 6, 'tachymeter: a dot between the numerals');
+assert.strictEqual(svg.split('stroke-width="3"').length - 1, 12, 'tachymeter: hour ticks');
+ctx = load({ settings: { RING: 5, BAND_COLOR: 0xC3 }, platform: 'emery' });
+assert.ok(screen().indexOf('stroke="#0000ff" stroke-width="17"') > 0 && /fill="#ffffff"[^>]*>60<\/text>/.test(screen()), 'tachymeter: blue band, white numerals');
 
 // Band color: fixed in any scheme, its ticks and numerals white on a dark one; the picker shows for banded rings only
 ctx = load({ settings: { RING: 2, BAND_COLOR: 0xF0, HANDS: 3 }, platform: 'emery' });

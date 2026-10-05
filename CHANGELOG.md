@@ -3,6 +3,8 @@
 ## 1.6.0
 
 - **Band color:** pick the band's color on the Sport and Chronograph rings. Ticks and numerals turn black or white to stay readable on it.
+- **Roman ring:** new Roman ring, the Default dial with its hours in Roman numerals, turned along the dial.
+- **Tachymeter ring:** new Tachymeter ring: ticks for the seconds around the edge, and inside them a colored band with 10 to 60 and a dot between each. The band follows the seconds color, or takes its own.
 - **Calories bar:** both calories complications now show a bar, in corners and subdials. Like distance, it fills with progress toward the daily step goal.
 - **New complications:** digital time, time zones (one per slot, picked by abbreviation: PST, CET, IST), sleep last night, active minutes and moon phase. All in corners and subdials.
 - **Grouped pickers:** the complication dropdowns are sorted into Activity, Weather, Time and date, Sun and moon, Place, Watch and Custom.

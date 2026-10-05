@@ -34,6 +34,8 @@
 #define CHR_INSET  4    // the accent ring inside it; chronograph's band is that much wider instead
 #define CHR_NUM_R  (RING_OUT - 15)
 #define CHR_NUM    (NUM_SMALL - 2)  // sport's numerals
+#define TACH_TICK  7    // tachymeter's ticks; its band fills the rest, a 2px gap between
+#define TACH_NUM_R (RING_OUT - 18)
 
 #define COMP_SPAN  45   // degrees per corner complication, labels included
 #define ACCENT     GColorChromeYellow
@@ -75,9 +77,9 @@ static GColor picked(uint8_t argb, GColor own) {
   return argb ? fixed((GColor){ .argb = argb }) : own;
 }
 
-// Sport and chronograph: a white band the minute hand runs over.
+// Sport, chronograph and tachymeter: a band the minute hand runs over.
 static bool banded(void) {
-  return g_settings.ring == RING_SPORT || g_settings.ring == RING_CHRONO;
+  return g_settings.ring == RING_SPORT || g_settings.ring == RING_CHRONO || g_settings.ring == RING_TACHY;
 }
 
 // Per ring: the radius of the empty center the subdials fill, and how far each hand runs.
@@ -144,9 +146,29 @@ static void draw_band(GContext *ctx, GPoint c) {
   }
 }
 
+// Ticks for the seconds around the edge, the hours heavier. Inside them a band
+// in the accent: 10..60 along it, a dot between each.
+static void draw_tachy(GContext *ctx, GPoint c) {
+  ray_ticks(ctx, c, 0, 60, RING_OUT - TACH_TICK, RING_OUT, 1, GColorLightGray);
+  ray_ticks(ctx, c, 0, 12, RING_OUT - TACH_TICK, RING_OUT, 3, GColorWhite);
+  GColor band = picked(g_settings.band_color, picked(g_settings.second_color, ACCENT)), ink = ink_on(band);
+  int out = RING_OUT - TACH_TICK - 2;
+  ring_fill(ctx, c, out, out - (RING_OUT - CHR_BAND - CHR_INSET), band);
+  graphics_context_set_fill_color(ctx, theme(ink));
+  char buf[3];
+  for (int n = 10; n <= 60; n += 10) {
+    snprintf(buf, sizeof(buf), "%d", n);
+    text_draw_arc(ctx, buf, c, DEG(n * 6), TACH_NUM_R, CHR_NUM, ink);
+    graphics_fill_circle(ctx, polar(c, DEG(n * 6 - 30), TACH_NUM_R), 2);
+  }
+}
+
 static void draw_dial(GContext *ctx, GPoint c) {
   if (g_settings.ring == RING_MINIMAL) {
     return draw_minimal(ctx, c);
+  }
+  if (g_settings.ring == RING_TACHY) {
+    return draw_tachy(ctx, c);
   }
   if (banded()) {
     return draw_band(ctx, c);
@@ -162,6 +184,7 @@ static void draw_dial(GContext *ctx, GPoint c) {
          hour ? GColorLightGray : GColorDarkGray);
   }
 
+  static const char *const ROMAN[] = { "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII" };
   char buf[3];
   for (int h = 1; h <= 12; h++) {
     int32_t a = DEG(h * 30);
@@ -169,10 +192,16 @@ static void draw_dial(GContext *ctx, GPoint c) {
     if (big) {
       line(ctx, polar(c, a, DIAL_R + 1), polar(c, a, DIAL_R - 5), 3, picked(g_settings.second_color, ACCENT));
     }
-    snprintf(buf, sizeof(buf), "%d", h);
-    text_draw(ctx, buf, polar(c, a, big ? NUM_R_BIG : NUM_R), big ? NUM_BIG : NUM_SMALL,
-              // Dark gray is too faint on white; the palette has nothing between it and black.
-              big || theme_light() ? GColorWhite : GColorLightGray);
+    int r = big ? NUM_R_BIG : NUM_R, size = big ? NUM_BIG : NUM_SMALL;
+    // Dark gray is too faint on white; the palette has nothing between it and black.
+    GColor color = big || theme_light() ? GColorWhite : GColorLightGray;
+    if (g_settings.ring == RING_ROMAN) {
+      // Along the dial, feet to the center: upright, "VIII" would run into the ticks.
+      text_draw_arc(ctx, ROMAN[h - 1], c, a, r, size, color);
+    } else {
+      snprintf(buf, sizeof(buf), "%d", h);
+      text_draw(ctx, buf, polar(c, a, r), size, color);
+    }
   }
   graphics_context_set_stroke_color(ctx, theme(GColorLightGray));
   graphics_context_set_stroke_width(ctx, 2);

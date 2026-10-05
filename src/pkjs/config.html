@@ -725,7 +725,7 @@
 
 		// RING_OUT.. and reach() in ultra-watchface.c: the empty center's radius and how far each hand runs, per ring
 		var OUT = g.DIAL_R + 4, MIN_TICK = 8, CHR_BAND = 22, CHR_INSET = 4, secondCol = handColor("SECOND_COLOR", C.accent);
-		var sport = settings.RING === 2, banded = sport || settings.RING === 3;
+		var sport = settings.RING === 2, tachy = settings.RING === 5, banded = sport || tachy || settings.RING === 3;
 		var reach = settings.RING === 1 ? { center: OUT - MIN_TICK - 4, hour: OUT - MIN_TICK - 10, minute: OUT - MIN_TICK, second: OUT - MIN_TICK / 2 } :
 			banded ? { center: OUT - CHR_BAND - CHR_INSET, hour: OUT - CHR_BAND - CHR_INSET - 3, minute: OUT - 4, second: OUT } :
 			{ center: g.INNER_R, hour: g.INNER_R - 8, minute: g.NUM_R_BIG - g.NUM_BIG / 2, second: g.DIAL_R - 10 };
@@ -735,6 +735,20 @@
 			for (i = 0; i < 60; i++) {
 				hour = i % 5 === 0;
 				stroke(seg(P(i * 6, OUT - MIN_TICK), P(i * 6, OUT)), hour ? C.white : C.lg, hour ? 3 : 1);
+			}
+		} else if (tachy) {
+			// draw_tachy: seconds ticks, inside them the accent band with 10..60 and a dot between each
+			var TACH_TICK = 7, tachOut = OUT - TACH_TICK - 2, tachW = tachOut - (OUT - CHR_BAND - CHR_INSET);
+			for (i = 0; i < 60; i++) {
+				hour = i % 5 === 0;
+				stroke(seg(P(i * 6, OUT - TACH_TICK), P(i * 6, OUT)), hour ? C.white : C.lg, hour ? 3 : 1);
+			}
+			var tachCol = handColor("BAND_COLOR", secondCol), tachInk = ink(tachCol);
+			ring(tachOut - tachW / 2, tachCol, tachW);
+			// ponytail: straight, turned as a whole; the watch curves each digit
+			for (i = 10; i <= 60; i += 10) {
+				text(String(i), P(i * 6, OUT - 18), g.NUM_SMALL - 2, tachInk, i <= 15 || i >= 45 ? i * 6 : i * 6 + 180);
+				disc(P(i * 6 - 30, OUT - 18), 2, tachInk);
 			}
 		} else if (banded) {
 			// draw_band: sport has the accent ring and hour ticks, 00..55 turned; chronograph black on white, a wider band, 1..12 upright
@@ -766,13 +780,15 @@
 				hour = i % 5 === 0;
 				stroke(seg(P(i * 6, g.DIAL_R - 3), P(i * 6, g.DIAL_R - (hour ? 8 : 5))), hour ? C.lg : C.dg, 1);
 			}
+			// ponytail: roman's are straight, turned as a whole; the watch curves each letter
+			var ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"], roman = settings.RING === 4;
 			for (var h = 1; h <= 12; h++) {
 				var big = h % 3 === 0;
 				if (big) {
 					stroke(seg(P(h * 30, g.DIAL_R + 1), P(h * 30, g.DIAL_R - 5)), secondCol, 3);
 				}
-				text(String(h), P(h * 30, big ? g.NUM_R_BIG : g.NUM_R), big ? g.NUM_BIG : g.NUM_SMALL,
-					big || lightScheme(scheme) ? C.white : C.lg, 0);
+				text(roman ? ROMAN[h - 1] : String(h), P(h * 30, big ? g.NUM_R_BIG : g.NUM_R), big ? g.NUM_BIG : g.NUM_SMALL,
+					big || lightScheme(scheme) ? C.white : C.lg, !roman ? 0 : h <= 3 || h >= 9 ? h * 30 : h * 30 + 180);
 			}
 			ring(g.DIAL_R, C.lg, 2);
 			ring(g.DIAL_R + 4, C.dg, 1);
@@ -1069,8 +1085,8 @@
 		$("rings").innerHTML = RINGS.map(function (label, i) {
 			return '<button type="button" class="scheme" data-ring="' + i + '" aria-pressed="' + (settings.RING === i) + '">' + label + "</button>";
 		}).join("");
-		$("band-row").hidden = settings.RING < 2;  // sport and chronograph
-		$("band-chip").style.background = theme(handColor("BAND_COLOR", C.white), settings.SCHEME);
+		$("band-row").hidden = [2, 3, 5].indexOf(settings.RING) < 0;  // sport, chronograph and tachymeter
+		$("band-chip").style.background = theme(handColor("BAND_COLOR", settings.RING === 5 ? handColor("SECOND_COLOR", C.accent) : C.white), settings.SCHEME);
 		$("hand-chip").style.background = theme(handColor("HAND_COLOR", C.white), settings.SCHEME);
 		$("minute-chip").style.background = theme(handColor("MINUTE_COLOR", C.white), settings.SCHEME);
 		$("second-chip").style.background = theme(handColor("SECOND_COLOR", C.accent), settings.SCHEME);
