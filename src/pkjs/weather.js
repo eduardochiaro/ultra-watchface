@@ -1,9 +1,11 @@
 // Open-Meteo, no key needed. Units are picked here (temperature_unit) so the
 // watch only ever displays what it gets.
 
-var savedSettings = require('./config').savedSettings;
+var config = require('./config');
+var savedSettings = config.savedSettings;
 var send = require('./send');
 var WEATHER_KEY = 'ultra-weather';  // last message sent, for the settings preview
+var LOCATION_ID = 36;  // COMP_LOCATION in src/c/complications/complications.h
 
 function buildUrl(lat, lon, imperial) {
   return 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
@@ -17,6 +19,38 @@ function buildUrl(lat, lon, imperial) {
 function aqiUrl(lat, lon) {
   return 'https://air-quality-api.open-meteo.com/v1/air-quality?latitude=' + lat +
     '&longitude=' + lon + '&current=us_aqi';
+}
+
+// BigDataCloud's client-side reverse geocoding, no key needed: names the place.
+function placeUrl(lat, lon) {
+  return 'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' + lat +
+    '&longitude=' + lon + '&localityLanguage=en';
+}
+
+// geo: BigDataCloud response, or null. The city in the watch font's characters,
+// and a short code for the subdial: a word's first 3 letters, several words'
+// initials ("SEA", "NY"). There is no code every city has; this needs no lookup.
+// No name: the coordinates, and the country as the code.
+// ponytail: made-up codes, not IATA or UN/LOCODE; ship a table if the real ones matter.
+function place(geo, lat, lon) {
+  geo = geo || {};
+  // The city can come as its municipality's official name: "Gemeente Utrecht".
+  // ponytail: the administrative words seen so far; add the next one that shows up.
+  var name = String(geo.city || geo.locality || '')
+    .replace(/^(Gemeente|City of|Municipality of) /i, '').replace(/ (Municipality|Kommune?)$/i, '');
+  if (name.normalize) {
+    name = name.normalize('NFD');  // "São" -> "Sa~o": the accent is cleaned off
+  }
+  name = config.clean(name, 16).trim();
+  if (!name) {
+    return {
+      LOCATION: Math.abs(lat).toFixed(1) + (lat < 0 ? 'S ' : 'N ') + Math.abs(lon).toFixed(1) + (lon < 0 ? 'W' : 'E'),
+      LOCATION_CODE: config.clean(geo.countryCode || '', 4)
+    };
+  }
+  var words = name.replace(/[^A-Za-z ]/g, ' ').split(' ').filter(Boolean);
+  var code = words.length > 1 ? words.map(function(w) { return w[0]; }).join('') : (words[0] || name).slice(0, 3);
+  return { LOCATION: name, LOCATION_CODE: code.slice(0, 4).toUpperCase() };
 }
 
 // WMO weather code -> icon index on the watch (ICON_SUN.. in draw.h), -1 = unknown.
@@ -94,10 +128,10 @@ function getWeather(skipSame) {
   navigator.geolocation.getCurrentPosition(function(pos) {
     var lat = pos.coords.latitude, lon = pos.coords.longitude;
     fetchJson(buildUrl(lat, lon, imperial), function(data) {
-      // Air quality is a separate API; weather still goes out without it.
-      fetchJson(aqiUrl(lat, lon), function(aqi) { sendWeather(data, aqi); }, function(err) {
+      // Air quality and the place's name are separate APIs; weather still goes out without them.
+      fetchJson(aqiUrl(lat, lon), function(aqi) { namePlace(lat, lon, data, aqi); }, function(err) {
         console.log('AQI fetch failed: ' + err);
-        sendWeather(data, null);
+        namePlace(lat, lon, data, null);
       });
     }, function(err) {
       console.log('Weather fetch failed: ' + err);
@@ -106,8 +140,25 @@ function getWeather(skipSame) {
     console.log('Location failed: ' + err.message);
   }, { timeout: 15000, maximumAge: 30 * 60 * 1000 });
 
-  function sendWeather(data, aqi) {
+  // Asked only when a Location complication is shown: the position goes to no one else otherwise.
+  function namePlace(lat, lon, data, aqi) {
+    var s = savedSettings();
+    var shown = config.CORNERS.concat(config.CENTERS).some(function(p) { return s[p.key] === LOCATION_ID; });
+    if (!shown) {
+      return sendWeather(data, aqi, null);
+    }
+    fetchJson(placeUrl(lat, lon), function(geo) { sendWeather(data, aqi, place(geo, lat, lon)); }, function(err) {
+      console.log('Place fetch failed: ' + err);
+      sendWeather(data, aqi, null);  // the watch keeps the last one
+    });
+  }
+
+  function sendWeather(data, aqi, where) {
     var msg = buildMessage(data, aqi);
+    if (where) {
+      msg.LOCATION = where.LOCATION;
+      msg.LOCATION_CODE = where.LOCATION_CODE;
+    }
     msg.imperial = imperial;
     var json = JSON.stringify(msg);
     if (skipSame === true && json === localStorage.getItem(WEATHER_KEY)) { return; }
@@ -124,5 +175,6 @@ function getWeather(skipSame) {
 module.exports = getWeather;
 module.exports.condition = condition;
 module.exports.buildMessage = buildMessage;
+module.exports.place = place;
 module.exports.fetchJson = fetchJson;
 module.exports.WEATHER_KEY = WEATHER_KEY;

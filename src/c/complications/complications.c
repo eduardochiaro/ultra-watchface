@@ -22,10 +22,10 @@ static const ComplicationDraw DRAW[COMP_COUNT] = {
   [COMP_CALORIES] = comp_calories_draw,
   [COMP_CALORIES_ACTIVE] = comp_calories_active_draw,
   [COMP_TIME]    = comp_time_draw,
-  [COMP_ZONE]    = comp_zone_draw,
   [COMP_SLEEP]   = comp_sleep_draw,
   [COMP_ACTIVE]  = comp_active_draw,
   [COMP_MOON]    = comp_moon_draw,
+  [COMP_LOCATION] = comp_location_draw,
 };
 
 void complication_draw(ComplicationId id, GContext *ctx, const Slot *s) {

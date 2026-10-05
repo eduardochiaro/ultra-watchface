@@ -14,7 +14,8 @@ enum { SCHEME_LIGHT = 1, SCHEME_MONO = 2, SCHEME_ACCENT = 4 };
 // an outline around the background color.
 // Pointer: the bar with a pointed tip. Sword: widest by the stem, tapering to the tip.
 // Dauphine: no stem, a long kite out of the pin, one half of it shaded.
-typedef enum { HANDS_LINE, HANDS_BAR, HANDS_OUTLINE, HANDS_POINTER, HANDS_SWORD, HANDS_DAUPHINE, HANDS_COUNT } HandStyle;
+// None: no hour or minute hand, for a face that tells the time in a complication.
+typedef enum { HANDS_LINE, HANDS_BAR, HANDS_OUTLINE, HANDS_POINTER, HANDS_SWORD, HANDS_DAUPHINE, HANDS_NONE, HANDS_COUNT } HandStyle;
 
 // The dial's ring. Minimal: ticks only, no numerals. Sport: a white band of
 // minute numerals over an accent ring. Chronograph: the band alone, in black and
@@ -41,9 +42,9 @@ typedef struct {
   uint8_t hand_color, second_color, minute_color;
   uint8_t ring;                    // RingStyle
   uint8_t band_color;              // sport's and chronograph's band; 0 = the scheme's white
-  // COMP_ZONE: minutes from UTC, and what to call it.
-  int16_t zone_offset;
-  char zone_name[5];
+  // COMP_ZONE: minutes from UTC, per corner then per subdial. Its name ("PST")
+  // is that place's slot_text or center_text.
+  int16_t zone[SLOT_POS_COUNT + CENTER_POS_COUNT];
 } Settings;
 
 extern Settings g_settings;

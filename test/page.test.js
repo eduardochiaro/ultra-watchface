@@ -8,8 +8,13 @@ var config = require('../src/pkjs/config');
 // Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
 assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6,
-  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0, ZONE_OFFSET: 0, ZONE_NAME: 'UTC',
+  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
+  ZONE_TL: 0, ZONE_TR: 0, ZONE_BL: 0, ZONE_BR: 0, ZONE_T: 0, ZONE_L: 0, ZONE_R: 0, ZONE_B: 0,
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
+// Time zone: the watch gets the offset, and the name as the text of a place showing it; an unknown zone is UTC
+msg = config.toMessage(config.withDefaults({ SLOT_TL: 32, ZONE_TL: 'PST', TEXT_TL: 'mine', CENTER_T: 32, ZONE_T: 'CST-CN', ZONE_B: 'IST', ZONE_L: 'nope' }));
+assert.deepStrictEqual([msg.ZONE_TL, msg.TEXT_TL, msg.ZONE_T, msg.TEXT_T, msg.ZONE_B, msg.TEXT_B, msg.ZONE_L], [-480, 'PST', 480, 'CST', 330, '', 0]);
+assert.ok(config.ZONES.every(function (z) { return z.name.length <= 4 && config.zone(z.value) === z; }), 'zone names fit a subdial, values are unique');
 // Text: only glyphs the watch font has, 12 max
 var texts = config.withDefaults({ TEXT_TL: 'Héllo <b>&"x" 12:30 and more', TEXT_B: 'Hello' });
 assert.deepStrictEqual([texts.TEXT_TL, texts.TEXT_B], ['Hllo bx 12:3', 'Hell']);
@@ -120,8 +125,15 @@ assert.deepStrictEqual([sent.ACCENT_COLOR, sent.SECOND_COLOR, sent.HAND_COLOR], 
   ctx = load({ settings: { HANDS: style, HAND_COLOR: 0xF0 }, platform: 'emery' });
   svg = screen();
   assert.ok(svg.split('<polygon').length - 1 === (style === 5 ? 4 : 2) && (style !== 5 || /<polygon[^>]*fill="#aa0000"/.test(svg)) && /<polygon[^>]*fill="#ff0000"/.test(svg), 'polygon hands, style ' + style);
-  assert.ok(els.hands.innerHTML.split('data-hands=').length - 1 === 6, 'six hand styles');
+  assert.ok(els.hands.innerHTML.split('data-hands=').length - 1 === 7, 'seven hand styles');
 });
+// None: no hour or minute hand, and no pin; the seconds hand stays if it's on, with its pin
+load({ settings: { HANDS: 6, HAND_COLOR: 0xF3, MINUTE_COLOR: 0xC3 }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('#ff00ff') < 0 && svg.indexOf('#0000ff') < 0 && svg.indexOf('r="5"') < 0, 'no hands, no pin');
+load({ settings: { HANDS: 6, SECONDS: 1, SECOND_COLOR: 0xCC }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('stroke="#00ff00" stroke-width="2"') > 0 && svg.indexOf('r="5" fill="#00ff00"') > 0, 'seconds hand and pin without the others');
 
 // Rings: minimal has ticks only and the subdials grown into the larger center; sport a white band,
 // 00..55 on it and the accent ring inside, a rim around the minute hand over it
@@ -204,7 +216,7 @@ assert.strictEqual(svg.split('>42</text>').length - 1, 2, 'bar: sample value');
 assert.strictEqual(svg.split('>ppm</text>').length - 1, 2, 'header pattern: as last sent');
 var sizes = svg.split('font-size="').map(parseFloat);  // [i + 1]: of the text after split i
 assert.ok(sizes[svg.split('>Living room 1234 ppm</text>')[0].split('font-size="').length - 1] < sizes[svg.split('>KW 12.3</text>')[0].split('font-size="').length - 1], 'a long corner text shrinks');
-assert.ok(els.corners.innerHTML.indexOf('<option value="15" selected>KW</option>') > 0 && els.corners.innerHTML.indexOf('>Rain &lt;b></option>') > 0 && els.centers.innerHTML.indexOf('<option value="17" selected>Custom 3</option>') > 0, 'API options');
+assert.ok(els.corners.innerHTML.indexOf('<option value="15" selected>KW</option>') > 0 && els.corners.innerHTML.indexOf('>Rain &lt;b></option>') > 0 && els.centers.innerHTML.indexOf('<option value="17" selected>Custom 3</option></optgroup>') > 0, 'API options, in their group');
 assert.ok(els.apis.innerHTML.indexOf('<details class="card api" data-card="0"><summary>KW \u00B7 Gauge</summary>') === 0, 'saved cards start collapsed');
 assert.ok(els.apis.innerHTML.indexOf('value="https://x.test/&quot;a&quot;"') > 0 && els.apis.innerHTML.split('data-api-remove').length - 1 === 3, 'API cards');
 // A card's Save sends everything, like the page's
@@ -250,6 +262,20 @@ assert.ok(screen().indexOf('>8mph N</text>') > 0, 'wind in mph');
 ctx = load({ settings: { SLOT_TL: 25 }, weather: { TEMP: 1 }, platform: 'emery' });
 assert.ok(screen().indexOf('>--</text>') > 0, 'weather saved before wind has none');
 
+// Location: the city in a corner, its short code in a subdial; coordinates and the country without a name
+var place = require('../src/pkjs/weather').place;
+assert.deepStrictEqual(place({ city: 'Seattle' }, 47.6, -122.3), { LOCATION: 'Seattle', LOCATION_CODE: 'SEA' });
+assert.deepStrictEqual(place({ city: 'São Paulo' }, -23.5, -46.6), { LOCATION: 'Sao Paulo', LOCATION_CODE: 'SP' }, 'accents off, initials');
+assert.deepStrictEqual(place({ city: '', locality: 'St. Louis' }, 38.6, -90.2), { LOCATION: 'St. Louis', LOCATION_CODE: 'SL' }, 'locality when no city');
+assert.deepStrictEqual(place({ city: '東京', countryCode: 'JP' }, 35.68, 139.69), { LOCATION: '35.7N 139.7E', LOCATION_CODE: 'JP' }, 'nothing the font has');
+assert.deepStrictEqual(place({ city: 'Gemeente Utrecht' }, 52.09, 5.12), { LOCATION: 'Utrecht', LOCATION_CODE: 'UTR' }, 'not the municipality');
+assert.deepStrictEqual(place({ city: 'Stockholm Municipality' }, 59.33, 18.07).LOCATION, 'Stockholm');
+assert.deepStrictEqual(place(null, -33.87, -70.6), { LOCATION: '33.9S 70.6W', LOCATION_CODE: '' });
+load({ settings: { SLOT_TL: 36, CENTER_T: 36 }, weather: { TEMP: 1, LOCATION: 'Sao Paulo', LOCATION_CODE: 'SP' }, platform: 'emery' });
+assert.ok(screen().indexOf('>Sao Paulo</text>') > 0 && screen().indexOf('>SP</text>') > 0, 'location in a corner and a subdial');
+load({ settings: { SLOT_TL: 36, CENTER_T: 36, CENTER_L: 0, CENTER_R: 0, CENTER_B: 0, SLOT_TR: 0, SLOT_BL: 0, SLOT_BR: 0 }, weather: { TEMP: 1 }, platform: 'emery' });
+assert.strictEqual(screen().split('>--</text>').length - 1, 2, 'weather saved before it had a place');
+
 // Plain calendar: subdial only, weekday in red, no page behind it
 ctx = load({ settings: { CENTER_T: 26, CENTER_B: 0 }, platform: 'emery' });
 svg = screen();
@@ -260,18 +286,19 @@ load({ settings: { SLOT_TL: 30, CENTER_T: 30 }, platform: 'emery' });
 assert.ok(screen().split('>310</text>').length - 1 === 2 && screen().indexOf('1480') < 0, 'active calories');
 
 // Digital time, second time zone, sleep, active minutes, moon phase: corners and subdials
-ctx = load({ settings: { SLOT_TL: 31, SLOT_TR: 32, SLOT_BL: 33, SLOT_BR: 34, CENTER_T: 31, CENTER_L: 32, CENTER_R: 33, CENTER_B: 34, ZONE_OFFSET: 330, ZONE_NAME: 'Delhi!' }, platform: 'emery' });
+ctx = load({ settings: { SLOT_TL: 31, SLOT_TR: 32, SLOT_BL: 33, SLOT_BR: 34, CENTER_T: 31, CENTER_L: 32, CENTER_R: 33, CENTER_B: 34, ZONE_TR: 'IST', ZONE_L: 'PST' }, platform: 'emery' });
 svg = screen();
 assert.strictEqual(svg.split(/>\d\d:\d\d<\/text>/).length - 1, 3, 'local time in a corner and a subdial, the zone time in its subdial');
-var zone = new Date(Date.now() + 330 * 60000).toISOString().slice(11, 16);
-assert.ok(svg.indexOf('>Delh ' + zone + '</text>') > 0 && svg.indexOf('>Delh</text>') > 0, 'second zone: its name cut to 4, then its time');
+var zone = new Date(Date.now() + 330 * 60000).toISOString().slice(11, 16), pst = new Date(Date.now() - 480 * 60000).toISOString().slice(11, 16);
+assert.ok(svg.indexOf('>IST ' + zone + '</text>') > 0 && svg.indexOf('>PST</text>') > 0 && svg.indexOf('>' + pst + '</text>') > 0, 'a zone per place: its name, then its time');
 assert.ok(svg.indexOf('>ZZ</text>') > 0 && svg.split('>7h32</text>').length - 1 === 2 && svg.indexOf('>SLEEP</text>') > 0, 'sleep');
 assert.ok(svg.indexOf('>48 MIN</text>') > 0 && svg.indexOf('>48</text>') > 0 && svg.indexOf('>ACTIVE</text>') > 0, 'active minutes');
-assert.ok(els['zone-row'].hidden === false && els.zone.innerHTML.indexOf('<option value="330" selected>UTC+05:30</option>') > 0 && els.zone.innerHTML.split('<option').length - 1 === 56, 'zone picker shown, 56 offsets');
+assert.ok(els.corners.innerHTML.indexOf('<select data-zone="ZONE_TR" data-slot-key="SLOT_TR"') > 0 && els.corners.innerHTML.indexOf('<option value="IST" selected>IST \u00B7 India \u00B7 UTC+5:30</option>') > 0, 'a zone picker per place');
+assert.ok(els.corners.innerHTML.indexOf('<optgroup label="Activity"><option value="1">Steps</option>') > 0 && els.corners.innerHTML.indexOf('</optgroup><option value="0">None</option>') > 0 &&
+  els.corners.innerHTML.indexOf('<optgroup label="Americas"><option value="HST">') > 0, 'pickers in groups, None outside them');
 ctx = load({ settings: { SLOT_TL: 35, CENTER_T: 35 }, platform: 'emery' });
 svg = screen();
 assert.ok(/>[\u25B4\u25BE]\d+%<\/text>/.test(svg) && svg.split(ctx.ICONS.moon).length - 1 === 1 && /A12 12 0 0 [01] 100 95A[\d.]+ 12 0 0 [01] 100 71Z" fill="#ffffff"/.test(svg), 'moon: lit share in the corner, its shape in the subdial');
-assert.strictEqual(els['zone-row'].hidden, true);
 
 console.log('ok');
 

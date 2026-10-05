@@ -55,7 +55,6 @@ Settings g_settings = {
   .accent = GColorChromeYellowARGB8,
   .center = { COMP_CUSTOM, COMP_ELEVATION, COMP_WEATHER, COMP_CALENDAR },
   .center_text = { "PB" },
-  .zone_name = "UTC",
 };
 
 static Window *s_window;
@@ -239,13 +238,17 @@ static void draw_hands(GContext *ctx, GPoint c, struct tm *t) {
   int32_t ma = DEG(t->tm_min * 6);
   GColor second = picked(g_settings.second_color, ACCENT);
   Reach r = reach();
-  draw_hand(ctx, c, ha, r.hour, 6, picked(g_settings.hand_color, GColorWhite));
-  // A 1px rim of background, so a white hand shows over the white band.
-  static const int8_t RIM[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
-  for (int i = 0; banded() && i < 4; i++) {
-    draw_hand(ctx, GPoint(c.x + RIM[i][0], c.y + RIM[i][1]), ma, r.minute, 3, GColorBlack);
+  if (g_settings.hands != HANDS_NONE) {
+    draw_hand(ctx, c, ha, r.hour, 6, picked(g_settings.hand_color, GColorWhite));
+    // A 1px rim of background, so a white hand shows over the white band.
+    static const int8_t RIM[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+    for (int i = 0; banded() && i < 4; i++) {
+      draw_hand(ctx, GPoint(c.x + RIM[i][0], c.y + RIM[i][1]), ma, r.minute, 3, GColorBlack);
+    }
+    draw_hand(ctx, c, ma, r.minute, 3, picked(g_settings.minute_color, GColorWhite));
+  } else if (!g_settings.seconds) {
+    return;  // nothing to pin
   }
-  draw_hand(ctx, c, ma, r.minute, 3, picked(g_settings.minute_color, GColorWhite));
   if (g_settings.seconds) {
     int32_t sa = DEG(t->tm_sec * 6);
     line(ctx, polar(c, sa + DEG(180), DIAL_R * 25 / 100), polar(c, sa, r.second), 2, second);
@@ -290,9 +293,11 @@ static void draw_face(GContext *ctx, GRect b, GPoint c) {
       .a0 = DEG(SIDE[i]),
       .a1 = DEG(SIDE[i] + DIR[i] * COMP_SPAN),
     };
-    // Text needs its slot's string; the rest draw from what they measure.
+    // Text and the time zone need their slot's string; the rest draw from what they measure.
     if (g_settings.slots[i] == COMP_CUSTOM) {
       comp_custom_draw(ctx, &s, g_settings.slot_text[i]);
+    } else if (g_settings.slots[i] == COMP_ZONE) {
+      comp_zone_draw(ctx, &s, g_settings.zone[i], g_settings.slot_text[i]);
     } else {
       complication_draw(g_settings.slots[i], ctx, &s);
     }
@@ -335,21 +340,22 @@ static void subscribe_ticks(void) {
   tick_timer_service_subscribe(g_settings.seconds ? SECOND_UNIT : MINUTE_UNIT, tick_handler);
 }
 
-// Every corner and subdial: its complication and its COMP_CUSTOM text.
-#define PLACE(key, text_key, id, text) \
-  { MESSAGE_KEY_##key, MESSAGE_KEY_##text_key, &g_settings.id, g_settings.text, sizeof(g_settings.text) }
+// Every corner and subdial, in g_settings.zone order: its complication, its
+// COMP_CUSTOM text or COMP_ZONE name, and its COMP_ZONE offset.
+#define PLACE(key, text_key, zone_key, id, text) \
+  { MESSAGE_KEY_##key, MESSAGE_KEY_##text_key, MESSAGE_KEY_##zone_key, &g_settings.id, g_settings.text, sizeof(g_settings.text) }
 
 static void inbox_received(DictionaryIterator *iter, void *context) {
   if (!weather_handle_message(iter) && !api_handle_message(iter)) {
-    const struct { uint32_t key, text_key; uint8_t *id; char *text; size_t size; } places[] = {
-      PLACE(SLOT_TL, TEXT_TL, slots[SLOT_POS_TL], slot_text[SLOT_POS_TL]),
-      PLACE(SLOT_TR, TEXT_TR, slots[SLOT_POS_TR], slot_text[SLOT_POS_TR]),
-      PLACE(SLOT_BR, TEXT_BR, slots[SLOT_POS_BR], slot_text[SLOT_POS_BR]),
-      PLACE(SLOT_BL, TEXT_BL, slots[SLOT_POS_BL], slot_text[SLOT_POS_BL]),
-      PLACE(CENTER_T, TEXT_T, center[CENTER_POS_T], center_text[CENTER_POS_T]),
-      PLACE(CENTER_L, TEXT_L, center[CENTER_POS_L], center_text[CENTER_POS_L]),
-      PLACE(CENTER_R, TEXT_R, center[CENTER_POS_R], center_text[CENTER_POS_R]),
-      PLACE(CENTER_B, TEXT_B, center[CENTER_POS_B], center_text[CENTER_POS_B]),
+    const struct { uint32_t key, text_key, zone_key; uint8_t *id; char *text; size_t size; } places[] = {
+      PLACE(SLOT_TL, TEXT_TL, ZONE_TL, slots[SLOT_POS_TL], slot_text[SLOT_POS_TL]),
+      PLACE(SLOT_TR, TEXT_TR, ZONE_TR, slots[SLOT_POS_TR], slot_text[SLOT_POS_TR]),
+      PLACE(SLOT_BR, TEXT_BR, ZONE_BR, slots[SLOT_POS_BR], slot_text[SLOT_POS_BR]),
+      PLACE(SLOT_BL, TEXT_BL, ZONE_BL, slots[SLOT_POS_BL], slot_text[SLOT_POS_BL]),
+      PLACE(CENTER_T, TEXT_T, ZONE_T, center[CENTER_POS_T], center_text[CENTER_POS_T]),
+      PLACE(CENTER_L, TEXT_L, ZONE_L, center[CENTER_POS_L], center_text[CENTER_POS_L]),
+      PLACE(CENTER_R, TEXT_R, ZONE_R, center[CENTER_POS_R], center_text[CENTER_POS_R]),
+      PLACE(CENTER_B, TEXT_B, ZONE_B, center[CENTER_POS_B], center_text[CENTER_POS_B]),
     };
     Tuple *t;
     for (unsigned i = 0; i < ARRAY_LENGTH(places); i++) {
@@ -358,6 +364,9 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
       }
       if ((t = dict_find(iter, places[i].text_key)) && t->type == TUPLE_CSTRING) {
         strncpy(places[i].text, t->value->cstring, places[i].size - 1);
+      }
+      if ((t = dict_find(iter, places[i].zone_key))) {
+        g_settings.zone[i] = t->value->int32;
       }
     }
     if ((t = dict_find(iter, MESSAGE_KEY_SECONDS))) {
@@ -393,12 +402,6 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     }
     if ((t = dict_find(iter, MESSAGE_KEY_SECOND_COLOR))) {
       g_settings.second_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
-    }
-    if ((t = dict_find(iter, MESSAGE_KEY_ZONE_OFFSET))) {
-      g_settings.zone_offset = t->value->int32;
-    }
-    if ((t = dict_find(iter, MESSAGE_KEY_ZONE_NAME)) && t->type == TUPLE_CSTRING) {
-      strncpy(g_settings.zone_name, t->value->cstring, sizeof(g_settings.zone_name) - 1);
     }
     if ((t = dict_find(iter, MESSAGE_KEY_BAND_COLOR))) {
       g_settings.band_color = t->value->int32 ? t->value->int32 | 0xC0 : 0;
@@ -445,7 +448,7 @@ int main(void) {
 
   subscribe_ticks();
   app_message_register_inbox_received(inbox_received);
-  app_message_open(512, 64);  // settings with all 8 texts: ~290 bytes
+  app_message_open(512, 64);  // settings with all 8 texts: ~440 bytes
 
   app_event_loop();
   tick_timer_service_unsubscribe();

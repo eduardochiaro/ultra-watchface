@@ -37,6 +37,18 @@ bool weather_handle_message(DictionaryIterator *iter) {
       *fields[i].dst = f->value->int32;
     }
   }
+  // Left as they were when the phone couldn't name the place.
+  const struct { uint32_t key; char *dst; size_t size; } texts[] = {
+    { MESSAGE_KEY_LOCATION,      g_weather.place,      sizeof(g_weather.place) },
+    { MESSAGE_KEY_LOCATION_CODE, g_weather.place_code, sizeof(g_weather.place_code) },
+  };
+  for (unsigned i = 0; i < ARRAY_LENGTH(texts); i++) {
+    Tuple *f = dict_find(iter, texts[i].key);
+    if (f && f->type == TUPLE_CSTRING) {
+      strncpy(texts[i].dst, f->value->cstring, texts[i].size - 1);
+      texts[i].dst[texts[i].size - 1] = '\0';
+    }
+  }
   g_weather.valid = true;
   persist_write_data(PK_WEATHER, &g_weather, sizeof(g_weather));
   return true;

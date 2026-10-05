@@ -24,6 +24,7 @@ Customizations to consider. Tick one off when it ships, and add it to [CHANGELOG
 - [x] Sleep last night (1.6.0)
 - [x] Active minutes (1.6.0)
 - [x] Moon phase (1.6.0)
+- [x] Location (1.6.0)
 - [ ] Bluetooth status
 - [ ] Weather: feels-like, tomorrow's forecast, pressure
 

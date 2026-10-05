@@ -77,8 +77,16 @@
       "MINUTE_COLOR",
       "RING",
       "BAND_COLOR",
-      "ZONE_OFFSET",
-      "ZONE_NAME"
+      "ZONE_TL",
+      "ZONE_TR",
+      "ZONE_BR",
+      "ZONE_BL",
+      "ZONE_T",
+      "ZONE_L",
+      "ZONE_R",
+      "ZONE_B",
+      "LOCATION",
+      "LOCATION_CODE"
     ],
     "resources": {
       "media": [

@@ -1,5 +1,4 @@
 #include "complications.h"
-#include "../settings.h"
 
 // "10:09" in the watch's 12 or 24h style. Returns "AM" or "PM", "" in 24h style.
 static const char *clock_text(char *buf, size_t n, const struct tm *t) {
@@ -16,10 +15,11 @@ static struct tm *local_now(void) {
   return localtime(&now);
 }
 
-// The second time zone: a fixed offset from UTC, in minutes.
-// ponytail: no daylight saving; send the offset from the phone by zone name if wanted.
-static struct tm *zone_now(void) {
-  time_t now = time(NULL) + g_settings.zone_offset * 60;
+// A time zone: a fixed offset from UTC, in minutes.
+// ponytail: no daylight saving, PST and PDT are picked apart; send the offset
+// from the phone by IANA zone if it should switch by itself.
+static struct tm *zone_now(int offset) {
+  time_t now = time(NULL) + offset * 60;
   return gmtime(&now);
 }
 
@@ -50,10 +50,10 @@ void center_time_draw(GContext *ctx, GPoint c) {
   subdial(ctx, c, local_now(), "");
 }
 
-void comp_zone_draw(GContext *ctx, const Slot *s) {
-  corner(ctx, s, zone_now(), g_settings.zone_name);
+void comp_zone_draw(GContext *ctx, const Slot *s, int offset, const char *name) {
+  corner(ctx, s, zone_now(offset), name);
 }
 
-void center_zone_draw(GContext *ctx, GPoint c) {
-  subdial(ctx, c, zone_now(), g_settings.zone_name);
+void center_zone_draw(GContext *ctx, GPoint c, int offset, const char *name) {
+  subdial(ctx, c, zone_now(offset), name);
 }

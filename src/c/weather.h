@@ -15,6 +15,9 @@ typedef struct {
   int16_t sunrise, sunset;   // today's, minutes after local midnight; equal = unknown
   int16_t wind;              // speed now, km/h (the watch converts), -1 = unknown
   int16_t wind_dir;          // where it blows from, degrees clockwise from north
+  // Appended: empty on older saves.
+  char place[17];            // the city at the phone's position, "" = unknown
+  char place_code[5];        // a short code for it, for the subdial
 } Weather;
 
 extern Weather g_weather;

@@ -4,7 +4,10 @@
 
 - **Band color:** pick the band's color on the Sport and Chronograph rings. Ticks and numerals turn black or white to stay readable on it.
 - **Calories bar:** both calories complications now show a bar, in corners and subdials. Like distance, it fills with progress toward the daily step goal.
-- **New complications:** digital time, second time zone (pick a UTC offset and a short name), sleep last night, active minutes and moon phase. All in corners and subdials.
+- **New complications:** digital time, time zones (one per slot, picked by abbreviation: PST, CET, IST), sleep last night, active minutes and moon phase. All in corners and subdials.
+- **Grouped pickers:** the complication dropdowns are sorted into Activity, Weather, Time and date, Sun and moon, Place, Watch and Custom.
+- **Location:** new complication with the city your phone is in: its name in a corner, a short code (SEA, NY) in a subdial. Named by BigDataCloud, asked only while the complication is on the face.
+- **No hands:** new None hand style hides the hour and minute hands, for a face that tells the time in a complication. The seconds hand keeps its own switch.
 
 ## 1.5.0
 
