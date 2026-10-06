@@ -7,7 +7,6 @@ static const ComplicationDraw DRAW[COMP_COUNT] = {
   [COMP_TEMP]    = comp_temp_draw,
   [COMP_BATTERY] = comp_battery_draw,
   [COMP_RAIN]    = comp_rain_draw,
-  [COMP_CALENDAR] = comp_calendar_draw,
   [COMP_HEART]   = comp_heart_draw,
   [COMP_DISTANCE] = comp_distance_draw,
   [COMP_AQI]     = comp_aqi_draw,
@@ -26,6 +25,8 @@ static const ComplicationDraw DRAW[COMP_COUNT] = {
   [COMP_ACTIVE]  = comp_active_draw,
   [COMP_MOON]    = comp_moon_draw,
   [COMP_LOCATION] = comp_location_draw,
+  [COMP_WEEK]    = comp_week_draw,
+  [COMP_YEAR]    = comp_year_draw,
 };
 
 void complication_draw(ComplicationId id, GContext *ctx, const Slot *s) {
@@ -58,7 +59,9 @@ uint32_t complication_stamp(ComplicationId id, const struct tm *t) {
       return t->tm_hour * 60 + t->tm_min;
     }
     case COMP_CALENDAR:
-    case COMP_CALENDAR_PLAIN: {
+    case COMP_CALENDAR_PLAIN:
+    case COMP_WEEK:
+    case COMP_YEAR: {
       return t->tm_mday;
     }
     case COMP_BATTERY: {

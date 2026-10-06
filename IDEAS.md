@@ -27,6 +27,10 @@ Customizations to consider. Tick one off when it ships, and add it to [CHANGELOG
 - [x] Active minutes (1.6.0)
 - [x] Moon phase (1.6.0)
 - [x] Location (1.6.0)
+- [x] Date formats: weekday, month, full, numeric, week number, day of year, year (1.6.0)
+- [x] Week and year progress (1.6.0)
+- [ ] Countdown to a date, days since
+- [ ] Month and day progress bars, week starts on Sunday
 - [ ] Bluetooth status
 - [ ] Weather: feels-like, tomorrow's forecast, pressure
 
@@ -43,5 +47,5 @@ Customizations to consider. Tick one off when it ships, and add it to [CHANGELOG
 - [ ] Vibrate when Bluetooth disconnects
 - [x] Seconds off during Quiet Time (1.6.0)
 - [ ] Quiet hours: dim colors at night
-- [ ] Weather refresh interval
-- [ ] Manual location for weather
+- [x] Weather refresh interval (1.6.0)
+- [x] Manual location for weather (1.6.0)

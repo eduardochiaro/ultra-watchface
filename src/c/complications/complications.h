@@ -19,7 +19,7 @@ typedef enum {
   COMP_BATTERY,
   COMP_RAIN,
   COMP_RETIRED_5, // was the sun gauge
-  COMP_CALENDAR,
+  COMP_CALENDAR,  // the date, in the place's DateFormat
   COMP_AQI,
   COMP_HEART,
   COMP_DISTANCE,
@@ -33,7 +33,7 @@ typedef enum {
   COMP_SUN,       // sunrise and sunset
   COMP_BEAT,      // Swatch .beat time
   COMP_WIND,
-  COMP_CALENDAR_PLAIN, // subdial only: no page behind it
+  COMP_CALENDAR_PLAIN, // retired: older saves, a subdial's DATE_WEEKDAY
   COMP_AQI_GAUGE, // the AQI and UV as range gauges, not sections
   COMP_UV_GAUGE,
   COMP_CALORIES,  // active and resting
@@ -44,8 +44,24 @@ typedef enum {
   COMP_ACTIVE,    // active minutes today
   COMP_MOON,      // moon phase
   COMP_LOCATION,  // the city the phone is in
+  COMP_WEEK,      // the week's days, lit up to today
+  COMP_YEAR,      // how much of the year is gone
   COMP_COUNT
 } ComplicationId;
+
+// COMP_CALENDAR's formats, one per place, kept in g_settings.zone. Sent by the
+// config page (DATE_FORMATS in src/pkjs/config.js): append only.
+typedef enum {
+  DATE_CALENDAR,  // boxes in a corner, a tear-off page in a subdial
+  DATE_WEEKDAY,   // TUE 6
+  DATE_MONTH,     // OCT 6
+  DATE_FULL,      // TUE 6 OCT
+  DATE_NUMERIC,   // 6/10/2026, the year under it in a subdial
+  DATE_WEEK,      // WEEK 41
+  DATE_YEARDAY,   // DAY 279
+  DATE_YEAR,      // 2026
+  DATE_COUNT
+} DateFormat;
 
 void complication_draw(ComplicationId id, GContext *ctx, const Slot *s);
 // What its drawing hangs on that no message brings: the time, health, the
@@ -69,7 +85,6 @@ void comp_steps_draw(GContext *ctx, const Slot *s);
 void comp_temp_draw(GContext *ctx, const Slot *s);
 void comp_battery_draw(GContext *ctx, const Slot *s);
 void comp_rain_draw(GContext *ctx, const Slot *s);
-void comp_calendar_draw(GContext *ctx, const Slot *s);
 void comp_heart_draw(GContext *ctx, const Slot *s);
 void comp_distance_draw(GContext *ctx, const Slot *s);
 void comp_aqi_draw(GContext *ctx, const Slot *s);
@@ -88,8 +103,11 @@ void comp_sleep_draw(GContext *ctx, const Slot *s);
 void comp_active_draw(GContext *ctx, const Slot *s);
 void comp_moon_draw(GContext *ctx, const Slot *s);
 void comp_location_draw(GContext *ctx, const Slot *s);
+void comp_week_draw(GContext *ctx, const Slot *s);
+void comp_year_draw(GContext *ctx, const Slot *s);
 void comp_custom_draw(GContext *ctx, const Slot *s, const char *txt);  // not in the tables: needs its text
 void comp_zone_draw(GContext *ctx, const Slot *s, int offset, const char *name);  // nor this: minutes from UTC, and its name
+void comp_date_draw(GContext *ctx, const Slot *s, int format);  // nor this: a DateFormat
 void comp_api_draw(GContext *ctx, const Slot *s, int i);  // i: 0..API_MAX-1
 
 // Custom API complications: what the phone last sent for each (src/pkjs/api.js).
@@ -127,8 +145,6 @@ void center_gauge(GContext *ctx, GPoint c, int pct, GColor fill);
 void center_temp_draw(GContext *ctx, GPoint c);
 void center_battery_draw(GContext *ctx, GPoint c);
 void center_rain_draw(GContext *ctx, GPoint c);
-void center_calendar_draw(GContext *ctx, GPoint c);
-void center_calendar_plain_draw(GContext *ctx, GPoint c);
 void center_aqi_draw(GContext *ctx, GPoint c);
 void center_heart_draw(GContext *ctx, GPoint c);
 void center_distance_draw(GContext *ctx, GPoint c);
@@ -147,8 +163,11 @@ void center_sleep_draw(GContext *ctx, GPoint c);
 void center_active_draw(GContext *ctx, GPoint c);
 void center_moon_draw(GContext *ctx, GPoint c);
 void center_location_draw(GContext *ctx, GPoint c);
+void center_week_draw(GContext *ctx, GPoint c);
+void center_year_draw(GContext *ctx, GPoint c);
 void center_custom_draw(GContext *ctx, GPoint c, const char *txt);
 void center_zone_draw(GContext *ctx, GPoint c, int offset, const char *name);
+void center_date_draw(GContext *ctx, GPoint c, int format);
 void center_api_draw(GContext *ctx, GPoint c, int i);
 // `size`, or the largest below it at which `txt` fits `width` px.
 int comp_fit(GContext *ctx, const char *txt, int size, int width);

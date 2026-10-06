@@ -48,6 +48,8 @@ typedef struct {
   uint8_t band_color;              // the band's; 0 = the scheme's white, tachymeter's the seconds color
   // COMP_ZONE: minutes from UTC, per corner then per subdial. Its name ("PST")
   // is that place's slot_text or center_text.
+  // ponytail: a COMP_CALENDAR place keeps its DateFormat here, a place shows
+  // one or the other; its own array and message keys if a third wants in.
   int16_t zone[SLOT_POS_COUNT + CENTER_POS_COUNT];
   bool sweep;                      // the seconds hand glides, not ticks; with `seconds` only
   bool shake_hide;                 // two shakes hide the hands for a few seconds; on the pad byte, 0 on older saves

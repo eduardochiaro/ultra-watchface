@@ -4,10 +4,18 @@ var getWeather = require('./weather');
 var api = require('./api');
 var send = require('./send');
 
+var weatherTimer;
+
+// The weather timer, at the saved refresh interval.
+function scheduleWeather() {
+  clearInterval(weatherTimer);
+  weatherTimer = setInterval(function() { getWeather(true); }, config.savedSettings().WEATHER_FREQ * 60 * 1000);
+}
+
 Pebble.addEventListener('ready', function() {
   getWeather();
   api.start();
-  setInterval(function() { getWeather(true); }, 30 * 60 * 1000);
+  scheduleWeather();
 });
 
 // The page is handed over whole, with the saved settings, the last weather and
@@ -36,6 +44,7 @@ Pebble.addEventListener('webviewclosed', function(e) {
     return;
   }
   localStorage.setItem(config.SETTINGS_KEY, JSON.stringify(settings));
+  scheduleWeather();
   send(config.toMessage(settings), function() {
     getWeather();
     api.start();

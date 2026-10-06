@@ -31,16 +31,17 @@ typedef void (*Subdial)(GContext *ctx, GPoint c);
 
 static const Subdial SUBDIAL[COMP_COUNT] = {
   [COMP_TEMP] = center_temp_draw, [COMP_RAIN] = center_rain_draw, [COMP_AQI] = center_aqi_draw,
-  [COMP_CALENDAR] = center_calendar_draw, [COMP_BATTERY] = center_battery_draw, [COMP_HEART] = center_heart_draw,
+  [COMP_BATTERY] = center_battery_draw, [COMP_HEART] = center_heart_draw,
   [COMP_DISTANCE] = center_distance_draw, [COMP_ELEVATION] = center_elevation_draw, [COMP_UV] = center_uv_draw,
   [COMP_WEATHER] = conditions, [COMP_HUMIDITY] = center_humidity_draw,
   [COMP_SUN] = center_sun_draw, [COMP_BEAT] = center_beat_draw,
-  [COMP_WIND] = center_wind_draw, [COMP_CALENDAR_PLAIN] = center_calendar_plain_draw,
+  [COMP_WIND] = center_wind_draw,
   [COMP_AQI_GAUGE] = center_aqi_gauge_draw, [COMP_UV_GAUGE] = center_uv_gauge_draw,
   [COMP_CALORIES] = center_calories_draw, [COMP_CALORIES_ACTIVE] = center_calories_active_draw,
   [COMP_TIME] = center_time_draw, [COMP_SLEEP] = center_sleep_draw,
   [COMP_ACTIVE] = center_active_draw, [COMP_MOON] = center_moon_draw,
   [COMP_LOCATION] = center_location_draw,
+  [COMP_WEEK] = center_week_draw, [COMP_YEAR] = center_year_draw,
 };
 
 void center_draw(GContext *ctx, GPoint c) {
@@ -53,6 +54,10 @@ void center_draw(GContext *ctx, GPoint c) {
       center_custom_draw(ctx, at[i], g_settings.center_text[i]);
     } else if (id == COMP_ZONE) {
       center_zone_draw(ctx, at[i], g_settings.zone[SLOT_POS_COUNT + i], g_settings.center_text[i]);
+    } else if (id == COMP_CALENDAR) {
+      center_date_draw(ctx, at[i], g_settings.zone[SLOT_POS_COUNT + i]);
+    } else if (id == COMP_CALENDAR_PLAIN) {
+      center_date_draw(ctx, at[i], DATE_WEEKDAY);
     } else if (id >= COMP_API && id <= COMP_API_LAST) {
       center_api_draw(ctx, at[i], id - COMP_API);
     } else if (id < COMP_COUNT && SUBDIAL[id]) {

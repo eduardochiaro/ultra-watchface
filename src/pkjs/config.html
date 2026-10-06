@@ -41,6 +41,29 @@
 
 	/* Preview: sizes come from the watch's own metrics, see face() */
 	.preview { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 16px 18px; border-radius: 24px; }
+	/* Stays in view while the page scrolls, as a bar: the watch at half the size on the left, the text
+	   beside it. .shut: closed to one thin line, a click opens it again. dock() in the script sets both. */
+	.preview { position: sticky; top: 8px; z-index: 5; }
+	.preview.small .about { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+	.preview b, .preview button { display: none; }
+	.preview button { flex-shrink: 0; align-self: flex-start; min-height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--field); font-size: 13px; font-weight: 700; }
+	.preview.small { flex-direction: row; padding: 10px 12px; border-radius: 16px; box-shadow: 0 8px 32px #000; }
+	.preview.small .bezel { zoom: .5; }
+	.preview.small .about { flex: 1; }
+	/* Stacked beside the watch: side by side they left the text no room */
+	.preview .info { display: flex; flex-direction: column; gap: 20px; align-self: flex-start; flex:1; }
+	.preview .acts { display: none; }
+	.preview.small .acts { display: flex;  gap: 6px; flex-shrink: 0; justify-content: space-between; }
+	.preview.small .bezel { flex-shrink: 0; }
+	.preview.small.shut .acts { flex-direction: row; align-self: center; flex: 1; }
+	.preview.small.shut .about { flex: initial; }
+	/* Closed: .info is the row, not .about. Reversed: the title left, the buttons right */
+	.preview.small.shut .info { flex-direction: row-reverse; align-items: center; align-self: center; gap: 100px; }
+	.preview button[data-save] { background: var(--accent); color: #141414; }
+	.preview.small b, .preview.small button { display: block; }
+	.preview.small.shut { align-items: center; padding: 6px 6px 6px 14px; cursor: pointer; }
+	.preview.small.shut button { align-self: center; }
+	.preview.small.shut .bezel, .preview.small.shut .caption { display: none; }
 	.bezel { padding: 12px; background: #202226; border: 1px solid var(--edge); border-radius: 34px; }
 	.screen { overflow: hidden; line-height: 0; border-radius: 6px; }
 	.round, .round .screen { border-radius: 50%; }
@@ -107,6 +130,10 @@
 	.api label { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 13px; color: var(--soft); }
 	.api label[hidden] { display: none; }
 	.api input { width: 100%; min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--ground); font-weight: 700; }
+	.row.place { display: block; }
+	.place input { width: 100%; min-height: 40px; margin-top: 10px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--ground); font-weight: 700; }
+	.place button { display: block; width: 100%; min-height: 44px; margin-top: 6px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--ground); text-align: left; font-weight: 700; }
+	.place small { margin-top: 6px; }
 	.api input:invalid { box-shadow: inset 0 0 0 2px #c0392b; }
 	.api button, #api-add { min-height: 44px; border: 1px solid var(--edge); border-radius: 10px; background: transparent; font-size: 15px; font-weight: 700; }
 	#api-add { width: 100%; }
@@ -122,9 +149,18 @@
 		<span class="soft">Watchface settings</span>
 	</header>
 
-	<section class="card preview" aria-label="Preview">
+	<section class="card preview" id="preview" aria-label="Preview">
 		<div class="bezel" id="bezel"><div class="screen" id="screen"></div></div>
-		<span class="caption" id="caption"></span>
+		<div class="info">
+			<div class="acts">
+				<button type="button" data-save="1">Save</button>
+				<button type="button" id="preview-toggle">Hide</button>
+			</div>
+			<div class="about">
+				<b>Preview</b>
+				<span class="caption" id="caption"></span>
+			</div>
+		</div>
 	</section>
 
 	<section>
@@ -204,6 +240,22 @@
 	</section>
 
 	<section>
+		<h2>Weather</h2>
+		<div class="card">
+			<div class="row">
+				<label for="freq">Refresh every</label>
+				<select id="freq" style="width: auto"></select>
+			</div>
+			<div class="row place">
+				<label for="place-q">Location</label>
+				<small id="place-now"></small>
+				<input id="place-q" type="search" placeholder="Search a city" autocomplete="off">
+				<div id="place-results"></div>
+			</div>
+		</div>
+	</section>
+
+	<section>
 		<h2>Options</h2>
 		<div class="card">
 			<div class="row">
@@ -276,6 +328,22 @@
 	function isApi(id) { return id >= API_ID && id < API_ID + API_MAX; }
 	function esc(v) { return String(v).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
 	var DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
+	// MONTHS in calendar.c: in full, short is the first 3 letters
+	var MONTHS = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
+	// date_parts() in calendar.c: [head, value, low] of a DATE_FORMATS index past Calendar
+	function dateParts(fmt, d) {
+		var day = String(d.getDate()), mon = d.getMonth() + 1, y = String(d.getFullYear());
+		return [null, [DAYS[d.getDay()], day, ""], [MONTHS[d.getMonth()].slice(0, 3), day, ""], [DAYS[d.getDay()], day, MONTHS[d.getMonth()].slice(0, 3)],
+			["", settings.UNITS === 1 ? mon + "/" + day : day + "/" + mon, y], ["WEEK", String(isoWeek(d)), ""],
+			["DAY", String(yearDay(d) + 1), ""], ["", y, ""]][fmt];
+	}
+	// week_bands() in calendar.c: the week's days of the month, Monday first, the last open-ended
+	function weekBands(d) {
+		var monday = d.getDate() - (d.getDay() + 6) % 7;
+		return [0, 1, 2, 3, 4, 5, 6].map(function (i) { return [i < 6 ? monday + i : Infinity, C.accent]; });
+	}
+	// year_pct() in calendar.c; yearDay() and isoWeek() are config.js's
+	function yearPct(d) { return Math.trunc(yearDay(d) * 100 / yearDays(d.getFullYear())); }
 
 	// The #defines at the top of ultra-watchface.c, complications.h and center.c
 	var GEO = {
@@ -665,8 +733,30 @@
 			if (id === 4) {
 				bar(s, weather.RAIN, C.picton, weather.RAIN + CORNER_PCT, "umbrella");
 			}
-			if (id === 6) {
+			// comp_date_draw: the boxes, or its parts as text, "TUE 6 OCT", "6/10/2026"
+			var fmt = settings["DATE_" + k.slice(5)];
+			if (id === DATE_ID && !fmt) {
 				calendar(s);
+			} else if (id === DATE_ID) {
+				var date = dateParts(fmt, now).filter(Boolean).join(fmt === 4 ? "/" : " ");
+				// The full date: the month in full, the weekday beside the arc; round: one line
+				if (fmt === 3) {
+					date = (g.round ? DAYS[now.getDay()] + " " : "") + now.getDate() + " " + MONTHS[now.getMonth()];
+					if (!g.round) {
+						along(DAYS[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
+					}
+				}
+				along(date, at(s, 50), s.r, fitCap(date, g.TEXT + 2, slen(s)), C.white);
+			}
+			if (id === 37) {
+				bandGauge(s, now.getDate(), weekBands(now), DAYS[now.getDay()]);
+			}
+			if (id === 38) {
+				// comp_year_draw: the year curved by the middle; round: it leads the bar
+				bar(s, yearPct(now), C.accent, yearPct(now) + CORNER_PCT, g.round ? { name: String(now.getFullYear()) } : null);
+				if (!g.round) {
+					along(String(now.getFullYear()), at(s, 50), s.r + g.THUMB, g.TEXT + 2, C.white);
+				}
 			}
 			if (id === 13) {
 				bar(s, HUM, C.cyan, HUM >= 0 ? HUM + CORNER_PCT : "--", "drop");
@@ -919,7 +1009,14 @@
 				text("UV", [c[0], c[1] + SL], SS, C.white, 0);
 			},
 			// Tear-off page: red header above a flat cut, black on white below in any scheme
-			6: function (c) {
+			6: function (c, t, z, fmt) {
+				// center_date_draw: no page, the first part small in red, the value big, the last under it
+				if (fmt) {
+					var d = dateParts(fmt, now), pair = d[0] && !d[2];
+					fit(d[0], [c[0], c[1] - 9], SS + 1, 2 * g.SUB_R, C.red);
+					fit(d[1], [c[0], c[1] + (pair ? 4 : d[0] ? 1 : d[2] ? -2 : 0)], ST + (pair ? 5 : 3), 2 * g.SUB_R, C.white);
+					return fit(d[2], [c[0], c[1] + SL + 1], SS, 2 * g.SUB_R, C.lg);
+				}
 				var dr = g.SUB_R + 1, cut = Math.trunc(-dr / 3), hw = f(Math.sqrt(dr * dr - cut * cut));
 				if (lightScheme(scheme)) {
 					disc(c, dr + 1, C.lg);
@@ -981,10 +1078,17 @@
 				text(wind() >= 0 ? String(wind()) : "--", [c[0], c[1] + 1], ST + 3, C.white, 0);
 				text(settings.UNITS === 1 ? "mph" : "km/h", [c[0], c[1] + SL + 2], SS + 1, C.white, 0);
 			},
-			// center_calendar_plain_draw: no page, the weekday in red over the day
-			26: function (c) {
-				text(DAYS[now.getDay()], [c[0], c[1] - 9], SS + 1, C.red, 0);
-				text(String(now.getDate()), [c[0], c[1] + 4], ST + 5, C.white, 0);
+			// center_week_draw: the week's days around the ring, lit up to today
+			37: function (c) {
+				sections(-120, 120, g.SUB_R, 3, false, now.getDate(), weekBands(now), c);
+				text(String(now.getDate()), [c[0], c[1] - 1], ST, C.white, 0);
+				text(DAYS[now.getDay()], [c[0], c[1] + SL], SS, C.white, 0);
+			},
+			// center_year_draw: like humidity, the year under the value
+			38: function (c) {
+				gauge(c, yearPct(now), C.accent);
+				fit(yearPct(now) + SMALL_PCT, [c[0], c[1] - 1], ST + 2, INNER, C.white);
+				text(String(now.getFullYear()), [c[0], c[1] + SL], SS, C.white, 0);
 			},
 			// center_time_draw, center_zone_draw: the time across the subdial, the zone's name above
 			31: function (c) { fit(clock(now.getHours(), now.getMinutes()), c, ST + 3, 2 * g.SUB_R, C.white); },
@@ -1032,8 +1136,8 @@
 			if (isApi(settings[pos])) {
 				apiSubdial(SUBDIAL_AT[pos], apiView(settings[pos] - API_ID));
 			} else if (SUBDIAL[settings[pos]]) {
-				// The place's text and zone: only Text and Time zone take them
-				SUBDIAL[settings[pos]](SUBDIAL_AT[pos], settings["TEXT_" + pos.slice(7)], settings[pos] === ZONE_ID ? zone(settings["ZONE_" + pos.slice(7)]) : undefined);
+				// The place's text, zone and date format: only Text, Time zone and Date take them
+				SUBDIAL[settings[pos]](SUBDIAL_AT[pos], settings["TEXT_" + pos.slice(7)], settings[pos] === ZONE_ID ? zone(settings["ZONE_" + pos.slice(7)]) : undefined, settings["DATE_" + pos.slice(7)]);
 			}
 		}
 		out.push("</g>");
@@ -1127,12 +1231,15 @@
 		[].forEach.call($("units").children, function (b, i) { b.setAttribute("aria-pressed", settings.UNITS === i); });
 		$("goal").value = settings.STEP_GOAL;
 		$("goal-text").textContent = settings.STEP_GOAL.toLocaleString("en-US") + " steps";
+		$("freq").value = settings.WEATHER_FREQ;
+		$("place-now").textContent = settings.WEATHER_PLACE ? settings.WEATHER_PLACE.label : "The phone's location";
 		$("seconds").setAttribute("aria-checked", !!settings.SECONDS);
 		$("sweep-row").hidden = !settings.SECONDS;
 		$("sweep").setAttribute("aria-checked", !!settings.SWEEP);
 		$("shake").setAttribute("aria-checked", !!settings.SHAKE_HIDE);
 		[].forEach.call(document.querySelectorAll("[data-text]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== 14; });
 		[].forEach.call(document.querySelectorAll("[data-zone]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== ZONE_ID; });
+		[].forEach.call(document.querySelectorAll("[data-date]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== DATE_ID; });
 		[].forEach.call(document.querySelectorAll("[data-range]"), function (l) { l.hidden = settings.APIS[l.dataset.range].type === 0; });
 		$("api-add").hidden = settings.APIS.length >= API_MAX;
 	}
@@ -1161,7 +1268,8 @@
 				optionList(options, settings[c.key]) + '</select><input type="text" data-text="' + t + '" data-slot-key="' + c.key + '" value="' + settings[t] +
 				'" maxlength="' + (t.length === 6 ? 4 : 12) + '" autocomplete="off" placeholder="Text" aria-label="' + c.label + ' text">' +
 				'<select data-zone="ZONE_' + at + '" data-slot-key="' + c.key + '" aria-label="' + c.label + ' time zone">' +
-				optionList(ZONES, settings["ZONE_" + at]) + "</select></label>";
+				optionList(ZONES, settings["ZONE_" + at]) + '</select><select data-date="DATE_' + at + '" data-slot-key="' + c.key + '" aria-label="' + c.label + ' date format">' +
+				optionList(DATE_FORMATS.map(function (label, i) { return { label: label, value: i }; }), settings["DATE_" + at]) + "</select></label>";
 		}).join("");
 	}
 	function buildPickers() {
@@ -1227,11 +1335,60 @@
 		}).join("");
 	});
 
+	$("freq").innerHTML = WEATHER_FREQS.map(function (m) {
+		return '<option value="' + m + '">' + (m < 60 ? m + " minutes" : m === 60 ? "1 hour" : m / 60 + " hours") + "</option>";
+	}).join("");
+
+	// Weather place: searched on Open-Meteo's geocoding as it is typed. `found` is the last answer.
+	var found = [], searchTimer, searchRun = 0;
+	function buildPlaces(note) {
+		$("place-results").innerHTML = (settings.WEATHER_PLACE ? '<button type="button" data-place="-1">Use the phone\'s location</button>' : "") +
+			found.map(function (p, i) { return '<button type="button" data-place="' + i + '">' + esc(p.label) + "</button>"; }).join("") +
+			(note ? "<small>" + note + "</small>" : "");
+	}
+	buildPlaces();
+	$("place-q").addEventListener("input", function (e) {
+		var q = e.target.value.trim(), mine = ++searchRun;  // an older search's answer is dropped
+		clearTimeout(searchTimer);
+		found = [];
+		if (q.length < 2) {
+			return buildPlaces();
+		}
+		searchTimer = setTimeout(function () {
+			var xhr = new XMLHttpRequest();
+			xhr.onload = function () {
+				if (mine !== searchRun) {
+					return;
+				}
+				try {
+					found = (JSON.parse(xhr.responseText).results || []).map(function (r) {
+						// "Springfield, Illinois, United States"
+						var parts = [r.name, r.admin1, r.country].filter(function (s, n, all) { return s && all.indexOf(s) === n; });
+						return { name: r.name, label: parts.join(", "), lat: r.latitude, lon: r.longitude };
+					});
+				} catch (err) {}
+				buildPlaces(found.length ? "" : "No place found.");
+			};
+			xhr.onerror = xhr.ontimeout = function () {
+				if (mine === searchRun) {
+					buildPlaces("Search failed. Check the connection.");
+				}
+			};
+			xhr.timeout = 10000;
+			xhr.open("GET", "https://geocoding-api.open-meteo.com/v1/search?count=6&language=en&format=json&name=" + encodeURIComponent(q));
+			xhr.send();
+		}, 300);
+	});
+
 	document.addEventListener("change", function (e) {
-		if (e.target.dataset.slot) {
+		if (e.target.id === "freq") {
+			settings.WEATHER_FREQ = +e.target.value;
+		} else if (e.target.dataset.slot) {
 			settings[e.target.dataset.slot] = +e.target.value;
 		} else if (e.target.dataset.zone) {
 			settings[e.target.dataset.zone] = e.target.value;
+		} else if (e.target.dataset.date) {
+			settings[e.target.dataset.date] = +e.target.value;
 		}
 		render();
 	});
@@ -1293,6 +1450,12 @@
 			settings.SWEEP = settings.SWEEP ? 0 : 1;
 		} else if (b.id === "shake") {
 			settings.SHAKE_HIDE = settings.SHAKE_HIDE ? 0 : 1;
+		} else if (b.dataset.place) {
+			settings.WEATHER_PLACE = found[b.dataset.place] || null;  // -1: the phone's
+			found = [];
+			searchRun++;
+			$("place-q").value = "";
+			buildPlaces();
 		} else if (b.id === "api-add" || b.dataset.apiRemove) {
 			if (b.id === "api-add") {
 				apiOpen[settings.APIS.length] = true;
@@ -1316,7 +1479,7 @@
 			buildApis();
 			buildPickers();
 		}
-		else if (b.id === "save" || b.dataset.apiSave) {
+		else if (b.id === "save" || b.dataset.save || b.dataset.apiSave) {
 			// A card's Save saves everything too, once its fields are valid: the phone
 			// only hears from this page when it closes, and only then refreshes the watch.
 			if (b.dataset.apiSave && ![].every.call(b.closest("details").querySelectorAll("input"), function (i) { return i.reportValidity(); })) {
@@ -1330,6 +1493,28 @@
 			return;
 		}
 		render();
+	});
+
+	// PREVIEW_AT: px scrolled before the preview shrinks, about where it reaches the top.
+	var PREVIEW_AT = 80, previewFull = 0;
+	function dock() {
+		var p = $("preview"), small = window.pageYOffset > PREVIEW_AT;
+		if (!p.classList.contains("small")) {
+			previewFull = p.offsetHeight;
+		}
+		p.classList.toggle("small", small);
+		// The bar is shorter: a margin keeps the room the full preview took, so the page under it does not jump.
+		p.style.marginBottom = small ? previewFull - p.offsetHeight + "px" : "";
+		$("preview-toggle").textContent = p.classList.contains("shut") ? "Show" : "Hide";
+	}
+	document.addEventListener("scroll", dock);
+	// Hide closes the bar; a click anywhere on the closed bar opens it. Stays closed until then.
+	$("preview").addEventListener("click", function (e) {
+		var p = $("preview"), shut = p.classList.contains("shut");
+		if (p.classList.contains("small") && !e.target.closest("[data-save]") && (shut || e.target.closest("#preview-toggle"))) {
+			p.classList.toggle("shut", !shut);
+			dock();
+		}
 	});
 
 	render();

@@ -134,10 +134,18 @@ function fetchJson(url, ok, fail) {
 function getWeather(skipSame) {
   // A face with no weather on it: no position asked, nothing fetched.
   if (!shown(WEATHER_IDS)) { return; }
-  var imperial = savedSettings().UNITS === 1;
+  var settings = savedSettings(), imperial = settings.UNITS === 1;
+  // A place picked in Settings: the phone's position is not asked.
+  var picked = settings.WEATHER_PLACE;
+  if (picked) { return at(picked.lat, picked.lon); }
 
   navigator.geolocation.getCurrentPosition(function(pos) {
-    var lat = pos.coords.latitude, lon = pos.coords.longitude;
+    at(pos.coords.latitude, pos.coords.longitude);
+  }, function(err) {
+    console.log('Location failed: ' + err.message);
+  }, { timeout: 15000, maximumAge: 30 * 60 * 1000 });
+
+  function at(lat, lon) {
     fetchJson(buildUrl(lat, lon, imperial), function(data) {
       // Air quality and the place's name are separate APIs, asked only when shown; weather still goes out without them.
       if (!shown(AQI_IDS)) { return namePlace(lat, lon, data, null); }
@@ -148,14 +156,15 @@ function getWeather(skipSame) {
     }, function(err) {
       console.log('Weather fetch failed: ' + err);
     });
-  }, function(err) {
-    console.log('Location failed: ' + err.message);
-  }, { timeout: 15000, maximumAge: 30 * 60 * 1000 });
+  }
 
   // Asked only when a Location complication is shown: the position goes to no one else otherwise.
   function namePlace(lat, lon, data, aqi) {
     if (!shown([LOCATION_ID])) {
       return sendWeather(data, aqi, null);
+    }
+    if (picked) {
+      return sendWeather(data, aqi, place({ city: picked.name }, lat, lon));  // already named
     }
     fetchJson(placeUrl(lat, lon), function(geo) { sendWeather(data, aqi, place(geo, lat, lon)); }, function(err) {
       console.log('Place fetch failed: ' + err);

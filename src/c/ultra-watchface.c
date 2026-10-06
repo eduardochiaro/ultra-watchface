@@ -411,11 +411,13 @@ static void draw_face(GContext *ctx, GRect b, GPoint c) {
       .a0 = DEG(SIDE[i]),
       .a1 = DEG(SIDE[i] + DIR[i] * COMP_SPAN),
     };
-    // Text and the time zone need their slot's string; the rest draw from what they measure.
+    // Text and the time zone need their slot's string, the date its format; the rest draw from what they measure.
     if (g_settings.slots[i] == COMP_CUSTOM) {
       comp_custom_draw(ctx, &s, g_settings.slot_text[i]);
     } else if (g_settings.slots[i] == COMP_ZONE) {
       comp_zone_draw(ctx, &s, g_settings.zone[i], g_settings.slot_text[i]);
+    } else if (g_settings.slots[i] == COMP_CALENDAR) {
+      comp_date_draw(ctx, &s, g_settings.zone[i]);
     } else {
       complication_draw(g_settings.slots[i], ctx, &s);
     }
@@ -551,7 +553,7 @@ static void subscribe_ticks(void) {
 }
 
 // Every corner and subdial, in g_settings.zone order: its complication, its
-// COMP_CUSTOM text or COMP_ZONE name, and its COMP_ZONE offset.
+// COMP_CUSTOM text or COMP_ZONE name, and its COMP_ZONE offset or COMP_CALENDAR format.
 #define PLACE(key, text_key, zone_key, id, text) \
   { MESSAGE_KEY_##key, MESSAGE_KEY_##text_key, MESSAGE_KEY_##zone_key, &g_settings.id, g_settings.text, sizeof(g_settings.text) }
 

@@ -25,7 +25,9 @@ var COMPLICATIONS = [
   { group: 'Time and date', label: 'Digital time', value: 31 },
   { group: 'Time and date', label: 'Time zone', value: 32 },
   { group: 'Time and date', label: '.beat time', value: 24 },
-  { group: 'Time and date', label: 'Calendar', value: 6 },
+  { group: 'Time and date', label: 'Date', value: 6 },
+  { group: 'Time and date', label: 'Week', value: 37 },
+  { group: 'Time and date', label: 'Year progress', value: 38 },
   { group: 'Sun and moon', label: 'Sunrise / sunset', value: 23 },
   { group: 'Sun and moon', label: 'Moon phase', value: 35 },
   { group: 'Place', label: 'Location', value: 36 },
@@ -55,8 +57,9 @@ var CENTER_COMPLICATIONS = [
   { group: 'Time and date', label: 'Digital time', value: 31 },
   { group: 'Time and date', label: 'Time zone', value: 32 },
   { group: 'Time and date', label: '.beat time', value: 24 },
-  { group: 'Time and date', label: 'Calendar', value: 6 },
-  { group: 'Time and date', label: 'Calendar (plain)', value: 26 },
+  { group: 'Time and date', label: 'Date', value: 6 },
+  { group: 'Time and date', label: 'Week', value: 37 },
+  { group: 'Time and date', label: 'Year progress', value: 38 },
   { group: 'Sun and moon', label: 'Sunrise / sunset', value: 23 },
   { group: 'Sun and moon', label: 'Moon phase', value: 35 },
   { group: 'Place', label: 'Location', value: 36 },
@@ -102,6 +105,26 @@ function zone(id) {
   return ZONES.filter(function (z) { return z.value === id; })[0] || zone('UTC');
 }
 
+// The Date complication's formats, one picked per place showing it. Index =
+// value, see DateFormat in src/c/complications/complications.h: append only.
+var DATE_ID = 6;  // COMP_CALENDAR
+var DATE_FORMATS = ['Calendar', 'Weekday and day', 'Month and day', 'Full date', 'Numeric', 'Week number', 'Day of year', 'Year'];
+var PLAIN_ID = 26;  // COMP_CALENDAR_PLAIN, retired: a subdial's Date as weekday and day
+
+// The settings preview's, here to be tested: calendar.c's year_days(), tm_yday and iso_week().
+function yearDays(y) { return y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0) ? 366 : 365; }
+function yearDay(d) { return Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 1)) / 86400000); }
+// ISO 8601: weeks start on Monday, and a week is of the year its Thursday is in.
+function isoWeek(d) {
+  var y = d.getFullYear(), thu = yearDay(d) - (d.getDay() + 6) % 7 + 3;
+  if (thu < 0) {
+    thu += yearDays(y - 1);
+  } else if (thu >= yearDays(y)) {
+    thu -= yearDays(y);
+  }
+  return Math.trunc(thu / 7) + 1;
+}
+
 // Custom API complications (src/pkjs/api.js): settings.APIS[i] is complication
 // API_ID + i in any place. Same numbers as COMP_API and API_MAX in complications.h.
 var API_ID = 15, API_MAX = 8;
@@ -138,10 +161,26 @@ var DEFAULTS = { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, C
   BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   // The Time zone complication's zone, per place: ZONE_ + the SLOT_/CENTER_ suffix, a ZONES value.
   ZONE_TL: 'UTC', ZONE_TR: 'UTC', ZONE_BL: 'UTC', ZONE_BR: 'UTC', ZONE_T: 'UTC', ZONE_L: 'UTC', ZONE_R: 'UTC', ZONE_B: 'UTC',
+  // The Date complication's format, per place: DATE_ + the SLOT_/CENTER_ suffix, a DATE_FORMATS index.
+  // On the phone: the watch gets it as the ZONE_ of a place showing the date.
+  DATE_TL: 0, DATE_TR: 0, DATE_BL: 0, DATE_BR: 0, DATE_T: 0, DATE_L: 0, DATE_R: 0, DATE_B: 0,
   // The Text complication's text, per place: TEXT_ + the SLOT_/CENTER_ suffix.
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '',
+  // Weather: minutes between refreshes, a WEATHER_FREQS value, and where it is for:
+  // { name, label, lat, lon } picked in Settings, or null for the phone's own position. Both stay on the phone.
+  WEATHER_FREQ: 30, WEATHER_PLACE: null,
   // Custom API complications. Stays on the phone: the watch gets what to draw (api.js).
   APIS: [] };
+var WEATHER_FREQS = [15, 30, 60, 120, 180];
+
+// name is the city, what the Location complication shows; label tells it from its namesakes.
+function cleanPlace(p) {
+  var lat = p ? Number(p.lat) : NaN, lon = p ? Number(p.lon) : NaN;
+  if (!(Math.abs(lat) <= 90) || !(Math.abs(lon) <= 180)) {
+    return null;
+  }
+  return { name: String(p.name || '').slice(0, 40), label: String(p.label || p.name || '').slice(0, 80), lat: lat, lon: lon };
+}
 
 // Only characters the watch font has, `n` at most.
 function clean(s, n) {
@@ -176,8 +215,17 @@ function value(k, v) {
   if (k === 'APIS') {
     return cleanApis(v);
   }
+  if (k === 'WEATHER_PLACE') {
+    return cleanPlace(v);
+  }
+  if (k === 'WEATHER_FREQ') {
+    return WEATHER_FREQS.indexOf(Number(v)) < 0 ? DEFAULTS[k] : Number(v);
+  }
   if (k.indexOf('ZONE_') === 0) {
     return zone(String(v)).value;
+  }
+  if (k.indexOf('DATE_') === 0) {
+    return DATE_FORMATS[v] ? Number(v) : 0;
   }
   return typeof DEFAULTS[k] === 'string' ? cleanText(k, v) : Number(v);
 }
@@ -187,6 +235,12 @@ function withDefaults(saved) {
   for (var k in DEFAULTS) {
     s[k] = value(k, saved && saved[k] !== undefined ? saved[k] : DEFAULTS[k]);
   }
+  CENTERS.forEach(function (p) {
+    if (s[p.key] === PLAIN_ID) {
+      s[p.key] = DATE_ID;
+      s['DATE_' + p.key.split('_')[1]] = 1;
+    }
+  });
   return s;
 }
 
@@ -201,14 +255,15 @@ function savedSettings() {
 function toMessage(settings) {
   var msg = {};
   for (var k in DEFAULTS) {
-    if (k !== 'APIS') {
+    if (k !== 'APIS' && k.indexOf('WEATHER_') !== 0 && k.indexOf('DATE_') !== 0) {  // the phone's own
       msg[k] = value(k, settings[k]);
     }
   }
   // The watch gets a zone as its offset, and its name as the text of a place showing it.
+  // A place showing the date gets its format there.
   CORNERS.concat(CENTERS).forEach(function (p) {
     var at = p.key.split('_')[1], z = zone(msg['ZONE_' + at]);
-    msg['ZONE_' + at] = z.offset;
+    msg['ZONE_' + at] = msg[p.key] === DATE_ID ? value('DATE_' + at, settings['DATE_' + at]) : z.offset;
     if (msg[p.key] === ZONE_ID) {
       msg['TEXT_' + at] = z.name;
     }
@@ -219,8 +274,8 @@ function toMessage(settings) {
 if (typeof module === 'object') {
   module.exports = {
     SETTINGS_KEY: SETTINGS_KEY, COMPLICATIONS: COMPLICATIONS, CENTER_COMPLICATIONS: CENTER_COMPLICATIONS,
-    CORNERS: CORNERS, CENTERS: CENTERS, SCHEMES: SCHEMES, SCHEME_ACCENT: SCHEME_ACCENT, HANDS: HANDS, RINGS: RINGS, ZONES: ZONES, zone: zone,
-    API_ID: API_ID, API_MAX: API_MAX, API_TYPES: API_TYPES,
+    CORNERS: CORNERS, CENTERS: CENTERS, SCHEMES: SCHEMES, SCHEME_ACCENT: SCHEME_ACCENT, HANDS: HANDS, RINGS: RINGS, ZONES: ZONES, zone: zone, DATE_ID: DATE_ID, DATE_FORMATS: DATE_FORMATS, yearDays: yearDays, yearDay: yearDay, isoWeek: isoWeek,
+    API_ID: API_ID, API_MAX: API_MAX, API_TYPES: API_TYPES, WEATHER_FREQS: WEATHER_FREQS,
     DEFAULTS: DEFAULTS, clean: clean, cleanText: cleanText, withDefaults: withDefaults, savedSettings: savedSettings, toMessage: toMessage
   };
 }

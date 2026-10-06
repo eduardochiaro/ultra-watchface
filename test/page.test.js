@@ -12,7 +12,7 @@ assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CE
   ZONE_TL: 0, ZONE_TR: 0, ZONE_BL: 0, ZONE_BR: 0, ZONE_T: 0, ZONE_L: 0, ZONE_R: 0, ZONE_B: 0,
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
 // Time zone: the watch gets the offset, and the name as the text of a place showing it; an unknown zone is UTC
-msg = config.toMessage(config.withDefaults({ SLOT_TL: 32, ZONE_TL: 'PST', TEXT_TL: 'mine', CENTER_T: 32, ZONE_T: 'CST-CN', ZONE_B: 'IST', ZONE_L: 'nope' }));
+msg = config.toMessage(config.withDefaults({ SLOT_TL: 32, ZONE_TL: 'PST', TEXT_TL: 'mine', CENTER_T: 32, ZONE_T: 'CST-CN', CENTER_B: 0, ZONE_B: 'IST', ZONE_L: 'nope' }));
 assert.deepStrictEqual([msg.ZONE_TL, msg.TEXT_TL, msg.ZONE_T, msg.TEXT_T, msg.ZONE_B, msg.TEXT_B, msg.ZONE_L], [-480, 'PST', 480, 'CST', 330, '', 0]);
 assert.ok(config.ZONES.every(function (z) { return z.name.length <= 4 && config.zone(z.value) === z; }), 'zone names fit a subdial, values are unique');
 // Text: only glyphs the watch font has, 12 max
@@ -91,6 +91,7 @@ assert.ok(svg.indexOf('stroke="#ffaa00" stroke-width="2"') > 0, 'seconds hand');
 assert.ok(els.schemes.innerHTML.indexOf('data-scheme="1" aria-pressed="true"') > 0);
 assert.strictEqual(els.colors.hidden, true);
 assert.strictEqual(els.seconds.attrs['aria-checked'], 'true');
+assert.ok(els.freq.value === 30 && els.freq.innerHTML.indexOf('<option value="180">3 hours') > 0 && els['place-now'].textContent === "The phone's location" && els['place-results'].innerHTML === '', 'weather: every 30 minutes, at the phone');
 assert.ok(els['sweep-row'].hidden === false && els.sweep.attrs['aria-checked'] === 'false', 'sweep: offered with the seconds hand, off');
 
 // Save navigates with the settings as payload
@@ -300,10 +301,37 @@ assert.ok(screen().indexOf('>Sao Paulo</text>') > 0 && screen().indexOf('>SP</te
 load({ settings: { SLOT_TL: 36, CENTER_T: 36, CENTER_L: 0, CENTER_R: 0, CENTER_B: 0, SLOT_TR: 0, SLOT_BL: 0, SLOT_BR: 0 }, weather: { TEMP: 1 }, platform: 'emery' });
 assert.strictEqual(screen().split('>--</text>').length - 1, 2, 'weather saved before it had a place');
 
-// Plain calendar: subdial only, weekday in red, no page behind it
+// Plain calendar, retired: a saved one becomes the Date as weekday and day, in red, no page behind it
+assert.deepStrictEqual([config.withDefaults({ CENTER_T: 26 }).CENTER_T, config.withDefaults({ CENTER_T: 26 }).DATE_T, config.withDefaults({ DATE_T: 99 }).DATE_T], [6, 1, 0]);
 ctx = load({ settings: { CENTER_T: 26, CENTER_B: 0 }, platform: 'emery' });
 svg = screen();
 assert.ok(/fill="#ff0000"[^>]*>(SUN|MON|TUE|WED|THU|FRI|SAT)<\/text>/.test(svg) && !/Z" fill="#ff0000"/.test(svg), 'plain calendar');
+
+// Date: a format per place, sent as the place's ZONE_; a time zone's place keeps its offset
+msg = config.toMessage(config.withDefaults({ SLOT_TL: 6, DATE_TL: 3, CENTER_T: 6, DATE_T: 5, SLOT_TR: 32, ZONE_TR: 'PST', DATE_TR: 2 }));
+assert.deepStrictEqual([msg.ZONE_TL, msg.ZONE_T, msg.ZONE_TR, msg.ZONE_B, msg.DATE_TL], [3, 5, -480, 0, undefined]);
+ctx = load({ settings: { SLOT_TL: 6, DATE_TL: 3, SLOT_TR: 6, DATE_TR: 4, SLOT_BL: 6, DATE_BL: 5, SLOT_BR: 6, DATE_BR: 6,
+  CENTER_T: 6, DATE_T: 3, CENTER_L: 6, DATE_L: 7, CENTER_R: 6, DATE_R: 2, CENTER_B: 6, UNITS: 1 }, platform: 'emery' });
+svg = screen();
+var today = new Date(), wd = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][today.getDay()], month = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE', 'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'][today.getMonth()], mo = month.slice(0, 3), md = today.getDate(), yr = today.getFullYear();
+assert.ok(svg.indexOf('>' + md + ' ' + month + '</text>') > 0 && svg.split('>' + wd + '</text>').length - 1 === 3, 'full date in a corner: day and month on the arc, the weekday beside it (and in two subdials)');
+assert.ok(svg.indexOf('>' + (today.getMonth() + 1) + '/' + md + '/' + yr + '</text>') > 0, 'numeric date, month first with imperial units');
+assert.ok(/>WEEK \d+<\/text>/.test(svg) && />DAY \d+<\/text>/.test(svg), 'week number and day of year');
+assert.ok(svg.indexOf('>' + mo + '</text>') > 0 && svg.indexOf('>' + yr + '</text>') > 0 && /Z" fill="#ff0000"/.test(svg), 'date subdials: parts stacked, the year, the page');
+assert.ok(els.corners.innerHTML.indexOf('<select data-date="DATE_TL" data-slot-key="SLOT_TL"') > 0 && els.corners.innerHTML.indexOf('<option value="3" selected>Full date</option>') > 0, 'a date format picker per place');
+// ISO weeks and days of the year
+assert.deepStrictEqual([[2026, 9, 6], [2021, 0, 3], [2024, 11, 30], [2026, 11, 31], [2027, 0, 1], [2024, 11, 31]].map(function (d) {
+  d = new Date(d[0], d[1], d[2]);
+  return [config.isoWeek(d), config.yearDay(d) + 1];
+}), [[41, 279], [53, 3], [1, 365], [53, 365], [53, 1], [1, 366]]);
+
+// Week and year progress: corners and subdials
+ctx = load({ settings: { SLOT_TL: 37, SLOT_TR: 38, CENTER_T: 37, CENTER_L: 38, SLOT_BL: 0, SLOT_BR: 0, CENTER_R: 0, CENTER_B: 0 }, platform: 'emery' });
+svg = screen();
+var lit = (today.getDay() + 6) % 7 + 1, gone = Math.trunc(config.yearDay(today) * 100 / config.yearDays(yr));
+assert.strictEqual(svg.split('stroke="#ffaa00" stroke-width="6"').length - 1, lit + (gone > 0 ? 1 : 0), 'week corner: a section per day so far; the year bar');
+assert.strictEqual(svg.split('>' + wd + '</text>').length - 1, 2, 'week: the weekday in a corner and a subdial');
+assert.ok(svg.indexOf('>' + gone + '%</text>') > 0 && svg.split('>' + yr + '</text>').length - 1 === 2, 'year progress and the year');
 
 // Active calories: its own complication, corner and subdial
 load({ settings: { SLOT_TL: 30, CENTER_T: 30 }, platform: 'emery' });
@@ -350,8 +378,13 @@ function fetched(settings) {
   require('../src/pkjs/weather')();
   return urls.join(' ');
 }
+// A picked place: its coordinates, no position asked, and its own name for the Location complication
+var PICKED = { name: 'Rome', label: 'Rome, Lazio, Italy', lat: 41.9, lon: 12.5 };
+assert.deepStrictEqual(config.withDefaults({ WEATHER_PLACE: PICKED, WEATHER_FREQ: '60' }), Object.assign(config.withDefaults(), { WEATHER_PLACE: PICKED, WEATHER_FREQ: 60 }));
+assert.deepStrictEqual([config.withDefaults({ WEATHER_PLACE: { name: 'x', lat: 'no', lon: 1 } }).WEATHER_PLACE, config.withDefaults({ WEATHER_FREQ: 7 }).WEATHER_FREQ], [null, 30], 'a place without coordinates is the phone\'s; an unknown interval is 30');
 var NO_WEATHER = { SLOT_TL: 1, SLOT_TR: 3, SLOT_BL: 6, SLOT_BR: 8, CENTER_T: 14, CENTER_L: 35, CENTER_R: 31, CENTER_B: 6 };
 assert.strictEqual(fetched(NO_WEATHER), '', 'no weather complication: no position, no request');
 assert.strictEqual(fetched(Object.assign({}, NO_WEATHER, { SLOT_TL: 2 })), 'position api.open-meteo.com', 'temperature: the forecast alone');
 assert.strictEqual(fetched(Object.assign({}, NO_WEATHER, { CENTER_T: 27, CENTER_L: 36 })), 'position api.open-meteo.com air-quality-api.open-meteo.com api.bigdatacloud.net', 'AQI and location: theirs too');
+assert.strictEqual(fetched(Object.assign({}, NO_WEATHER, { CENTER_T: 27, CENTER_L: 36, WEATHER_PLACE: PICKED })), 'api.open-meteo.com air-quality-api.open-meteo.com', 'picked place: no position, no reverse geocoding');
 console.log('ok weather');
