@@ -36,6 +36,7 @@
 #define CHR_NUM    (NUM_SMALL - 2)  // sport's numerals
 #define TACH_TICK  7    // tachymeter's ticks; its band fills the rest, a 2px gap between
 #define TACH_NUM_R (RING_OUT - 18)
+#define CMP_TICK   7    // compass's 30 degree ticks; the 5 degree ones are 3px shorter
 
 #define COMP_SPAN  45   // degrees per corner complication, labels included
 #define ACCENT     GColorChromeYellow
@@ -50,6 +51,10 @@
 #define CACHE_HEADROOM 4000   // bytes left free beside the face cache, and beside fctx
 #define LOW_BATTERY    20     // % and under, off the charger: no seconds hand
 #define SWEEP_MS       125    // a sweeping seconds hand's step: 8 a second, a 4 Hz movement's
+// Shake twice to hide the hands. Tune on the wrist: one hard shake can tap more than once.
+#define SHAKE_MIN_MS   200    // taps closer than this are the same shake
+#define SHAKE_MAX_MS   1500   // the second shake comes within this of the first
+#define SHAKE_HIDE_MS  5000   // how long the hands stay away
 
 Settings g_settings = {
   .slots = { COMP_STEPS, COMP_TEMP, COMP_RAIN, COMP_BATTERY },
@@ -79,6 +84,8 @@ static AppTimer *s_sweep;  // the sweeping seconds hand's next step
 // there. The clock's seconds and its ms do not turn over together (the emulator
 // is a third of a second apart), so the two read as one make the hand jump back.
 static int s_tick_sec, s_tick_ms;
+static AppTimer *s_hide;   // set while a double shake has the hands hidden
+static uint32_t s_tap_ms;  // the last shake, in ms
 static int s_min = -1;     // the minute s_stamp was taken in
 static uint32_t s_stamp;
 
@@ -93,9 +100,10 @@ static GColor picked(uint8_t argb, GColor own) {
   return argb ? fixed((GColor){ .argb = argb }) : own;
 }
 
-// Sport, chronograph and tachymeter: a band the minute hand runs over.
+// Sport, chronograph, tachymeter and compass: a band the minute hand runs over.
 static bool banded(void) {
-  return g_settings.ring == RING_SPORT || g_settings.ring == RING_CHRONO || g_settings.ring == RING_TACHY;
+  return g_settings.ring == RING_SPORT || g_settings.ring == RING_CHRONO || g_settings.ring == RING_TACHY ||
+         g_settings.ring == RING_COMPASS;
 }
 
 // Per ring: the radius of the empty center the subdials fill, and how far each hand runs.
@@ -179,9 +187,33 @@ static void draw_tachy(GContext *ctx, GPoint c) {
   }
 }
 
+// A compass bezel on chronograph's band: a tick every 5 degrees, the 30s heavier,
+// N E S W upright at the quarters, the degrees (30, 60, 120 .. 330) along it
+// between. It does not turn: a bezel, not a compass.
+static void draw_compass(GContext *ctx, GPoint c) {
+  GColor band = picked(g_settings.band_color, GColorWhite), ink = ink_on(band);
+  ring_fill(ctx, c, RING_OUT, CHR_BAND + CHR_INSET, band);
+  ray_ticks(ctx, c, 0, 72, RING_OUT - CMP_TICK + 3, RING_OUT - 1, 1, ink);
+  ray_ticks(ctx, c, 0, 12, RING_OUT - CMP_TICK, RING_OUT - 1, 3, ink);
+  int r = RING_OUT - (CMP_TICK + CHR_BAND + CHR_INSET) / 2;
+  char buf[4];
+  for (int h = 0; h < 12; h++) {
+    if (h % 3 == 0) {
+      snprintf(buf, sizeof(buf), "%c", "NESW"[h / 3]);
+      text_draw(ctx, buf, polar(c, DEG(h * 30), r), CHRONO_NUM + 2, ink);
+    } else {
+      snprintf(buf, sizeof(buf), "%d", h * 30);
+      text_draw_arc(ctx, buf, c, DEG(h * 30), r, CHR_NUM, ink);
+    }
+  }
+}
+
 static void draw_dial(GContext *ctx, GPoint c) {
   if (g_settings.ring == RING_MINIMAL) {
     return draw_minimal(ctx, c);
+  }
+  if (g_settings.ring == RING_COMPASS) {
+    return draw_compass(ctx, c);
   }
   if (g_settings.ring == RING_TACHY) {
     return draw_tachy(ctx, c);
@@ -437,7 +469,9 @@ static void update_proc(Layer *layer, GContext *ctx) {
   if (g_settings.sweep && s_cache) {
     sa = DEG(s_tick_sec * 6) + DEG(6) * ((ms - s_tick_ms + 1000) % 1000) / 1000;
   }
-  draw_hands(ctx, c, &t, sa);
+  if (!s_hide) {
+    draw_hands(ctx, c, &t, sa);
+  }
 }
 
 static bool seconds_wanted(void) {
@@ -464,8 +498,42 @@ static void tick_handler(struct tm *t, TimeUnits changed) {
 
 static void sweep_step(void *data) {
   s_sweep = app_timer_register(SWEEP_MS, sweep_step, NULL);
-  if (s_cache) {
+  if (s_cache && !s_hide) {
     layer_mark_dirty(s_layer);
+  }
+}
+
+static void hide_end(void *data) {
+  s_hide = NULL;
+  layer_mark_dirty(s_layer);
+}
+
+// Two shakes in a row hide the hands for a while, pin and seconds too: the subdials show whole.
+static void tap_handler(AccelAxisType axis, int32_t direction) {
+  time_t now;
+  uint16_t ms;
+  time_ms(&now, &ms);
+  uint32_t at = (uint32_t)now * 1000 + ms, gap = at - s_tap_ms;
+  if (gap < SHAKE_MIN_MS) {
+    return;
+  }
+  s_tap_ms = at;
+  if (gap > SHAKE_MAX_MS) {
+    return;
+  }
+  // A third shake keeps them away longer.
+  if (s_hide) {
+    app_timer_cancel(s_hide);
+  }
+  s_hide = app_timer_register(SHAKE_HIDE_MS, hide_end, NULL);
+  layer_mark_dirty(s_layer);
+}
+
+static void subscribe_shake(void) {
+  if (g_settings.shake_hide) {
+    accel_tap_service_subscribe(tap_handler);
+  } else {
+    accel_tap_service_unsubscribe();
   }
 }
 
@@ -517,6 +585,9 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     if ((t = dict_find(iter, MESSAGE_KEY_SWEEP))) {
       g_settings.sweep = t->value->int32;
     }
+    if ((t = dict_find(iter, MESSAGE_KEY_SHAKE_HIDE))) {
+      g_settings.shake_hide = t->value->int32;
+    }
     if ((t = dict_find(iter, MESSAGE_KEY_UNITS))) {
       g_settings.imperial = t->value->int32;
     }
@@ -553,6 +624,7 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     }
     persist_write_data(PK_SETTINGS, &g_settings, sizeof(g_settings));
     subscribe_ticks();
+    subscribe_shake();
   }
   s_stale = true;
   layer_mark_dirty(s_layer);
@@ -590,10 +662,12 @@ int main(void) {
   window_stack_push(s_window, true);
 
   subscribe_ticks();
+  subscribe_shake();
   app_message_register_inbox_received(inbox_received);
   app_message_open(512, 64);  // settings with all 8 texts: ~440 bytes
 
   app_event_loop();
   tick_timer_service_unsubscribe();
+  accel_tap_service_unsubscribe();
   window_destroy(s_window);
 }

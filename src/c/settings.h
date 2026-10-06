@@ -23,7 +23,9 @@ typedef enum { HANDS_LINE, HANDS_BAR, HANDS_OUTLINE, HANDS_POINTER, HANDS_SWORD,
 // grow to fill it and the hands run longer. Roman: the default, its hours in
 // Roman numerals along the dial. Tachymeter: ticks for the seconds around a
 // band in the accent, 10..60 on it and a dot between each; the larger center too.
-typedef enum { RING_DEFAULT, RING_MINIMAL, RING_SPORT, RING_CHRONO, RING_ROMAN, RING_TACHY, RING_COUNT } RingStyle;
+// Compass: chronograph's band as a compass bezel, N E S W and the
+// degrees between on it. Fixed: it does not turn to north.
+typedef enum { RING_DEFAULT, RING_MINIMAL, RING_SPORT, RING_CHRONO, RING_ROMAN, RING_TACHY, RING_COMPASS, RING_COUNT } RingStyle;
 
 typedef struct {
   uint8_t slots[SLOT_POS_COUNT];   // ComplicationId per corner
@@ -48,6 +50,7 @@ typedef struct {
   // is that place's slot_text or center_text.
   int16_t zone[SLOT_POS_COUNT + CENTER_POS_COUNT];
   bool sweep;                      // the seconds hand glides, not ticks; with `seconds` only
+  bool shake_hide;                 // two shakes hide the hands for a few seconds; on the pad byte, 0 on older saves
 } Settings;
 
 extern Settings g_settings;

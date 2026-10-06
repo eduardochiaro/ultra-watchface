@@ -129,12 +129,12 @@ var SCHEME_ACCENT = 4;
 var HANDS = ['Line', 'Bar', 'Outline', 'Pointer', 'Sword', 'Dauphine', 'None'];
 
 // Index = RING value, see RingStyle in src/c/settings.h
-var RINGS = ['Default', 'Minimal', 'Sport', 'Chronograph', 'Roman', 'Tachymeter'];
+var RINGS = ['Default', 'Minimal', 'Sport', 'Chronograph', 'Roman', 'Tachymeter', 'Compass'];
 
 // Mirrors g_settings in C. weather.js asks Open-Meteo for the chosen
 // temperature unit; the watch converts distance and elevation. Colors are GColor8 argb (0xC0 = black,
 // 0xF8 = chrome yellow); a hand or band color of 0 follows the scheme.
-var DEFAULTS = { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6, SCHEME: 0, UNITS: 0, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0,
+var DEFAULTS = { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6, SCHEME: 0, UNITS: 0, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0,
   BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   // The Time zone complication's zone, per place: ZONE_ + the SLOT_/CENTER_ suffix, a ZONES value.
   ZONE_TL: 'UTC', ZONE_TR: 'UTC', ZONE_BL: 'UTC', ZONE_BR: 'UTC', ZONE_T: 'UTC', ZONE_L: 'UTC', ZONE_R: 'UTC', ZONE_B: 'UTC',

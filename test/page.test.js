@@ -8,7 +8,7 @@ var config = require('../src/pkjs/config');
 // Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
 assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6,
-  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
+  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   ZONE_TL: 0, ZONE_TR: 0, ZONE_BL: 0, ZONE_BR: 0, ZONE_T: 0, ZONE_L: 0, ZONE_R: 0, ZONE_B: 0,
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
 // Time zone: the watch gets the offset, and the name as the text of a place showing it; an unknown zone is UTC
@@ -156,7 +156,7 @@ svg = screen();
 assert.ok(svg.indexOf('r="85" fill="none" stroke="#ffffff" stroke-width="26"') > 0 && svg.indexOf('stroke-width="4"') < 0 && svg.indexOf('scale(1.33)') > 0, 'chronograph: wider band, no inset ring, subdials 72/54 the size');
 assert.ok(/y="32" font-size="11.43" fill="#000000" transform="rotate\(0 [^>]*>12<\/text>/.test(svg) && svg.indexOf('>00</text>') < 0, 'chronograph: hours, upright, midway between the ticks and the inner edge');
 assert.strictEqual(svg.split('stroke="#000000" stroke-width="3"').length - 1, 12, 'chronograph: hour ticks black');
-assert.ok(els.rings.innerHTML.split('data-ring=').length - 1 === 6 && els.rings.innerHTML.indexOf('data-ring="3" aria-pressed="true">Chronograph') > 0, 'six rings');
+assert.ok(els.rings.innerHTML.split('data-ring=').length - 1 === 7 && els.rings.innerHTML.indexOf('data-ring="3" aria-pressed="true">Chronograph') > 0, 'seven rings');
 // Roman: the default dial, I..XII turned along it, the bottom half the other way; no band color
 ctx = load({ settings: { RING: 4 }, platform: 'emery' });
 svg = screen();
@@ -172,6 +172,14 @@ assert.strictEqual(svg.split('r="2" fill="#000000"').length - 1, 6, 'tachymeter:
 assert.strictEqual(svg.split('stroke-width="3"').length - 1, 12, 'tachymeter: hour ticks');
 ctx = load({ settings: { RING: 5, BAND_COLOR: 0xC3 }, platform: 'emery' });
 assert.ok(screen().indexOf('stroke="#0000ff" stroke-width="17"') > 0 && /fill="#ffffff"[^>]*>60<\/text>/.test(screen()), 'tachymeter: blue band, white numerals');
+
+// Compass: chronograph's band, 72 ticks, the 30s heavy, N E S W upright and 30..330 turned; the band takes a color
+ctx = load({ settings: { RING: 6, HANDS: 3 }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('r="85" fill="none" stroke="#ffffff" stroke-width="26"') > 0 && svg.indexOf('scale(1.33)') > 0 && els['band-row'].hidden === false, 'compass: band, the larger center');
+assert.ok(/rotate\(0 [^>]*>N<\/text>/.test(svg) && /rotate\(0 [^>]*>W<\/text>/.test(svg) && /rotate\(330 [^>]*>330<\/text>/.test(svg) && /rotate\(300 [^>]*>120<\/text>/.test(svg) && svg.indexOf('>360</text>') < 0, 'compass: cardinals upright, degrees turned');
+assert.strictEqual(svg.split('stroke="#000000" stroke-width="3"').length - 1, 12, 'compass: 30 degree ticks');
+assert.strictEqual(svg.split('stroke="#000000" stroke-width="1"').length - 1, 60, 'compass: 5 degree ticks');
 
 // Band color: fixed in any scheme, its ticks and numerals white on a dark one; the picker shows for banded rings only
 ctx = load({ settings: { RING: 2, BAND_COLOR: 0xF0, HANDS: 3 }, platform: 'emery' });

@@ -38,12 +38,13 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 | Text | Pick **Text** in any slot to show your own label: up to 12 characters in a corner, 4 in a subdial. |
 | Custom complications | Show a value from any JSON API. Create up to 8, then pick them in any corner or subdial. See below. |
 | Color scheme | Black, White, White on black, Black on white, or Accent. Accent adds a background and an accent color picker. |
-| Ring | Default, Minimal (ticks only, no numerals), Sport (a white band of minute numerals over an accent ring) Chronograph (the white band alone, black on white, hours 1 to 12), Roman (Default with its hours in Roman numerals, turned along the dial) or Tachymeter (seconds ticks around a colored band of 10 to 60, a dot between each). Minimal, Sport, Chronograph and Tachymeter leave a larger center: the subdials grow to fill it and the hands run longer. Sport, Chronograph and Tachymeter take a band color; ticks and numerals turn black or white to stay readable on it. Tachymeter's band follows the seconds color until it has its own. Picking a color scheme resets it. |
+| Ring | Default, Minimal (ticks only, no numerals), Sport (a white band of minute numerals over an accent ring) Chronograph (the white band alone, black on white, hours 1 to 12), Roman (Default with its hours in Roman numerals, turned along the dial), Tachymeter (seconds ticks around a colored band of 10 to 60, a dot between each) or Compass (a compass bezel: N, E, S, W and the degrees between, 30 to 330, on a band; it is fixed and does not turn to north). Minimal, Sport, Chronograph, Tachymeter and Compass leave a larger center: the subdials grow to fill it and the hands run longer. Sport, Chronograph, Tachymeter and Compass take a band color; ticks and numerals turn black or white to stay readable on it. Tachymeter's band follows the seconds color until it has its own. Picking a color scheme resets it. |
 | Hands | Line, Bar, Outline, Pointer, Sword or Dauphine for the hour and minute hands, or None to hide them (the seconds hand has its own switch), and a color each for the hour, minute and seconds hands. The seconds color is also the 12, 3, 6 and 9 notches'. Picking a color scheme resets the colors; picking an accent resets the seconds color. |
 | Units | °C, km and km/h, or °F, miles and mph. |
 | Daily step goal | 1,000 to 30,000 steps. Fills the steps, distance and calories gauges. |
 | Seconds hand | Off by default. Uses more battery. It rests during Quiet Time and at 20% battery or less. |
 | Sweeping seconds | With the seconds hand on: it glides instead of ticking, 8 steps a second. Drains the battery much faster. On the round watch only with Line or no hands. |
+| Shake to hide hands | Off by default. Shake the watch twice to hide the hands for 5 seconds, so the center complications show whole. |
 
 Pick **None** to leave a slot empty.
 

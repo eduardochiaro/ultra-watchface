@@ -5,8 +5,10 @@
 - **Band color:** pick the band's color on the Sport and Chronograph rings. Ticks and numerals turn black or white to stay readable on it.
 - **Roman ring:** new Roman ring, the Default dial with its hours in Roman numerals, turned along the dial.
 - **Tachymeter ring:** new Tachymeter ring: ticks for the seconds around the edge, and inside them a colored band with 10 to 60 and a dot between each. The band follows the seconds color, or takes its own.
+- **Compass ring:** new Compass ring, a compass bezel: N, E, S and W and the degrees between, 30 to 330, on a band, a tick every 5 degrees. It is fixed and does not turn to north. The band takes a color.
 - **Lighter on the battery:** the face is drawn again only when something on it changed, not every minute, and only the hands move in between (on the round watch, with Line or no hands). Heart rate redraws on a change of 3 bpm, total calories every 10. The phone asks for weather, air quality and the place only when a complication showing them is on the face.
 - **Sweeping seconds:** new switch under Seconds hand. The hand glides, 8 steps a second, instead of ticking. It drains the battery much faster.
+- **Shake to hide hands:** new switch. Shake the watch twice and the hands step aside for 5 seconds, so the center complications show whole.
 - **Seconds hand rests:** it stops during Quiet Time and at 20% battery or less, and comes back on its own.
 - **Calories bar:** both calories complications now show a bar, in corners and subdials. Like distance, it fills with progress toward the daily step goal.
 - **New complications:** digital time, time zones (one per slot, picked by abbreviation: PST, CET, IST), sleep last night, active minutes and moon phase. All in corners and subdials.

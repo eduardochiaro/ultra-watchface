@@ -89,7 +89,8 @@
       "ZONE_B",
       "LOCATION",
       "LOCATION_CODE",
-      "SWEEP"
+      "SWEEP",
+      "SHAKE_HIDE"
     ],
     "resources": {
       "media": [
