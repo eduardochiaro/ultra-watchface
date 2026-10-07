@@ -12,8 +12,8 @@
 - **Weather location:** search a city and pick it, for weather somewhere other than where the phone is. The phone's position is then not asked.
 - **Lighter on the battery:** the face is drawn again only when something on it changed, not every minute, and only the hands move in between (on the round watch, with Line or no hands). Heart rate redraws on a change of 3 bpm, total calories every 10. The phone asks for weather, air quality and the place only when a complication showing them is on the face.
 - **Sweeping seconds:** new switch under Seconds hand. The hand glides, 8 steps a second, instead of ticking. It drains the battery much faster.
-- **Shake to hide hands:** new switch. Shake the watch twice and the hands step aside for 5 seconds, so the center complications show whole.
-- **Battery saver:** new switch. After an hour with no steps and no pulse, the face sleeps: one redraw an hour, no seconds hand, weather and custom complications once an hour. A step, a pulse or a shake wakes it.
+- **Shake to hide hands:** new switch, under Experimental. Shake the watch twice and the hands step aside for 5 seconds, so the center complications show whole.
+- **Battery saver:** new switch, under Experimental. After an hour with no steps and no pulse, the face sleeps: one redraw an hour, no seconds hand, weather and custom complications once an hour. A step, a pulse or a shake wakes it.
 - **Seconds hand rests:** it stops during Quiet Time and at 20% battery or less, and comes back on its own.
 - **Calories bar:** both calories complications now show a bar, in corners and subdials. Like distance, it fills with progress toward the daily step goal.
 - **New complications:** digital time, time zones (one per slot, picked by abbreviation: PST, CET, IST), sleep last night, active minutes and moon phase. All in corners and subdials.

@@ -2,9 +2,9 @@
 
 An analog watchface for Pebble with eight complications you choose yourself. Four gauges curve around the corners, four subdials sit inside the dial, and every one is yours to swap.
 
-- **Eight slots, your pick.** Steps, distance, calories, active minutes, sleep, heart rate, battery, the date in eight formats, week and year progress, temperature, rain, humidity, wind, air quality and UV index (as sections or a gauge), elevation, sunrise and sunset, moon phase, digital time, other time zones, .beat time, current weather, your own text, or a value from any JSON API.
+- **Eight slots, your pick.** Steps, distance, calories, active minutes, sleep, heart rate, battery, the date in eight formats, week and year progress, temperature, rain, humidity, wind, air quality and UV index (as sections or a gauge), elevation, location, sunrise and sunset, moon phase, digital time, other time zones, .beat time, current weather, your own text, or a value from any JSON API.
 - **Five color schemes.** Black, White, two monochromes, or Accent: any background and accent from the watch's 64 colors.
-- **Six rings** Default, Minimal, Sport, Chronograph, Roman or Tachymeter ring.
+- **Seven rings.** Default, Minimal, Sport, Chronograph, Roman, Tachymeter or Compass, the banded ones in a color you pick.
 - **Six hands.** Line, Bar, Outline, Pointer, Sword or Dauphine hands, each in its own color. Or none, with the time in a complication.
 - **Live preview.** The settings page draws the face as you change it.
 - **No account, no API key.** Weather and air quality come from [Open-Meteo](https://open-meteo.com), refreshed every 30 minutes, or as often as you set. The Location complication names your city with [BigDataCloud](https://www.bigdatacloud.com), asked only while it is on the face.
@@ -16,6 +16,7 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 ![Emery 2](assets/emery_2.png)
 ![Emery 3](assets/emery_3.png)
 ![Emery 4](assets/emery_4.png)
+![Emery 5](assets/emery_5.png)
 
 ### Pebble Time Round 2
 ![Gabbro](assets/gabbro_0.gif)
@@ -23,6 +24,7 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 ![Gabbro 2](assets/gabbro_2.png)
 ![Gabbro 3](assets/gabbro_3.png)
 ![Gabbro 4](assets/gabbro_4.png)
+![Gabbro 5](assets/gabbro_5.png)
 
 ## Store
 [Rebble App Store](https://apps.rebble.io/en_US/application/6abf59c037b3780009304810)
@@ -39,17 +41,17 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 | Text | Pick **Text** in any slot to show your own label: up to 12 characters in a corner, 4 in a subdial. |
 | Custom complications | Show a value from any JSON API. Create up to 8, then pick them in any corner or subdial. See below. |
 | Color scheme | Black, White, White on black, Black on white, or Accent. Accent adds a background and an accent color picker. |
-| Ring | Default, Minimal (ticks only, no numerals), Sport (a white band of minute numerals over an accent ring) Chronograph (the white band alone, black on white, hours 1 to 12), Roman (Default with its hours in Roman numerals, turned along the dial), Tachymeter (seconds ticks around a colored band of 10 to 60, a dot between each) or Compass (a compass bezel: N, E, S, W and the degrees between, 30 to 330, on a band; it is fixed and does not turn to north). Minimal, Sport, Chronograph, Tachymeter and Compass leave a larger center: the subdials grow to fill it and the hands run longer. Sport, Chronograph, Tachymeter and Compass take a band color; ticks and numerals turn black or white to stay readable on it. Tachymeter's band follows the seconds color until it has its own. Picking a color scheme resets it. |
+| Ring | Default, Minimal (ticks only, no numerals), Sport (a white band of minute numerals over an accent ring), Chronograph (the white band alone, black on white, hours 1 to 12), Roman (Default with its hours in Roman numerals, turned along the dial), Tachymeter (seconds ticks around a colored band of 10 to 60, a dot between each) or Compass (a compass bezel: N, E, S, W and the degrees between, 30 to 330, on a band; it is fixed and does not turn to north). Minimal, Sport, Chronograph, Tachymeter and Compass leave a larger center: the subdials grow to fill it and the hands run longer. Sport, Chronograph, Tachymeter and Compass take a band color; ticks and numerals turn black or white to stay readable on it. Tachymeter's band follows the seconds color until it has its own. Picking a color scheme resets it. |
 | Hands | Line, Bar, Outline, Pointer, Sword or Dauphine for the hour and minute hands, or None to hide them (the seconds hand has its own switch), and a color each for the hour, minute and seconds hands. The seconds color is also the 12, 3, 6 and 9 notches'. Picking a color scheme resets the colors; picking an accent resets the seconds color. |
 | Weather | **Refresh every** 15 or 30 minutes, 1, 2 or 3 hours. **Location**: the phone's, or search a city and pick it; weather, air quality, sun times and the Location complication are then that city's, and the phone's position is not asked. |
 | Units | °C, km and km/h, or °F, miles and mph. |
 | Daily step goal | 1,000 to 30,000 steps. Fills the steps, distance and calories gauges. |
 | Seconds hand | Off by default. Uses more battery. It rests during Quiet Time and at 20% battery or less. |
 | Sweeping seconds | With the seconds hand on: it glides instead of ticking, 8 steps a second. Drains the battery much faster. On the round watch only with Line or no hands. |
-| Shake to hide hands | Off by default. Shake the watch twice to hide the hands for 5 seconds, so the center complications show whole. |
-| Battery saver | Off by default. After an hour with no steps and no pulse, the face sleeps: it redraws once an hour, the seconds hand stops, and weather and custom complications refresh once an hour. The hands can be up to an hour behind until a step, a pulse or a shake wakes it. Never on the charger. |
+| Shake to hide hands | Experimental. Off by default. Shake the watch twice to hide the hands for 5 seconds, so the center complications show whole. |
+| Battery saver | Experimental. Off by default. After an hour with no steps and no pulse, the face sleeps: it redraws once an hour, the seconds hand stops, and weather and custom complications refresh once an hour. The hands can be up to an hour behind until a step, a pulse or a shake wakes it. Never on the charger. |
 
-Pick **None** to leave a slot empty.
+Pick **None** to leave a slot empty. **Shake to hide hands** and **Battery saver** sit in their own **Experimental** group at the bottom of the page: they work, but may change.
 
 ### Custom complications
 Each one reads a JSON API of your choice and shows a value from it.
