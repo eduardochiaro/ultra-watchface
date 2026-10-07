@@ -79,18 +79,19 @@ function refresh(api, i, skipSame) {
 }
 
 // (Re)starts the timers from the saved settings. Complications no place shows
-// are left alone.
+// are left alone. slow: the face is asleep, so nothing is fetched now and each
+// waits an hour at least.
 // ponytail: one request per complication; share them per URL if many read the same endpoint.
-function start() {
+function start(slow) {
   var settings = config.savedSettings();
   var places = config.CORNERS.concat(config.CENTERS);
   timers.forEach(clearInterval);
-  sent = [];
+  if (!slow) { sent = []; }
   run++;
   timers = settings.APIS.map(function(api, i) {
     if (!places.some(function(p) { return settings[p.key] === config.API_ID + i; })) { return 0; }
-    refresh(api, i);
-    return setInterval(function() { refresh(api, i, true); }, api.freq * 60 * 1000);
+    if (!slow) { refresh(api, i); }
+    return setInterval(function() { refresh(api, i, true); }, (slow ? Math.max(api.freq, 60) : api.freq) * 60 * 1000);
   });
 }
 

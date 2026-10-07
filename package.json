@@ -90,7 +90,9 @@
       "LOCATION",
       "LOCATION_CODE",
       "SWEEP",
-      "SHAKE_HIDE"
+      "SHAKE_HIDE",
+      "SAVER",
+      "ASLEEP"
     ],
     "resources": {
       "media": [

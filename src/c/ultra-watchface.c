@@ -55,6 +55,8 @@
 #define SHAKE_MIN_MS   200    // taps closer than this are the same shake
 #define SHAKE_MAX_MS   1500   // the second shake comes within this of the first
 #define SHAKE_HIDE_MS  5000   // how long the hands stay away
+// Battery saver: no steps and no pulse for this long and the face sleeps.
+#define SAVER_IDLE_S   3600
 
 Settings g_settings = {
   .slots = { COMP_STEPS, COMP_TEMP, COMP_RAIN, COMP_BATTERY },
@@ -88,6 +90,11 @@ static AppTimer *s_hide;   // set while a double shake has the hands hidden
 static uint32_t s_tap_ms;  // the last shake, in ms
 static int s_min = -1;     // the minute s_stamp was taken in
 static uint32_t s_stamp;
+// Battery saver. Asleep: a tick and a redraw an hour, no seconds hand, and the
+// phone asked to slow weather and the API complications down to match.
+static bool s_asleep;
+static time_t s_active_at;   // health's last sign of life
+static bool s_phone_behind;  // the phone has not heard of s_asleep yet
 
 static void line(GContext *ctx, GPoint a, GPoint b, int width, GColor color) {
   graphics_context_set_stroke_color(ctx, theme(color));
@@ -477,7 +484,7 @@ static void update_proc(Layer *layer, GContext *ctx) {
 }
 
 static bool seconds_wanted(void) {
-  if (!g_settings.seconds || quiet_time_is_active()) {
+  if (!g_settings.seconds || s_asleep || quiet_time_is_active()) {
     return false;
   }
   BatteryChargeState b = battery_state_service_peek();
@@ -485,15 +492,92 @@ static bool seconds_wanted(void) {
 }
 
 static void subscribe_ticks(void);
+static void subscribe_shake(void);
 
-// Quiet time and the battery are looked at once a minute, with or without seconds.
+static void tell_phone(void) {
+  DictionaryIterator *out;
+  s_phone_behind = app_message_outbox_begin(&out) != APP_MSG_OK;
+  if (!s_phone_behind) {
+    dict_write_uint8(out, MESSAGE_KEY_ASLEEP, s_asleep);
+    s_phone_behind = app_message_outbox_send() != APP_MSG_OK;
+  }
+}
+
+// Out of reach, or busy: tried again on the next tick.
+static void outbox_failed(DictionaryIterator *iter, AppMessageResult reason, void *context) {
+  s_phone_behind = true;
+}
+
+static void set_asleep(bool asleep) {
+  if (asleep == s_asleep) {
+    return;
+  }
+  s_asleep = asleep;
+  subscribe_ticks();
+  subscribe_shake();
+  tell_phone();
+  layer_mark_dirty(s_layer);
+}
+
+// Health has the wearer asleep: a pulse is read all night, and an arm moves.
+static bool wearer_asleep(void) {
+#if defined(PBL_HEALTH)
+  return health_service_peek_current_activities() & (HealthActivitySleep | HealthActivityRestfulSleep);
+#else
+  return false;
+#endif
+}
+
+// A sign of life: awake, and for SAVER_IDLE_S more.
+static void saver_stir(void) {
+  s_active_at = time(NULL);
+  set_asleep(false);
+}
+
+// Time to sleep. Not on the charger, and not when health is off or not
+// allowed: nothing but a shake would wake the face again.
+static bool saver_idle(void) {
+#if defined(PBL_HEALTH)
+  time_t now = time(NULL);
+  return g_settings.saver && now - s_active_at >= SAVER_IDLE_S && !battery_state_service_peek().is_plugged &&
+         (health_service_metric_accessible(HealthMetricStepCount, time_start_of_today(), now) & HealthServiceAccessibilityMaskAvailable);
+#else
+  return false;
+#endif
+}
+
+#if defined(PBL_HEALTH)
+// Steps or a pulse keep the face awake, and wake it. A significant update is
+// the first look or a new day's 0, not a step.
+// ponytail: trusts an off-wrist watch to read no pulse; check the reading's
+// quality here if a watch on the table stays awake.
+static void health_handler(HealthEventType event, void *context) {
+  static int32_t s_steps;
+  int32_t steps = health_service_sum_today(HealthMetricStepCount);
+  bool moved = steps != s_steps && event != HealthEventSignificantUpdate;
+  s_steps = steps;
+  bool pulse = event == HealthEventHeartRateUpdate && health_service_peek_current_value(HealthMetricHeartRateBPM) > 0;
+  if ((moved || pulse) && !wearer_asleep()) {
+    saver_stir();
+  }
+}
+#endif
+
+// Quiet time, the battery and the battery saver are looked at once a minute,
+// with or without seconds; once an hour asleep.
 static void tick_handler(struct tm *t, TimeUnits changed) {
   uint16_t ms;
   time_ms(NULL, &ms);
   s_tick_sec = t->tm_sec;
   s_tick_ms = ms;
-  if ((changed & MINUTE_UNIT) && seconds_wanted() != s_seconds) {
-    subscribe_ticks();
+  if (changed & MINUTE_UNIT) {
+    set_asleep(saver_idle());
+    if (s_phone_behind) {
+      tell_phone();
+    }
+    if (seconds_wanted() != s_seconds) {
+      subscribe_ticks();
+    }
   }
   layer_mark_dirty(s_layer);
 }
@@ -515,6 +599,13 @@ static void tap_handler(AccelAxisType axis, int32_t direction) {
   time_t now;
   uint16_t ms;
   time_ms(&now, &ms);
+  // Asleep, the hands may be an hour behind: any shake wakes the face.
+  if (s_asleep) {
+    if (!wearer_asleep()) {
+      saver_stir();
+    }
+    return;
+  }
   uint32_t at = (uint32_t)now * 1000 + ms, gap = at - s_tap_ms;
   if (gap < SHAKE_MIN_MS) {
     return;
@@ -532,7 +623,7 @@ static void tap_handler(AccelAxisType axis, int32_t direction) {
 }
 
 static void subscribe_shake(void) {
-  if (g_settings.shake_hide) {
+  if (g_settings.shake_hide || s_asleep) {
     accel_tap_service_subscribe(tap_handler);
   } else {
     accel_tap_service_unsubscribe();
@@ -541,7 +632,7 @@ static void subscribe_shake(void) {
 
 static void subscribe_ticks(void) {
   s_seconds = seconds_wanted();
-  tick_timer_service_subscribe(s_seconds ? SECOND_UNIT : MINUTE_UNIT, tick_handler);
+  tick_timer_service_subscribe(s_seconds ? SECOND_UNIT : s_asleep ? HOUR_UNIT : MINUTE_UNIT, tick_handler);
   // Quiet time and a low battery stop the sweep with the seconds hand.
   if (s_sweep) {
     app_timer_cancel(s_sweep);
@@ -590,6 +681,9 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     if ((t = dict_find(iter, MESSAGE_KEY_SHAKE_HIDE))) {
       g_settings.shake_hide = t->value->int32;
     }
+    if ((t = dict_find(iter, MESSAGE_KEY_SAVER))) {
+      g_settings.saver = t->value->int32;
+    }
     if ((t = dict_find(iter, MESSAGE_KEY_UNITS))) {
       g_settings.imperial = t->value->int32;
     }
@@ -627,6 +721,7 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     persist_write_data(PK_SETTINGS, &g_settings, sizeof(g_settings));
     subscribe_ticks();
     subscribe_shake();
+    saver_stir();
   }
   s_stale = true;
   layer_mark_dirty(s_layer);
@@ -663,13 +758,21 @@ int main(void) {
   });
   window_stack_push(s_window, true);
 
+  s_active_at = time(NULL);
   subscribe_ticks();
   subscribe_shake();
+#if defined(PBL_HEALTH)
+  health_service_events_subscribe(health_handler, NULL);
+#endif
   app_message_register_inbox_received(inbox_received);
+  app_message_register_outbox_failed(outbox_failed);
   app_message_open(512, 64);  // settings with all 8 texts: ~440 bytes
 
   app_event_loop();
   tick_timer_service_unsubscribe();
   accel_tap_service_unsubscribe();
+#if defined(PBL_HEALTH)
+  health_service_events_unsubscribe();
+#endif
   window_destroy(s_window);
 }

@@ -5,12 +5,26 @@ var api = require('./api');
 var send = require('./send');
 
 var weatherTimer;
+// The watch's battery saver has the face asleep: an hour at least between refreshes.
+// ponytail: lost when pkjs restarts under a sleeping face, back at the next sleep;
+// have the watch say it again on 'ready' if that hour of full rate matters.
+var asleep = false;
 
 // The weather timer, at the saved refresh interval.
 function scheduleWeather() {
   clearInterval(weatherTimer);
-  weatherTimer = setInterval(function() { getWeather(true); }, config.savedSettings().WEATHER_FREQ * 60 * 1000);
+  var minutes = config.savedSettings().WEATHER_FREQ;
+  weatherTimer = setInterval(function() { getWeather(true); }, (asleep ? Math.max(minutes, 60) : minutes) * 60 * 1000);
 }
+
+// The watch falls asleep or wakes. Awake again: what it missed, now.
+Pebble.addEventListener('appmessage', function(e) {
+  if (!e.payload || e.payload.ASLEEP === undefined) { return; }
+  asleep = !!e.payload.ASLEEP;
+  scheduleWeather();
+  api.start(asleep);
+  if (!asleep) { getWeather(true); }
+});
 
 Pebble.addEventListener('ready', function() {
   getWeather();

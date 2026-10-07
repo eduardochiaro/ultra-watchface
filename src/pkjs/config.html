@@ -294,6 +294,13 @@
 				</div>
 				<button type="button" class="switch" id="shake" role="switch" aria-labelledby="shake-label"><i></i></button>
 			</div>
+			<div class="row">
+				<div>
+					<b id="saver-label">Battery saver</b>
+					<small>After an hour with no steps and no pulse, the face sleeps: it redraws once an hour, the seconds hand stops, and weather and custom complications refresh once an hour. The hands can be up to an hour behind until a step, a pulse or a shake wakes it.</small>
+				</div>
+				<button type="button" class="switch" id="saver" role="switch" aria-labelledby="saver-label"><i></i></button>
+			</div>
 		</div>
 	</section>
 
@@ -1250,6 +1257,7 @@
 		$("sweep-row").hidden = !settings.SECONDS;
 		$("sweep").setAttribute("aria-checked", !!settings.SWEEP);
 		$("shake").setAttribute("aria-checked", !!settings.SHAKE_HIDE);
+		$("saver").setAttribute("aria-checked", !!settings.SAVER);
 		[].forEach.call(document.querySelectorAll("[data-text]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== 14; });
 		[].forEach.call(document.querySelectorAll("[data-zone]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== ZONE_ID; });
 		[].forEach.call(document.querySelectorAll("[data-date]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== DATE_ID; });
@@ -1474,6 +1482,8 @@
 			settings.SWEEP = settings.SWEEP ? 0 : 1;
 		} else if (b.id === "shake") {
 			settings.SHAKE_HIDE = settings.SHAKE_HIDE ? 0 : 1;
+		} else if (b.id === "saver") {
+			settings.SAVER = settings.SAVER ? 0 : 1;
 		} else if (b.dataset.place) {
 			settings.WEATHER_PLACE = found[b.dataset.place] || null;  // -1: the phone's
 			found = [];

@@ -53,6 +53,7 @@ typedef struct {
   int16_t zone[SLOT_POS_COUNT + CENTER_POS_COUNT];
   bool sweep;                      // the seconds hand glides, not ticks; with `seconds` only
   bool shake_hide;                 // two shakes hide the hands for a few seconds; on the pad byte, 0 on older saves
+  bool saver;                      // battery saver: the face sleeps when health goes quiet; appended, 0 on older saves
 } Settings;
 
 extern Settings g_settings;

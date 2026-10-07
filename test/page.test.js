@@ -8,7 +8,7 @@ var config = require('../src/pkjs/config');
 // Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
 assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6,
-  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
+  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, SAVER: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   ZONE_TL: 0, ZONE_TR: 0, ZONE_BL: 0, ZONE_BR: 0, ZONE_T: 0, ZONE_L: 0, ZONE_R: 0, ZONE_B: 0,
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
 // Time zone: the watch gets the offset, and the name as the text of a place showing it; an unknown zone is UTC

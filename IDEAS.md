@@ -49,3 +49,8 @@ Customizations to consider. Tick one off when it ships, and add it to [CHANGELOG
 - [ ] Quiet hours: dim colors at night
 - [x] Weather refresh interval (1.6.0)
 - [x] Manual location for weather (1.6.0)
+- [x] Battery saver: the face sleeps when health goes quiet (1.6.0)
+
+## Settings page
+
+- [ ] Redo the layout: the page is one long scroll of 8 sections. Three sketches in Ultra Settings v2, likely a mix of them: tabs (Face, Style, Data, Options) under a docked preview, tap a corner or subdial on the watch to pick its complication, and an index of rows showing each current value. Shelved, to be redone later.
