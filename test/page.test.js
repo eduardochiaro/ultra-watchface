@@ -268,7 +268,7 @@ ctx = load({ settings: { SLOT_TL: 23, CENTER_T: 23 }, weather: weather, platform
 svg = screen();
 assert.ok(svg.indexOf('>\u25B46:30 \u25BE19:55</text>') > 0 && /(up|down)/.test(Object.keys(ctx.ICONS).filter(function (k) { return svg.indexOf(ctx.ICONS[k]) > 0; }).join()), 'sun corner and subdial');
 ctx = load({ settings: { SLOT_TL: 23 }, weather: { TEMP: 1 }, platform: 'emery' });
-assert.ok(screen().indexOf('>--</text>') > 0, 'weather saved before 1.1 has no sun times');
+assert.ok(screen().indexOf('>\u25B46:30 \u25BE19:55</text>') > 0, 'no sun times fetched yet: the sample');
 
 // .beat time: ".042" and the @, corner and subdial
 ctx = load({ settings: { SLOT_TL: 24, CENTER_T: 24 }, platform: 'emery' });
@@ -285,7 +285,9 @@ assert.ok(svg.indexOf('>14km/h N</text>') > 0 && svg.indexOf('>14</text>') > 0 &
 ctx = load({ settings: { SLOT_TL: 25, UNITS: 1 }, weather: weather, platform: 'gabbro' });
 assert.ok(screen().indexOf('>8mph N</text>') > 0, 'wind in mph');
 ctx = load({ settings: { SLOT_TL: 25 }, weather: { TEMP: 1 }, platform: 'emery' });
-assert.ok(screen().indexOf('>--</text>') > 0, 'weather saved before wind has none');
+assert.ok(screen().indexOf('>14km/h NW</text>') > 0, 'no wind fetched yet: the sample');
+load({ settings: { SLOT_TL: 7, SLOT_TR: 13 }, weather: { TEMP: 1, AQI: -1, HUMIDITY: -1 }, platform: 'gabbro' });
+assert.ok(screen().indexOf('>AQI 42</text>') > 0 && screen().indexOf('>--</text>') < 0, 'unknown on the wire, not fetched yet: the sample');
 
 // Location: the city in a corner, its short code in a subdial; coordinates and the country without a name
 var place = require('../src/pkjs/weather').place;
@@ -299,7 +301,7 @@ assert.deepStrictEqual(place(null, -33.87, -70.6), { LOCATION: '33.9S 70.6W', LO
 load({ settings: { SLOT_TL: 36, CENTER_T: 36 }, weather: { TEMP: 1, LOCATION: 'Sao Paulo', LOCATION_CODE: 'SP' }, platform: 'emery' });
 assert.ok(screen().indexOf('>Sao Paulo</text>') > 0 && screen().indexOf('>SP</text>') > 0, 'location in a corner and a subdial');
 load({ settings: { SLOT_TL: 36, CENTER_T: 36, CENTER_L: 0, CENTER_R: 0, CENTER_B: 0, SLOT_TR: 0, SLOT_BL: 0, SLOT_BR: 0 }, weather: { TEMP: 1 }, platform: 'emery' });
-assert.strictEqual(screen().split('>--</text>').length - 1, 2, 'weather saved before it had a place');
+assert.ok(screen().indexOf('>Seattle</text>') > 0 && screen().indexOf('>SEA</text>') > 0, 'no place fetched yet: the sample');
 
 // Plain calendar, retired: a saved one becomes the Date as weekday and day, in red, no page behind it
 assert.deepStrictEqual([config.withDefaults({ CENTER_T: 26 }).CENTER_T, config.withDefaults({ CENTER_T: 26 }).DATE_T, config.withDefaults({ DATE_T: 99 }).DATE_T], [6, 1, 0]);
@@ -357,6 +359,11 @@ console.log('ok');
 // AQI and UV as range gauges, calories: corners and subdials
 load({ settings: { SLOT_TL: 27, SLOT_TR: 28, SLOT_BL: 29, CENTER_T: 27, CENTER_L: 28, CENTER_R: 29 }, weather: { AQI: 75, UV: 6 }, platform: 'emery' });
 svg = screen();
+// One pick per family, its kinds beside it: the place keeps the kind's own id
+assert.deepStrictEqual([27, 28, 30, 7, 1].map(config.family), [7, 11, 29, 7, 1]);
+assert.ok(config.COMPLICATIONS.concat(config.CENTER_COMPLICATIONS).every(function (o) { return config.family(o.value) === o.value; }), 'only families in the pickers');
+assert.ok(els.corners.innerHTML.indexOf('<option value="7" selected>Air quality</option>') > 0 &&
+  els.corners.innerHTML.indexOf('<select data-variant="SLOT_TL" data-family="7" aria-label="Top left kind"><option value="7">Sections</option><option value="27" selected>Gauge</option>') > 0, 'a kind picker per place');
 assert.ok(svg.indexOf('>AQI 75</text>') < 0 && svg.split('>1480</text>').length - 1 === 2 && svg.indexOf('stroke="#ff5500" stroke-width="6"') > 0, 'gauge corner: caption and value apart; calories corner and subdial, a bar of the step goal');
 assert.ok(svg.indexOf('>500</text>') < 0 && svg.split('>AQI</text>').length - 1 === 2 && svg.split('>75</text>').length - 1 === 2, 'AQI gauge: no min and max, caption and value in corner and subdial');
 load({ settings: { SLOT_TL: 27 }, weather: { AQI: 75 }, platform: 'gabbro' });

@@ -6,6 +6,8 @@
 - **Roman ring:** new Roman ring, the Default dial with its hours in Roman numerals, turned along the dial.
 - **Tachymeter ring:** new Tachymeter ring: ticks for the seconds around the edge, and inside them a colored band with 10 to 60 and a dot between each. The band follows the seconds color, or takes its own.
 - **Compass ring:** new Compass ring, a compass bezel: N, E, S and W and the degrees between, 30 to 330, on a band, a tick every 5 degrees. It is fixed and does not turn to north. The band takes a color.
+- **Fewer picks, same complications:** Air quality, UV index and Calories are one pick each. A second picker beside it sets the kind: Sections or Gauge, Total or Active. Saved faces keep theirs.
+- **Preview fills in:** pick a complication the phone has not fetched for yet (air quality, location, wind) and the settings preview draws it with sample values, not `--`.
 - **Weather refresh:** pick how often the weather refreshes, from 15 minutes to 3 hours.
 - **Weather location:** search a city and pick it, for weather somewhere other than where the phone is. The phone's position is then not asked.
 - **Lighter on the battery:** the face is drawn again only when something on it changed, not every minute, and only the hands move in between (on the round watch, with Line or no hands). Heart rate redraws on a change of 3 bpm, total calories every 10. The phone asks for weather, air quality and the place only when a complication showing them is on the face.

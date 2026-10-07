@@ -9,8 +9,7 @@ var SETTINGS_KEY = 'ultra-settings';  // last saved page result
 var COMPLICATIONS = [
   { group: 'Activity', label: 'Steps', value: 1 },
   { group: 'Activity', label: 'Distance', value: 9 },
-  { group: 'Activity', label: 'Calories (total)', value: 29 },
-  { group: 'Activity', label: 'Calories (active)', value: 30 },
+  { group: 'Activity', label: 'Calories', value: 29 },
   { group: 'Activity', label: 'Active minutes', value: 34 },
   { group: 'Activity', label: 'Heart rate', value: 8 },
   { group: 'Activity', label: 'Sleep', value: 33 },
@@ -19,9 +18,7 @@ var COMPLICATIONS = [
   { group: 'Weather', label: 'Humidity', value: 13 },
   { group: 'Weather', label: 'Wind', value: 25 },
   { group: 'Weather', label: 'Air quality', value: 7 },
-  { group: 'Weather', label: 'Air quality (gauge)', value: 27 },
   { group: 'Weather', label: 'UV index', value: 11 },
-  { group: 'Weather', label: 'UV index (gauge)', value: 28 },
   { group: 'Time and date', label: 'Digital time', value: 31 },
   { group: 'Time and date', label: 'Time zone', value: 32 },
   { group: 'Time and date', label: '.beat time', value: 24 },
@@ -40,8 +37,7 @@ var COMPLICATIONS = [
 // Subdials have their own designs, so their own list.
 var CENTER_COMPLICATIONS = [
   { group: 'Activity', label: 'Distance', value: 9 },
-  { group: 'Activity', label: 'Calories (total)', value: 29 },
-  { group: 'Activity', label: 'Calories (active)', value: 30 },
+  { group: 'Activity', label: 'Calories', value: 29 },
   { group: 'Activity', label: 'Active minutes', value: 34 },
   { group: 'Activity', label: 'Heart rate', value: 8 },
   { group: 'Activity', label: 'Sleep', value: 33 },
@@ -51,9 +47,7 @@ var CENTER_COMPLICATIONS = [
   { group: 'Weather', label: 'Humidity', value: 13 },
   { group: 'Weather', label: 'Wind', value: 25 },
   { group: 'Weather', label: 'Air quality', value: 7 },
-  { group: 'Weather', label: 'Air quality (gauge)', value: 27 },
   { group: 'Weather', label: 'UV index', value: 11 },
-  { group: 'Weather', label: 'UV index (gauge)', value: 28 },
   { group: 'Time and date', label: 'Digital time', value: 31 },
   { group: 'Time and date', label: 'Time zone', value: 32 },
   { group: 'Time and date', label: '.beat time', value: 24 },
@@ -68,6 +62,20 @@ var CENTER_COMPLICATIONS = [
   { group: 'Watch', label: 'Text', value: 14 },
   { label: 'None', value: 0 }
 ];
+
+// One pick in the pickers, its kinds in a second picker beside it. Each kind is
+// a ComplicationId of its own, saved as the place's: the watch knows no families.
+// The first is the one listed in COMPLICATIONS.
+var VARIANTS = [
+  [{ label: 'Sections', value: 7 }, { label: 'Gauge', value: 27 }],   // Air quality
+  [{ label: 'Sections', value: 11 }, { label: 'Gauge', value: 28 }],  // UV index
+  [{ label: 'Total', value: 29 }, { label: 'Active', value: 30 }]     // Calories
+];
+// The listed complication `id` is a kind of; itself with no kinds.
+function family(id) {
+  var kinds = VARIANTS.filter(function (v) { return v.some(function (o) { return o.value === id; }); })[0];
+  return kinds ? kinds[0].value : id;
+}
 
 // The Time zone complication's zones, one picked per place showing it: the name
 // the face shows, minutes from UTC, what it stands for. An abbreviation is a
@@ -274,7 +282,7 @@ function toMessage(settings) {
 if (typeof module === 'object') {
   module.exports = {
     SETTINGS_KEY: SETTINGS_KEY, COMPLICATIONS: COMPLICATIONS, CENTER_COMPLICATIONS: CENTER_COMPLICATIONS,
-    CORNERS: CORNERS, CENTERS: CENTERS, SCHEMES: SCHEMES, SCHEME_ACCENT: SCHEME_ACCENT, HANDS: HANDS, RINGS: RINGS, ZONES: ZONES, zone: zone, DATE_ID: DATE_ID, DATE_FORMATS: DATE_FORMATS, yearDays: yearDays, yearDay: yearDay, isoWeek: isoWeek,
+    CORNERS: CORNERS, CENTERS: CENTERS, SCHEMES: SCHEMES, SCHEME_ACCENT: SCHEME_ACCENT, HANDS: HANDS, RINGS: RINGS, VARIANTS: VARIANTS, family: family, ZONES: ZONES, zone: zone, DATE_ID: DATE_ID, DATE_FORMATS: DATE_FORMATS, yearDays: yearDays, yearDay: yearDay, isoWeek: isoWeek,
     API_ID: API_ID, API_MAX: API_MAX, API_TYPES: API_TYPES, WEATHER_FREQS: WEATHER_FREQS,
     DEFAULTS: DEFAULTS, clean: clean, cleanText: cleanText, withDefaults: withDefaults, savedSettings: savedSettings, toMessage: toMessage
   };

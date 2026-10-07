@@ -314,7 +314,20 @@
 
 	// Last weather sent to the watch, else a sample. Health and battery live on
 	// the watch only, so the preview always samples them.
-	var weather = state.weather || { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, SUNRISE: 390, SUNSET: 1195, WIND: 14, WIND_DIR: 315, LOCATION: "Seattle", LOCATION_CODE: "SEA", imperial: false };
+	var SAMPLE = { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, SUNRISE: 390, SUNSET: 1195, WIND: 14, WIND_DIR: 315, LOCATION: "Seattle", LOCATION_CODE: "SEA", imperial: false };
+	var weather = state.weather || SAMPLE;
+	// What the phone has not fetched yet, a complication just picked: the sample's,
+	// so the preview shows it drawn. Not the temperatures: they come in the saved unit.
+	Object.keys(SAMPLE).forEach(function (k) {
+		var unknown = weather[k] === undefined || (weather[k] === -1 && /^(AQI|UV|HUMIDITY|WIND)$/.test(k));
+		if (unknown && k.indexOf("TEMP") !== 0) {
+			weather[k] = SAMPLE[k];
+		}
+	});
+	if (weather.SUNRISE === weather.SUNSET) {
+		weather.SUNRISE = SAMPLE.SUNRISE;
+		weather.SUNSET = SAMPLE.SUNSET;
+	}
 	var STEPS = 6240, BATTERY = 82, BPM = 72, WALKED_M = 3900, KCAL = 1480, KCAL_ACTIVE = 310, SLEEP_MIN = 452, ACTIVE_MIN = 48;
 	// Custom API complication i as the watch draws it: the last message sent for
 	// it (api.js), else a sample.
@@ -1240,6 +1253,12 @@
 		[].forEach.call(document.querySelectorAll("[data-text]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== 14; });
 		[].forEach.call(document.querySelectorAll("[data-zone]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== ZONE_ID; });
 		[].forEach.call(document.querySelectorAll("[data-date]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== DATE_ID; });
+		[].forEach.call(document.querySelectorAll("[data-variant]"), function (i) {
+			i.hidden = +i.dataset.family !== family(settings[i.dataset.variant]);
+			if (!i.hidden) {
+				i.value = settings[i.dataset.variant];
+			}
+		});
 		[].forEach.call(document.querySelectorAll("[data-range]"), function (l) { l.hidden = settings.APIS[l.dataset.range].type === 0; });
 		$("api-add").hidden = settings.APIS.length >= API_MAX;
 	}
@@ -1248,7 +1267,7 @@
 	if (g.round) {
 		$("bezel").classList.add("round");
 	}
-	$("caption").textContent = state.weather ? "Health and battery are sample values" : "Sample data";
+	$("caption").textContent = state.weather ? "Health, battery and anything not fetched yet are sample values" : "Sample data";
 	// <option>s, an <optgroup> around each run of the same `group`
 	function optionList(options, picked) {
 		return options.map(function (o, i) {
@@ -1265,11 +1284,14 @@
 		return places.map(function (c) {
 			var at = c.key.split("_")[1], t = "TEXT_" + at;
 			return '<label class="card corner"><span>' + c.label + '</span><select data-slot="' + c.key + '">' +
-				optionList(options, settings[c.key]) + '</select><input type="text" data-text="' + t + '" data-slot-key="' + c.key + '" value="' + settings[t] +
+				optionList(options, family(settings[c.key])) + '</select><input type="text" data-text="' + t + '" data-slot-key="' + c.key + '" value="' + settings[t] +
 				'" maxlength="' + (t.length === 6 ? 4 : 12) + '" autocomplete="off" placeholder="Text" aria-label="' + c.label + ' text">' +
 				'<select data-zone="ZONE_' + at + '" data-slot-key="' + c.key + '" aria-label="' + c.label + ' time zone">' +
 				optionList(ZONES, settings["ZONE_" + at]) + '</select><select data-date="DATE_' + at + '" data-slot-key="' + c.key + '" aria-label="' + c.label + ' date format">' +
-				optionList(DATE_FORMATS.map(function (label, i) { return { label: label, value: i }; }), settings["DATE_" + at]) + "</select></label>";
+				optionList(DATE_FORMATS.map(function (label, i) { return { label: label, value: i }; }), settings["DATE_" + at]) + "</select>" +
+				VARIANTS.map(function (v) {
+					return '<select data-variant="' + c.key + '" data-family="' + v[0].value + '" aria-label="' + c.label + ' kind">' + optionList(v, settings[c.key]) + "</select>";
+				}).join("") + "</label>";
 		}).join("");
 	}
 	function buildPickers() {
@@ -1389,6 +1411,8 @@
 			settings[e.target.dataset.zone] = e.target.value;
 		} else if (e.target.dataset.date) {
 			settings[e.target.dataset.date] = +e.target.value;
+		} else if (e.target.dataset.variant) {
+			settings[e.target.dataset.variant] = +e.target.value;
 		}
 		render();
 	});
