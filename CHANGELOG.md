@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.0
+
+- **Settings on Android:** the settings page no longer jitters or sticks at the top when you scroll past the preview.
+
 ## 1.6.0
 
 ### Rings

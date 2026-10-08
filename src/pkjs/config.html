@@ -25,6 +25,9 @@
 		background: var(--ground);
 		color: var(--ink);
 		font: 16px/1.4 Nunito, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+		/* Chrome moves the scroll when the preview shrinks, back above PREVIEW_AT, and it grows again: a loop.
+		   dock() already keeps the room with a margin. Safari has no scroll anchoring. */
+		overflow-anchor: none;
 	}
 	main { max-width: 30rem; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
 	/* 16px: iOS zooms the page on focus of anything smaller */
