@@ -4,7 +4,7 @@
 
 ### Rings
 
-- **Band color:** pick the band's color on the Sport and Chronograph rings. Ticks and numerals turn black or white to stay readable on it.
+- **Band color:** pick the band's color on the Sport, Chronograph, Tachymeter and Compass rings. Ticks and numerals turn black or white to stay readable on it.
 - **Roman ring:** new Roman ring, the Default dial with its hours in Roman numerals, turned along the dial.
 - **Tachymeter ring:** new Tachymeter ring: ticks for the seconds around the edge, and inside them a colored band with 10 to 60 and a dot between each. The band follows the seconds color, or takes its own.
 - **Compass ring:** new Compass ring, a compass bezel: N, E, S and W and the degrees between, 30 to 330, on a band, a tick every 5 degrees. It is fixed and does not turn to north. The band takes a color.
