@@ -57,6 +57,8 @@
 #define SHAKE_HIDE_MS  5000   // how long the hands stay away
 // Battery saver: no steps and no pulse for this long and the face sleeps.
 #define SAVER_IDLE_S   3600
+// Steps in a minute that are a walk, not an arm moved in bed. Tune on the wrist.
+#define SAVER_WALK_STEPS 30
 
 Settings g_settings = {
   .slots = { COMP_STEPS, COMP_TEMP, COMP_RAIN, COMP_BATTERY },
@@ -90,7 +92,7 @@ static AppTimer *s_hide;   // set while a double shake has the hands hidden
 static uint32_t s_tap_ms;  // the last shake, in ms
 static int s_min = -1;     // the minute s_stamp was taken in
 static uint32_t s_stamp;
-// Battery saver. Asleep: a tick and a redraw an hour, no seconds hand, and the
+// Battery saver. Asleep: no seconds hand, and the
 // phone asked to slow weather and the API complications down to match.
 static bool s_asleep;
 static time_t s_active_at;   // health's last sign of life
@@ -552,19 +554,29 @@ static bool saver_idle(void) {
 // ponytail: trusts an off-wrist watch to read no pulse; check the reading's
 // quality here if a watch on the table stays awake.
 static void health_handler(HealthEventType event, void *context) {
-  static int32_t s_steps;
+  static int32_t s_steps, s_base;
+  static time_t s_base_at;
+  time_t now = time(NULL);
   int32_t steps = health_service_sum_today(HealthMetricStepCount);
   bool moved = steps != s_steps && event != HealthEventSignificantUpdate;
   s_steps = steps;
+  // A walk is awake, whatever health says of sleep: its sleep can outlast a
+  // still hour at a desk. Steps are counted a minute at a time, from the
+  // minute's first; a new day's 0 starts the count again.
+  if (now - s_base_at >= 60 || steps < s_base) {
+    s_base = steps;
+    s_base_at = now;
+  }
+  bool walking = steps - s_base >= SAVER_WALK_STEPS;
   bool pulse = event == HealthEventHeartRateUpdate && health_service_peek_current_value(HealthMetricHeartRateBPM) > 0;
-  if ((moved || pulse) && !wearer_asleep()) {
+  if (walking || ((moved || pulse) && !wearer_asleep())) {
     saver_stir();
   }
 }
 #endif
 
 // Quiet time, the battery and the battery saver are looked at once a minute,
-// with or without seconds; once an hour asleep.
+// with or without seconds, asleep too: the hands are never behind.
 static void tick_handler(struct tm *t, TimeUnits changed) {
   uint16_t ms;
   time_ms(NULL, &ms);
@@ -599,7 +611,7 @@ static void tap_handler(AccelAxisType axis, int32_t direction) {
   time_t now;
   uint16_t ms;
   time_ms(&now, &ms);
-  // Asleep, the hands may be an hour behind: any shake wakes the face.
+  // Asleep, any shake wakes the face.
   if (s_asleep) {
     if (!wearer_asleep()) {
       saver_stir();
@@ -632,7 +644,7 @@ static void subscribe_shake(void) {
 
 static void subscribe_ticks(void) {
   s_seconds = seconds_wanted();
-  tick_timer_service_subscribe(s_seconds ? SECOND_UNIT : s_asleep ? HOUR_UNIT : MINUTE_UNIT, tick_handler);
+  tick_timer_service_subscribe(s_seconds ? SECOND_UNIT : MINUTE_UNIT, tick_handler);
   // Quiet time and a low battery stop the sweep with the seconds hand.
   if (s_sweep) {
     app_timer_cancel(s_sweep);

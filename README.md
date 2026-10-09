@@ -49,7 +49,7 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 | Seconds hand | Off by default. Uses more battery. It rests during Quiet Time and at 20% battery or less. |
 | Sweeping seconds | With the seconds hand on: it glides instead of ticking, 8 steps a second. Drains the battery much faster. On the round watch only with Line or no hands. |
 | Shake to hide hands | Experimental. Off by default. Shake the watch twice to hide the hands for 5 seconds, so the center complications show whole. |
-| Battery saver | Experimental. Off by default. After an hour with no steps and no pulse, the face sleeps: it redraws once an hour, the seconds hand stops, and weather and custom complications refresh once an hour. The hands can be up to an hour behind until a step, a pulse or a shake wakes it. Never on the charger. |
+| Battery saver | Experimental. Off by default. After an hour with no steps and no pulse, the face sleeps: the seconds hand stops, and weather and custom complications refresh once an hour, until a step, a pulse or a shake wakes it. The time stays right. Never on the charger. |
 
 Pick **None** to leave a slot empty. **Shake to hide hands** and **Battery saver** sit in their own **Experimental** group at the bottom of the page: they work, but may change.
 
