@@ -859,7 +859,7 @@
 		// RING_OUT.. and reach() in ultra-watchface.c: the empty center's radius and how far each hand runs, per ring
 		var OUT = g.DIAL_R + 4, MIN_TICK = 8, CHR_BAND = 22, CHR_INSET = 4, secondCol = handColor("SECOND_COLOR", C.accent);
 		var sport = settings.RING === 2, tachy = settings.RING === 5, compass = settings.RING === 6, banded = sport || tachy || compass || settings.RING === 3;
-		var reach = settings.RING === 1 ? { center: OUT - MIN_TICK - 4, hour: OUT - MIN_TICK - 10, minute: OUT - MIN_TICK, second: OUT - MIN_TICK / 2 } :
+		var reach = settings.RING === 1 ? { center: OUT - MIN_TICK - 4, hour: Math.floor((OUT - MIN_TICK - 10) * 8.5 / 10), minute: OUT - MIN_TICK, second: OUT - MIN_TICK / 2 } :
 			banded ? { center: OUT - CHR_BAND - CHR_INSET, hour: OUT - CHR_BAND - CHR_INSET - 3, minute: OUT - 4, second: OUT } :
 			{ center: g.INNER_R, hour: g.INNER_R - 8, minute: g.NUM_R_BIG - g.NUM_BIG / 2, second: g.DIAL_R - 10 };
 		var i, hour;

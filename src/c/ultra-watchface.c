@@ -120,9 +120,9 @@ typedef struct { int16_t center, hour, minute, second; } Reach;
 
 static Reach reach(void) {
   if (g_settings.ring == RING_MINIMAL) {
-    // Minute hand to the ticks, the hour hand 10px short of them.
+    // Minute hand to the ticks, the hour hand 10px short of them and 15% shorter again.
     int in = RING_OUT - MIN_TICK;
-    return (Reach){ in - 4, in - 10, in, RING_OUT - MIN_TICK / 2 };
+    return (Reach){ in - 4, (in - 10) * 8.5 / 10, in, RING_OUT - MIN_TICK / 2 };
   }
   if (banded()) {
     // Hour hand just short of the band or its inset ring, the minute hand over the band, seconds to its outer edge.

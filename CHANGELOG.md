@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.0
+
+- **Minimal ring:** the hour hand is 15% shorter, so it no longer reads like the minute hand.
+
+## 1.8.0
+
+- **Battery saver:** the hands keep the right time while the face sleeps, instead of falling up to an hour behind. Walking now wakes the face even when the watch still thinks you are asleep.
+
 ## 1.7.0
 
 - **Settings on Android:** the settings page no longer jitters or sticks at the top when you scroll past the preview.
