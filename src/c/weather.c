@@ -49,9 +49,26 @@ bool weather_handle_message(DictionaryIterator *iter) {
       texts[i].dst[texts[i].size - 1] = '\0';
     }
   }
+  Tuple *r = dict_find(iter, MESSAGE_KEY_RAIN_START);
+  if (r) {
+    g_weather.rain_start = r->value->int32;
+  }
+  r = dict_find(iter, MESSAGE_KEY_RAIN_HOURS);
+  if (r && r->type == TUPLE_BYTE_ARRAY) {
+    memset(g_weather.rain_hours, 0, sizeof(g_weather.rain_hours));
+    memcpy(g_weather.rain_hours, r->value->data, r->length < RAIN_HOURS ? r->length : RAIN_HOURS);
+  }
   g_weather.valid = true;
   persist_write_data(PK_WEATHER, &g_weather, sizeof(g_weather));
   return true;
+}
+
+int weather_rain_hour(int dh) {
+  int i = (int)(time(NULL) / 3600 - g_weather.rain_start) + dh;
+  if (!g_weather.valid || !g_weather.rain_start || i < 0 || i >= RAIN_HOURS) {
+    return -1;
+  }
+  return g_weather.rain_hours[i];
 }
 
 const char *weather_icon(void) {

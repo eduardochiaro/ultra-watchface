@@ -330,7 +330,8 @@
 
 	// Last weather sent to the watch, else a sample. Health and battery live on
 	// the watch only, so the preview always samples them.
-	var SAMPLE = { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, SUNRISE: 390, SUNSET: 1195, WIND: 14, WIND_DIR: 315, LOCATION: "Seattle", LOCATION_CODE: "SEA", imperial: false };
+	var SAMPLE = { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, SUNRISE: 390, SUNSET: 1195, WIND: 14, WIND_DIR: 315, LOCATION: "Seattle", LOCATION_CODE: "SEA",
+		RAIN_START: Math.floor(Date.now() / 3600000) - 1, RAIN_HOURS: [10, 20, 40, 70, 90, 50, 20, 0, 0], imperial: false };
 	var weather = state.weather || SAMPLE;
 	// What the phone has not fetched yet, a complication just picked: the sample's,
 	// so the preview shows it drawn. Not the temperatures: they come in the saved unit.
@@ -483,6 +484,28 @@
 		return Math.max(0, Math.min(100, Math.trunc((i * 100 + Math.trunc((v - lo) * 100 / (hi - lo))) / bands.length)));
 	}
 	function bandCols(bands) { return bands.map(function (b) { return b[1]; }); }
+	// weather_rain_hour() in weather.c, rain_shades() in rain.c: -1h to +4h, darker the likelier
+	function rainHour(dh) {
+		var i = Math.floor(Date.now() / 3600000) - weather.RAIN_START + dh;
+		return weather.RAIN_START && i >= 0 && i < weather.RAIN_HOURS.length ? weather.RAIN_HOURS[i] : -1;
+	}
+	var RAIN_SHADES = [[25, "#AAFFFF"], [50, "#55AAFF"], [75, "#0055FF"], [Infinity, "#0000FF"]];
+	var RAIN_GRAYS = [[50, "#AAAAAA"], [Infinity, "#FFFFFF"]];  // mono
+	// accent_shades(): the background a quarter of the way to the accent at a time, fixed
+	function accentShades() {
+		var bg = chans(settings.BG_COLOR), ac = chans(settings.ACCENT_COLOR);
+		return [1, 2, 3, 4].map(function (k) {
+			return [k < 4 ? k * 25 : Infinity, "!" + css(bg.map(function (c, i) { return Math.trunc((c * (4 - k) + ac[i] * k + 2) / 4); }))];
+		});
+	}
+	function rainCols(scheme) {
+		var shades = scheme === SCHEME_ACCENT ? accentShades() : scheme & 2 ? RAIN_GRAYS : RAIN_SHADES;
+		return [-1, 0, 1, 2, 3, 4].map(function (dh) {
+			var p = rainHour(dh);
+			return p > 0 ? shades[bandAt(p, shades)][1] : C.track;
+		});
+	}
+	var RAIN_NOW = rainHour(0);
 	var HUM = weather.HUMIDITY === undefined ? -1 : weather.HUMIDITY;
 	// BANDS in uv.c
 	var UV = weather.UV === undefined ? -1 : weather.UV;
@@ -642,14 +665,19 @@
 			along(label, at(s, 50), s.r, fitCap(label, g.TEXT + 2, slen(s)), C.white);
 			compIcon(s, ic, c);
 		}
-		// band_sections(): a section per band, 2px apart, lit in their own colors up to v's band
-		function sections(a0, a1, r, t, flip, v, bands, cen) {
-			var n = bands.length, lit = bandAt(v, bands), span = a1 - a0;
+		// comp_sections(): a section per color, 2px apart; `mark` 2px thicker
+		function cells(a0, a1, r, t, flip, cols, mark, cen) {
+			var n = cols.length, span = a1 - a0;
 			var ins = (span > 0 ? 1 : -1) * (t + 2) / 2 / r * 180 / Math.PI;  // its cap and half the gap
-			bands.forEach(function (b, i) {
-				var j = flip ? n - 1 - i : i;
-				stroke(arc(r, a0 + span * j / n + ins, a0 + span * (j + 1) / n - ins, cen), i <= lit ? b[1] : C.track, t);
+			cols.forEach(function (col, i) {
+				var j = flip ? n - 1 - i : i, d = arc(r, a0 + span * j / n + ins, a0 + span * (j + 1) / n - ins, cen);
+				stroke(d, col, i === mark ? t + 2 : t);
 			});
+		}
+		// band_colors(): lit in their own colors up to v's band
+		function sections(a0, a1, r, t, flip, v, bands, cen) {
+			var lit = bandAt(v, bands);
+			cells(a0, a1, r, t, flip, bands.map(function (b, i) { return i <= lit ? b[1] : C.track; }), -1, cen);
 		}
 		// comp_band_draw: caption on the end, value by the middle; round: both lead the sections
 		function bandGauge(s0, v, bands, caption) {
@@ -660,6 +688,13 @@
 			if (!g.round) {
 				along(value, at(s0, 50), s0.r + g.THUMB, g.TEXT + 2, C.white);
 			}
+		}
+		// comp_rain_hourly_draw: laid out like bar, the sections for its fill
+		function rainHourly(s0) {
+			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
+			compIcon(s, "umbrella", C.picton);
+			endLabel(s, left, RAIN_NOW >= 0 ? RAIN_NOW + CORNER_PCT : "--");
+			cells(s.a0, s.a1, s.r, s.t, left, rainCols(scheme), 1);
 		}
 		// comp_band_gauge_draw: laid out like bandGauge, the sections one shaded arc with a thumb
 		function bandRange(s0, v, bands, top, caption) {
@@ -761,6 +796,9 @@
 			}
 			if (id === 4) {
 				bar(s, weather.RAIN, C.picton, weather.RAIN + CORNER_PCT, "umbrella");
+			}
+			if (id === 39) {
+				rainHourly(s);
 			}
 			// comp_date_draw: the boxes, or its parts as text, "TUE 6 OCT", "6/10/2026"
 			var fmt = settings["DATE_" + k.slice(5)];
@@ -1009,6 +1047,12 @@
 				gauge(c, weather.RAIN, C.picton);
 				thumb(c, weather.RAIN, C.celeste);
 				fit(weather.RAIN + SMALL_PCT, [c[0], c[1] - 1], ST + 2, INNER, C.white);
+				icon("umbrella", [c[0], c[1] + SL], 9, C.white);
+			},
+			// center_rain_hourly_draw
+			39: function (c) {
+				cells(-120, 120, g.SUB_R, 3, false, rainCols(scheme), 1, c);
+				fit(RAIN_NOW >= 0 ? RAIN_NOW + SMALL_PCT : "--", [c[0], c[1] - 1], ST + 2, INNER, C.white);
 				icon("umbrella", [c[0], c[1] + SL], 9, C.white);
 			},
 			13: function (c) {

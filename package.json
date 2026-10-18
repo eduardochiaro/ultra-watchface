@@ -1,7 +1,7 @@
 {
   "name": "ultra-watchface",
   "author": "Eduardo Chiaro",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "keywords": [
     "watchface",
     "complications",
@@ -92,7 +92,9 @@
       "SWEEP",
       "SHAKE_HIDE",
       "SAVER",
-      "ASLEEP"
+      "ASLEEP",
+      "RAIN_START",
+      "RAIN_HOURS"
     ],
     "resources": {
       "media": [

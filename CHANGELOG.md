@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.10.0
+
+- **Hourly rain:** Chance of rain gets a second kind, Hourly: six sections from the hour before this one to four hours on, a darker blue the likelier rain is, none for no rain. This hour's section is ringed in the accent and its chance shown beside it. Corners and subdials. The sections move on with the hour between fetches.
+
 ## 1.9.0
 
 - **Minimal ring:** the hour hand is 15% shorter, so it no longer reads like the minute hand.

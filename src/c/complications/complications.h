@@ -46,6 +46,7 @@ typedef enum {
   COMP_LOCATION,  // the city the phone is in
   COMP_WEEK,      // the week's days, lit up to today
   COMP_YEAR,      // how much of the year is gone
+  COMP_RAIN_HOURLY, // the chance of rain by the hour, -1h to +4h
   COMP_COUNT
 } ComplicationId;
 
@@ -105,6 +106,7 @@ void comp_moon_draw(GContext *ctx, const Slot *s);
 void comp_location_draw(GContext *ctx, const Slot *s);
 void comp_week_draw(GContext *ctx, const Slot *s);
 void comp_year_draw(GContext *ctx, const Slot *s);
+void comp_rain_hourly_draw(GContext *ctx, const Slot *s);
 void comp_custom_draw(GContext *ctx, const Slot *s, const char *txt);  // not in the tables: needs its text
 void comp_zone_draw(GContext *ctx, const Slot *s, int offset, const char *name);  // nor this: minutes from UTC, and its name
 void comp_date_draw(GContext *ctx, const Slot *s, int format);  // nor this: a DateFormat
@@ -165,6 +167,7 @@ void center_moon_draw(GContext *ctx, GPoint c);
 void center_location_draw(GContext *ctx, GPoint c);
 void center_week_draw(GContext *ctx, GPoint c);
 void center_year_draw(GContext *ctx, GPoint c);
+void center_rain_hourly_draw(GContext *ctx, GPoint c);
 void center_custom_draw(GContext *ctx, GPoint c, const char *txt);
 void center_zone_draw(GContext *ctx, GPoint c, int offset, const char *name);
 void center_date_draw(GContext *ctx, GPoint c, int format);
@@ -196,6 +199,9 @@ void center_range_draw(GContext *ctx, GPoint c, int pct, const char *min, const 
 typedef struct { int16_t to; uint8_t argb; } Band;
 void comp_band_draw(GContext *ctx, const Slot *s, int v, const Band *bands, const char *caption);
 void center_band_draw(GContext *ctx, GPoint c, int v, const Band *bands, const char *caption);
+// `n` sections along *s, 2px apart, in GColor8 `argb`, 0 for the track; the
+// first at the 100 end if `flip`. Section `mark` (or -1) is drawn 2px thicker.
+void comp_sections(GContext *ctx, const Slot *s, bool flip, const uint8_t *argb, int n, int mark);
 // The same index as a range gauge: the bands' colors along the arc, the thumb
 // where `v` falls in its band, no min and max. `top` ends the last band.
 void comp_band_gauge_draw(GContext *ctx, const Slot *s, int v, const Band *bands, int top, const char *caption);

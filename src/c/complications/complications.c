@@ -27,6 +27,7 @@ static const ComplicationDraw DRAW[COMP_COUNT] = {
   [COMP_LOCATION] = comp_location_draw,
   [COMP_WEEK]    = comp_week_draw,
   [COMP_YEAR]    = comp_year_draw,
+  [COMP_RAIN_HOURLY] = comp_rain_hourly_draw,
 };
 
 void complication_draw(ComplicationId id, GContext *ctx, const Slot *s) {
@@ -63,6 +64,9 @@ uint32_t complication_stamp(ComplicationId id, const struct tm *t) {
     case COMP_WEEK:
     case COMP_YEAR: {
       return t->tm_mday;
+    }
+    case COMP_RAIN_HOURLY: {  // its sections move on with the hour
+      return time(NULL) / 3600;
     }
     case COMP_BATTERY: {
       BatteryChargeState b = battery_state_service_peek();
@@ -206,19 +210,9 @@ void center_range_draw(GContext *ctx, GPoint c, int pct, const char *min, const 
   center_fit_text(ctx, value, GPoint(c.x, c.y + (name ? 2 : -1)), SUB_TEXT, 2 * SUB_R - SUB_T - 4, GColorWhite);
 }
 
-// A section per band, 2px apart: lit in their own colors up to the band `v` is
-// in, the rest track. `flip`: the first is at the 100 end.
-static void band_sections(GContext *ctx, const Slot *s, bool flip, int v, const Band *bands) {
-  int n = 1, lit = -1;
-  while (bands[n - 1].to != INT16_MAX) {
-    n++;
-  }
-  if (v >= 0) {
-    lit = 0;
-    while (v > bands[lit].to) {
-      lit++;
-    }
-  }
+#define BANDS_MAX 8
+
+void comp_sections(GContext *ctx, const Slot *s, bool flip, const uint8_t *argb, int n, int mark) {
   int32_t span = s->a1 - s->a0;
   int32_t inset = span * (s->thickness + 2) / (2 * slot_len(s));  // its cap and half the gap
   for (int i = 0; i < n; i++) {
@@ -226,8 +220,23 @@ static void band_sections(GContext *ctx, const Slot *s, bool flip, int v, const 
     Slot b = *s;
     b.a0 = s->a0 + span * at / n + inset;
     b.a1 = s->a0 + span * (at + 1) / n - inset;
-    slot_arc(ctx, &b, 0, 100, i <= lit ? (GColor){ .argb = bands[i].argb } : COMP_TRACK);
+    if (i == mark) {
+      b.thickness += 2;  // 1px bigger all round, the gaps beside it half as wide
+    }
+    slot_arc(ctx, &b, 0, 100, argb[i] ? (GColor){ .argb = argb[i] } : COMP_TRACK);
   }
+}
+
+// A section per band, lit in their own colors up to the band `v` is in, the
+// rest track. Their count.
+static int band_colors(int v, const Band *bands, uint8_t argb[BANDS_MAX]) {
+  int n = 0;
+  bool lit = v >= 0;
+  do {
+    argb[n] = lit ? bands[n].argb : 0;
+    lit = lit && v > bands[n].to;
+  } while (bands[n++].to != INT16_MAX && n < BANDS_MAX);
+  return n;
 }
 
 // Sections captioned at their left end, the value curved by the middle. Gabbro
@@ -247,7 +256,9 @@ void comp_band_draw(GContext *ctx, const Slot *slot, int v, const Band *bands, c
   text_draw_along(ctx, value, slot_point(slot, 50, COMP_THUMB), slot->center, COMP_TEXT + 2, GColorWhite);
 #endif
   end_label(ctx, &s, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&s) / 2));
-  band_sections(ctx, &s, left, v, bands);
+  uint8_t argb[BANDS_MAX];
+  int n = band_colors(v, bands, argb);
+  comp_sections(ctx, &s, left, argb, n, -1);
 }
 
 void center_band_draw(GContext *ctx, GPoint c, int v, const Band *bands, const char *caption) {
@@ -255,13 +266,13 @@ void center_band_draw(GContext *ctx, GPoint c, int v, const Band *bands, const c
   if (v >= 0) {
     snprintf(buf, sizeof(buf), "%d", v);
   }
+  uint8_t argb[BANDS_MAX];
+  int n = band_colors(v, bands, argb);
   Slot s = center_ring(c);
-  band_sections(ctx, &s, false, v, bands);
+  comp_sections(ctx, &s, false, argb, n, -1);
   text_draw(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT, GColorWhite);
   text_draw(ctx, caption, GPoint(c.x, c.y + SUB_LOW), SUB_SMALL, GColorWhite);
 }
-
-#define BANDS_MAX 8
 
 // The bands' colors into `fill`, their count into *n; where `v` falls along
 // them at even widths, in %, -1 for unknown.

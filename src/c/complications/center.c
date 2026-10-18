@@ -42,6 +42,7 @@ static const Subdial SUBDIAL[COMP_COUNT] = {
   [COMP_ACTIVE] = center_active_draw, [COMP_MOON] = center_moon_draw,
   [COMP_LOCATION] = center_location_draw,
   [COMP_WEEK] = center_week_draw, [COMP_YEAR] = center_year_draw,
+  [COMP_RAIN_HOURLY] = center_rain_hourly_draw,
 };
 
 void center_draw(GContext *ctx, GPoint c) {

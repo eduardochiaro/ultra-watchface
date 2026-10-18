@@ -267,6 +267,22 @@ assert.deepStrictEqual([weather.SUNRISE, weather.SUNSET], [390, 1195]);
 ctx = load({ settings: { SLOT_TL: 23, CENTER_T: 23 }, weather: weather, platform: 'emery' });
 svg = screen();
 assert.ok(svg.indexOf('>\u25B46:30 \u25BE19:55</text>') > 0 && /(up|down)/.test(Object.keys(ctx.ICONS).filter(function (k) { return svg.indexOf(ctx.ICONS[k]) > 0; }).join()), 'sun corner and subdial');
+
+// Hourly rain: hours since the epoch for the first hour, the sections shifted to the hour now
+var hourly = require('../src/pkjs/weather').buildMessage({ current: {}, utc_offset_seconds: -25200, daily: { temperature_2m_min: [1], temperature_2m_max: [2],
+  precipitation_probability_max: [3] }, hourly: { time: ['2026-10-17T22:00'], precipitation_probability: [10, null, 55.4] } }, null);
+assert.deepStrictEqual([hourly.RAIN_START, hourly.RAIN_HOURS], [Date.UTC(2026, 9, 18, 5) / 3600000, [10, 0, 55]], 'hourly rain on the wire');
+var hour = Math.floor(Date.now() / 3600000);
+load({ settings: { SLOT_TL: 39, CENTER_T: 39 }, weather: { RAIN_START: hour - 2, RAIN_HOURS: [0, 0, 30, 0, 80, 0, 0, 0, 0] }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('stroke="#55aaff" stroke-width="8"') > 0 && svg.indexOf('stroke="#55aaff" stroke-width="5"') > 0, 'hourly rain: now bigger in its own shade, corner and subdial');
+assert.ok(svg.split('>30%</text>').length - 1 === 2 && svg.split('stroke="#0000ff"').length - 1 === 2 && svg.indexOf('stroke="#aaffff"') < 0, 'hourly rain: now\'s chance, an hour shifted: -1h is the 0 before it');
+load({ settings: { SLOT_TL: 39, SCHEME: 3 }, weather: { RAIN_START: hour - 2, RAIN_HOURS: [0, 0, 30, 0, 80, 0, 0, 0, 0] }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('stroke="#555555" stroke-width="8"') > 0 && svg.indexOf('stroke="#000000" stroke-width="6"') > 0, 'hourly rain, black on white: grays, the likeliest darkest');
+load({ settings: { SLOT_TL: 39, SCHEME: 4, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8 }, weather: { RAIN_START: hour - 2, RAIN_HOURS: [0, 0, 30, 0, 80, 0, 0, 0, 0] }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('stroke="#aa5500" stroke-width="8"') > 0 && svg.indexOf('stroke="#ffaa00" stroke-width="6"') > 0, 'hourly rain, accent scheme: shades of the accent, the likeliest the accent itself');
 ctx = load({ settings: { SLOT_TL: 23 }, weather: { TEMP: 1 }, platform: 'emery' });
 assert.ok(screen().indexOf('>\u25B46:30 \u25BE19:55</text>') > 0, 'no sun times fetched yet: the sample');
 

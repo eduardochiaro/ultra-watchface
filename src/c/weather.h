@@ -1,6 +1,10 @@
 #pragma once
 #include <pebble.h>
 
+// The hour before the fetch's, it, and 7 more (weather.js): the hourly rain's
+// 6 sections, -1h to +4h, still fill 3 hours on from a fetch.
+#define RAIN_HOURS 9
+
 // Last Open-Meteo reading pushed by the phone (src/pkjs/weather.js), already in
 // the configured units. Cached to persist storage so a reboot shows real data.
 typedef struct {
@@ -18,9 +22,15 @@ typedef struct {
   // Appended: empty on older saves.
   char place[17];            // the city at the phone's position, "" = unknown
   char place_code[5];        // a short code for it, for the subdial
+  // Appended: 0 on older saves, no forecast.
+  int32_t rain_start;        // the hour rain_hours[0] is for, hours since the epoch
+  uint8_t rain_hours[RAIN_HOURS]; // precipitation probability per hour, %
 } Weather;
 
 extern Weather g_weather;
+
+// The chance of rain `dh` hours from this one, %; -1 = unknown.
+int weather_rain_hour(int dh);
 
 // The icon glyph (ICON_SUN.. in draw.h) for the conditions now, NULL if unknown.
 const char *weather_icon(void);

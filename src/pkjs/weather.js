@@ -7,8 +7,8 @@ var send = require('./send');
 var WEATHER_KEY = 'ultra-weather';  // last message sent, for the settings preview
 // ComplicationId in src/c/complications/complications.h
 var LOCATION_ID = 36, AQI_IDS = [7, 27];
-// Everything the weather message feeds: temperature, rain, AQI, elevation, UV, conditions, humidity, sun, wind, the place.
-var WEATHER_IDS = [2, 4, 7, 10, 11, 12, 13, 23, 25, 27, 28, LOCATION_ID];
+// Everything the weather message feeds: temperature, rain (today's, hourly), AQI, elevation, UV, conditions, humidity, sun, wind, the place.
+var WEATHER_IDS = [2, 4, 7, 10, 11, 12, 13, 23, 25, 27, 28, 39, LOCATION_ID];
 
 // Is one of these complications in a corner or a subdial?
 function shown(ids) {
@@ -21,6 +21,8 @@ function buildUrl(lat, lon, imperial) {
     '&longitude=' + lon +
     '&current=temperature_2m,relative_humidity_2m,uv_index,weather_code,is_day,wind_speed_10m,wind_direction_10m' +
     '&daily=temperature_2m_min,temperature_2m_max,precipitation_probability_max,sunrise,sunset' +
+    // RAIN_HOURS in src/c/weather.h: the hour before this one, it and 7 more
+    '&hourly=precipitation_probability&past_hours=1&forecast_hours=8' +
     '&forecast_days=1&timezone=auto' +
     (imperial ? '&temperature_unit=fahrenheit' : '');
 }
@@ -96,9 +98,13 @@ function minutes(iso) {
 
 // aqi: Open-Meteo air-quality response, or null. -1 = unknown.
 function buildMessage(data, aqi) {
-  var d = data.daily;
+  var d = data.daily, h = data.hourly || {};
   var a = aqi && aqi.current && aqi.current.us_aqi;
+  var first = h.time && Date.parse(h.time[0] + 'Z');  // local to the place: utc_offset_seconds off UTC
   return {
+    // ponytail: one offset for all hours; a DST change inside them is an hour off until the next fetch
+    RAIN_START: first ? Math.round((first / 1000 - (data.utc_offset_seconds || 0)) / 3600) : 0,  // hours since the epoch
+    RAIN_HOURS: (h.precipitation_probability || []).map(function(p) { return Math.round(p || 0); }),
     TEMP: Math.round(data.current.temperature_2m),
     TEMP_MIN: Math.round(d.temperature_2m_min[0]),
     TEMP_MAX: Math.round(d.temperature_2m_max[0]),
