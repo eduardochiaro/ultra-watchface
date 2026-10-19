@@ -73,10 +73,14 @@ uint32_t complication_stamp(ComplicationId id, const struct tm *t);
 #if defined(PBL_PLATFORM_GABBRO)
 #define COMP_TEXT   11   // cap height of value labels
 #define COMP_ICON   12   // icon size
-#else
+#elif defined(PBL_PLATFORM_EMERY)
 #define COMP_TEXT   8
 #define COMP_ICON   18
 #define COMP_THUMB  14   // radial offset of the label beside the arc; gabbro has none
+#else                    // lite: no corners
+#define COMP_TEXT   7
+#define COMP_ICON   13
+#define COMP_THUMB  10
 #endif
 #define COMP_GAP    4    // px between an arc end and its label/icon
 
@@ -131,14 +135,29 @@ void center_draw(GContext *ctx, GPoint c);
 #define SUB_TEXT   9    // value
 #define SUB_SMALL  7    // caption under it
 #define SUB_LOW    11   // caption's y below the subdial center, in the ring's gap
-#else
+#define SUB_T      3
+#elif defined(PBL_PLATFORM_EMERY)
 #define SUB_D      31
 #define SUB_R      16
 #define SUB_TEXT   8
 #define SUB_SMALL  6
 #define SUB_LOW    10
-#endif
 #define SUB_T      3
+#elif defined(PBL_PLATFORM_CHALK)  // emery's at 88%
+#define SUB_D      27
+#define SUB_R      14
+#define SUB_TEXT   7
+#define SUB_SMALL  6
+#define SUB_LOW    9
+#define SUB_T      3
+#else                              // 144x168: emery's at 70%
+#define SUB_D      22
+#define SUB_R      11
+#define SUB_TEXT   6
+#define SUB_SMALL  5
+#define SUB_LOW    7
+#define SUB_T      2
+#endif
 
 // Ring open at the bottom, filling clockwise from 8 o'clock.
 Slot center_ring(GPoint c);

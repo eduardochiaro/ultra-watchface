@@ -15,7 +15,10 @@
 #define CHRONO_NUM 9    // chronograph ring's hours
 #define COMP_R     118
 #define COMP_T     6
-#else                              // emery 200x228: dial fills the width, arcs in the corners
+#define COMP_SPAN  65   // degrees per corner complication, labels included
+#define COMP_LEAD  (DEG(COMP_SPAN) / 2)  // trig angle the arc starts before the corner's diagonal: centered on it
+#define SCALE      100  // % of the px below they are drawn at
+#elif defined(PBL_PLATFORM_EMERY)  // 200x228: dial fills the width, arcs in the corners
 #define DIAL_R     94
 #define NUM_R_BIG  77
 #define NUM_R      69
@@ -25,26 +28,51 @@
 #define CHRONO_NUM 8
 #define COMP_R     108
 #define COMP_T     6
+#define COMP_SPAN  45
+#define COMP_LEAD  DEG(15)  // pinned at 10/2/4/8 o'clock
+#define SCALE      100
+#elif defined(PBL_PLATFORM_CHALK)  // 180x180 round, lite: emery's dial at 88%
+#define DIAL_R     83
+#define NUM_R_BIG  68
+#define NUM_R      61
+#define NUM_BIG    13
+#define NUM_SMALL  8
+#define INNER_R    48
+#define CHRONO_NUM 7
+#define COMP_R     95
+#define COMP_T     5
+#define SCALE      88
+#else                              // 144x168, lite: emery's dial at 70%
+#define DIAL_R     66
+#define NUM_R_BIG  54
+#define NUM_R      48
+#define NUM_BIG    11
+#define NUM_SMALL  7
+#define INNER_R    38
+#define CHRONO_NUM 6
+#define COMP_R     76
+#define COMP_T     4
+#define SCALE      70
 #endif
+#define PX(v)      ((v) * SCALE / 100)
 
 // Minimal, sport and chronograph rings. Their outer edge is the default's outer circle.
 #define RING_OUT   (DIAL_R + 4)
-#define MIN_TICK   8    // minimal's ticks
-#define CHR_BAND   22   // sport's white band
-#define CHR_INSET  4    // the accent ring inside it; chronograph's band is that much wider instead
-#define CHR_NUM_R  (RING_OUT - 15)
+#define MIN_TICK   PX(8)    // minimal's ticks
+#define CHR_BAND   PX(22)   // sport's white band
+#define CHR_INSET  PX(4)    // the accent ring inside it; chronograph's band is that much wider instead
+#define CHR_NUM_R  (RING_OUT - PX(15))
 #define CHR_NUM    (NUM_SMALL - 2)  // sport's numerals
-#define TACH_TICK  7    // tachymeter's ticks; its band fills the rest, a 2px gap between
-#define TACH_NUM_R (RING_OUT - 18)
-#define CMP_TICK   7    // compass's 30 degree ticks; the 5 degree ones are 3px shorter
+#define TACH_TICK  PX(7)    // tachymeter's ticks; its band fills the rest, a 2px gap between
+#define TACH_NUM_R (RING_OUT - PX(18))
+#define CMP_TICK   PX(7)    // compass's 30 degree ticks; the 5 degree ones are 3px shorter
 
-#define COMP_SPAN  45   // degrees per corner complication, labels included
 #define ACCENT     GColorChromeYellow
 #define DEG(d)     DEG_TO_TRIGANGLE(d)
 // Bar and outline hands: a stem out of the pin, then the bar.
-#define HAND_STEM   12  // px from the center to the bar
+#define HAND_STEM   PX(12)  // px from the center to the bar
 #define HAND_STEM_W 2
-#define HAND_W      8
+#define HAND_W      PX(8)
 #define HAND_EDGE   2   // outline thickness
 
 #define PK_SETTINGS 10
@@ -64,6 +92,7 @@ Settings g_settings = {
   .slots = { COMP_STEPS, COMP_TEMP, COMP_RAIN, COMP_BATTERY },
   .seconds = false,
   .step_goal = 10000,
+  .scheme = PBL_IF_BW_ELSE(SCHEME_MONO, 0),  // black and white: white on black
   .bg = GColorBlackARGB8,
   .accent = GColorChromeYellowARGB8,
   .center = { COMP_CUSTOM, COMP_ELEVATION, COMP_WEATHER, COMP_CALENDAR },
@@ -77,8 +106,8 @@ static Layer *s_layer;
 // Text is the costly part to draw. Kept as runs of one color, a row at a time:
 // a face is mostly flat, some 11KB. fctx takes a byte per screen pixel while it
 // draws, so the cache is let go before the face is drawn and made again after
-// it. Hands fctx draws need that room on every tick: emery has 24KB beside it,
-// gabbro 2KB, so there the cache is kept only with plain line hands.
+// it. Hands fctx draws need that room on every tick: without it the cache is
+// kept only with plain line hands.
 static uint8_t *s_cache;   // NULL = no room: draw it all every tick
 static bool s_stale = true;
 // The seconds hand runs: the setting, unless quiet time or a low battery has it off.
@@ -133,9 +162,32 @@ static Reach reach(void) {
   return (Reach){ INNER_R, INNER_R - 8, NUM_R_BIG - NUM_BIG / 2, DIAL_R - 10 };
 }
 
-static void ring_fill(GContext *ctx, GPoint c, int r, int thickness, GColor color) {
-  graphics_context_set_fill_color(ctx, theme(color));
-  graphics_fill_radial(ctx, GRect(c.x - r, c.y - r, 2 * r + 1, 2 * r + 1), GOvalScaleModeFitCircle, thickness, 0, TRIG_MAX_ANGLE);
+// The rectangular ring: rect lite only, the screen's edge 2px in, corners rounded this much.
+#if defined(LITE) && defined(PBL_RECT)
+#define SQUARE     g_settings.square
+#else
+#define SQUARE     false
+#endif
+#define SQUARE_RC  14
+
+// A ring line `w` px wide, `r` px out.
+static void ring_circle(GContext *ctx, GPoint c, int r, int w, GColor color) {
+  if (SQUARE) {
+    ring_band(ctx, c, r + (w + 1) / 2, w, color);
+    return;
+  }
+  graphics_context_set_stroke_color(ctx, theme(color));
+  graphics_context_set_stroke_width(ctx, w);
+  graphics_draw_circle(ctx, c, r);
+}
+
+// Text along the ring; upright on the rectangular one, its sides are straight.
+static void ring_text(GContext *ctx, const char *txt, GPoint c, int32_t a, int r, int size, GColor color) {
+  if (SQUARE) {
+    text_draw(ctx, txt, ring_point(c, a, r), size, color);
+  } else {
+    text_draw_arc(ctx, txt, c, a, r, size, color);
+  }
 }
 
 // Ticks only: light gray minutes, white hours.
@@ -155,10 +207,10 @@ static void draw_band(GContext *ctx, GPoint c) {
   static const uint8_t TICK[2][3] = { { 6, 5, 3 }, { 10, 7, 4 } };  // hour, minute, half; [sport]
   // Ticks and numerals are black or white, whichever reads on the band.
   GColor band = picked(g_settings.band_color, GColorWhite), ink = ink_on(band), hours = ink;
-  ring_fill(ctx, c, RING_OUT, sport ? CHR_BAND : CHR_BAND + CHR_INSET, band);
+  ring_band(ctx, c, RING_OUT, sport ? CHR_BAND : CHR_BAND + CHR_INSET, band);
   if (sport) {
     hours = picked(g_settings.second_color, ACCENT);
-    ring_fill(ctx, c, RING_OUT - CHR_BAND, CHR_INSET, hours);
+    ring_band(ctx, c, RING_OUT - CHR_BAND, CHR_INSET, hours);
     // The accent is the band's own color: a mono scheme, or picked the same.
     if (gcolor_equal(theme(hours), theme(band))) {
       hours = ink;
@@ -172,9 +224,9 @@ static void draw_band(GContext *ctx, GPoint c) {
   for (int h = 1; h <= 12; h++) {
     snprintf(buf, sizeof(buf), sport ? "%02d" : "%d", sport ? h * 5 % 60 : h);
     if (sport) {
-      text_draw_arc(ctx, buf, c, DEG(h * 30), CHR_NUM_R, CHR_NUM, ink);
+      ring_text(ctx, buf, c, DEG(h * 30), CHR_NUM_R, CHR_NUM, ink);
     } else {
-      text_draw(ctx, buf, polar(c, DEG(h * 30), RING_OUT - (TICK[0][0] + CHR_BAND + CHR_INSET) / 2), CHRONO_NUM, ink);
+      text_draw(ctx, buf, ring_point(c, DEG(h * 30), RING_OUT - (TICK[0][0] + CHR_BAND + CHR_INSET) / 2), CHRONO_NUM, ink);
     }
   }
 }
@@ -186,13 +238,13 @@ static void draw_tachy(GContext *ctx, GPoint c) {
   ray_ticks(ctx, c, 0, 12, RING_OUT - TACH_TICK, RING_OUT, 3, GColorWhite);
   GColor band = picked(g_settings.band_color, picked(g_settings.second_color, ACCENT)), ink = ink_on(band);
   int out = RING_OUT - TACH_TICK - 2;
-  ring_fill(ctx, c, out, out - (RING_OUT - CHR_BAND - CHR_INSET), band);
+  ring_band(ctx, c, out, out - (RING_OUT - CHR_BAND - CHR_INSET), band);
   graphics_context_set_fill_color(ctx, theme(ink));
   char buf[3];
   for (int n = 10; n <= 60; n += 10) {
     snprintf(buf, sizeof(buf), "%d", n);
-    text_draw_arc(ctx, buf, c, DEG(n * 6), TACH_NUM_R, CHR_NUM, ink);
-    graphics_fill_circle(ctx, polar(c, DEG(n * 6 - 30), TACH_NUM_R), 2);
+    ring_text(ctx, buf, c, DEG(n * 6), TACH_NUM_R, CHR_NUM, ink);
+    graphics_fill_circle(ctx, ring_point(c, DEG(n * 6 - 30), TACH_NUM_R), 2);
   }
 }
 
@@ -201,7 +253,7 @@ static void draw_tachy(GContext *ctx, GPoint c) {
 // between. It does not turn: a bezel, not a compass.
 static void draw_compass(GContext *ctx, GPoint c) {
   GColor band = picked(g_settings.band_color, GColorWhite), ink = ink_on(band);
-  ring_fill(ctx, c, RING_OUT, CHR_BAND + CHR_INSET, band);
+  ring_band(ctx, c, RING_OUT, CHR_BAND + CHR_INSET, band);
   ray_ticks(ctx, c, 0, 72, RING_OUT - CMP_TICK + 3, RING_OUT - 1, 1, ink);
   ray_ticks(ctx, c, 0, 12, RING_OUT - CMP_TICK, RING_OUT - 1, 3, ink);
   int r = RING_OUT - (CMP_TICK + CHR_BAND + CHR_INSET) / 2;
@@ -209,10 +261,10 @@ static void draw_compass(GContext *ctx, GPoint c) {
   for (int h = 0; h < 12; h++) {
     if (h % 3 == 0) {
       snprintf(buf, sizeof(buf), "%c", "NESW"[h / 3]);
-      text_draw(ctx, buf, polar(c, DEG(h * 30), r), CHRONO_NUM + 2, ink);
+      text_draw(ctx, buf, ring_point(c, DEG(h * 30), r), CHRONO_NUM + 2, ink);
     } else {
       snprintf(buf, sizeof(buf), "%d", h * 30);
-      text_draw_arc(ctx, buf, c, DEG(h * 30), r, CHR_NUM, ink);
+      ring_text(ctx, buf, c, DEG(h * 30), r, CHR_NUM, ink);
     }
   }
 }
@@ -237,7 +289,7 @@ static void draw_dial(GContext *ctx, GPoint c) {
   for (int i = 0; i < 60; i++) {
     int32_t a = DEG(i * 6);
     bool hour = i % 5 == 0;
-    line(ctx, polar(c, a, DIAL_R - 3), polar(c, a, DIAL_R - (hour ? 8 : 5)), 1,
+    line(ctx, ring_point(c, a, DIAL_R - 3), ring_point(c, a, DIAL_R - (hour ? 8 : 5)), 1,
          hour ? GColorLightGray : GColorDarkGray);
   }
 
@@ -247,26 +299,21 @@ static void draw_dial(GContext *ctx, GPoint c) {
     int32_t a = DEG(h * 30);
     bool big = h % 3 == 0;
     if (big) {
-      line(ctx, polar(c, a, DIAL_R + 1), polar(c, a, DIAL_R - 5), 3, picked(g_settings.second_color, ACCENT));
+      line(ctx, ring_point(c, a, DIAL_R + 1), ring_point(c, a, DIAL_R - 5), 3, picked(g_settings.second_color, ACCENT));
     }
     int r = big ? NUM_R_BIG : NUM_R, size = big ? NUM_BIG : NUM_SMALL;
     // Dark gray is too faint on white; the palette has nothing between it and black.
     GColor color = big || theme_light() ? GColorWhite : GColorLightGray;
     if (g_settings.ring == RING_ROMAN) {
       // Along the dial, feet to the center: upright, "VIII" would run into the ticks.
-      text_draw_arc(ctx, ROMAN[h - 1], c, a, r, size, color);
+      ring_text(ctx, ROMAN[h - 1], c, a, r, size, color);
     } else {
       snprintf(buf, sizeof(buf), "%d", h);
-      text_draw(ctx, buf, polar(c, a, r), size, color);
+      text_draw(ctx, buf, ring_point(c, a, r), size, color);
     }
   }
-  graphics_context_set_stroke_color(ctx, theme(GColorLightGray));
-  graphics_context_set_stroke_width(ctx, 2);
-  graphics_draw_circle(ctx, c, DIAL_R);
-
-  graphics_context_set_stroke_color(ctx, theme(GColorDarkGray));
-  graphics_context_set_stroke_width(ctx, 1);
-  graphics_draw_circle(ctx, c, DIAL_R + 4);
+  ring_circle(ctx, c, DIAL_R, 2, GColorLightGray);
+  ring_circle(ctx, c, DIAL_R + 4, 1, GColorDarkGray);
 }
 
 // A step darker per channel: the dauphine hand's shaded facet.
@@ -319,6 +366,16 @@ static void draw_hand(GContext *ctx, GPoint c, int32_t angle, int len, int width
   }
 }
 
+// The hand in the background color 1px off each way first: a thin outline, so
+// it reads over the dial, the band and the other hands.
+static void draw_hand_rimmed(GContext *ctx, GPoint c, int32_t angle, int len, int width, GColor color) {
+  static const int8_t RIM[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
+  for (int i = 0; i < 4; i++) {
+    draw_hand(ctx, GPoint(c.x + RIM[i][0], c.y + RIM[i][1]), angle, len, width, GColorBlack);
+  }
+  draw_hand(ctx, c, angle, len, width, color);
+}
+
 // `sa`: the seconds hand's angle.
 static void draw_hands(GContext *ctx, GPoint c, struct tm *t, int32_t sa) {
   int32_t ha = DEG((t->tm_hour % 12) * 30 + t->tm_min / 2);
@@ -326,19 +383,19 @@ static void draw_hands(GContext *ctx, GPoint c, struct tm *t, int32_t sa) {
   GColor second = picked(g_settings.second_color, ACCENT);
   Reach r = reach();
   if (g_settings.hands != HANDS_NONE) {
-    draw_hand(ctx, c, ha, r.hour, 6, picked(g_settings.hand_color, GColorWhite));
-    // A 1px rim of background, so a white hand shows over the white band.
-    static const int8_t RIM[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
-    for (int i = 0; banded() && i < 4; i++) {
-      draw_hand(ctx, GPoint(c.x + RIM[i][0], c.y + RIM[i][1]), ma, r.minute, 3, GColorBlack);
-    }
-    draw_hand(ctx, c, ma, r.minute, 3, picked(g_settings.minute_color, GColorWhite));
+    draw_hand_rimmed(ctx, c, ha, r.hour, 6, picked(g_settings.hand_color, GColorWhite));
+    draw_hand_rimmed(ctx, c, ma, r.minute, 3, picked(g_settings.minute_color, GColorWhite));
   } else if (!s_seconds) {
     return;  // nothing to pin
   }
   if (s_seconds) {
-    line(ctx, polar(c, sa + DEG(180), DIAL_R * 25 / 100), polar(c, sa, r.second), 2, second);
+    // Its outline: the same line 2px wider underneath, in the background.
+    GPoint tail = polar(c, sa + DEG(180), DIAL_R * 25 / 100), tip = polar(c, sa, r.second);
+    line(ctx, tail, tip, 4, GColorBlack);
+    line(ctx, tail, tip, 2, second);
   }
+  graphics_context_set_fill_color(ctx, theme(GColorBlack));
+  graphics_fill_circle(ctx, c, 6);
   graphics_context_set_fill_color(ctx, theme(second));
   graphics_fill_circle(ctx, c, 5);
   graphics_context_set_fill_color(ctx, theme(GColorBlack));
@@ -410,15 +467,17 @@ static void draw_face(GContext *ctx, GRect b, GPoint c) {
   graphics_context_set_fill_color(ctx, theme(GColorBlack));
   graphics_fill_rect(ctx, b, 0, GCornerNone);
 
-  // Corner complications: the outer side is pinned at 10/2/4/8 o'clock and
-  // each runs COMP_SPAN toward 12/6. a0 is the pinned end.
-  static const int16_t SIDE[SLOT_POS_COUNT] = { 300, 60, 120, 240 };  // TL TR BR BL
+  // Corner complications: each runs COMP_SPAN toward 12/6, starting COMP_LEAD
+  // before its corner's diagonal. a0 is the outer end.
+#if !defined(LITE)  // lite has none: its dial fills the screen
+  static const int16_t SIDE[SLOT_POS_COUNT] = { 315, 45, 135, 225 };  // TL TR BR BL
   static const int8_t DIR[SLOT_POS_COUNT] = { 1, -1, 1, -1 };
   for (int i = 0; i < SLOT_POS_COUNT; i++) {
+    int32_t a0 = DEG(SIDE[i]) - DIR[i] * COMP_LEAD;
     Slot s = {
       .center = c, .radius = COMP_R, .thickness = COMP_T,
-      .a0 = DEG(SIDE[i]),
-      .a1 = DEG(SIDE[i] + DIR[i] * COMP_SPAN),
+      .a0 = a0,
+      .a1 = a0 + DIR[i] * DEG(COMP_SPAN),
     };
     // Text and the time zone need their slot's string, the date its format; the rest draw from what they measure.
     if (g_settings.slots[i] == COMP_CUSTOM) {
@@ -431,7 +490,9 @@ static void draw_face(GContext *ctx, GRect b, GPoint c) {
       complication_draw(g_settings.slots[i], ctx, &s);
     }
   }
+#endif
 
+  ring_shape(SQUARE ? RING_OUT : 0, b.size.w / 2 - 2, b.size.h / 2 - 2, SQUARE_RC);
   draw_dial(ctx, c);
   draw_zoom(c, reach().center * 100 / INNER_R);
   center_draw(ctx, c);
@@ -695,6 +756,9 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     }
     if ((t = dict_find(iter, MESSAGE_KEY_SAVER))) {
       g_settings.saver = t->value->int32;
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_SQUARE))) {
+      g_settings.square = t->value->int32;
     }
     if ((t = dict_find(iter, MESSAGE_KEY_UNITS))) {
       g_settings.imperial = t->value->int32;

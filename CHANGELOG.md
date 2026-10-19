@@ -1,7 +1,14 @@
 # Changelog
 
-## 1.10.0
+## 2.0.0
 
+- **Older watches:** Ultra now runs on the Pebble Time, Pebble Time Round, Pebble 2 and Pebble 2 Duo. They have no corner complications: the dial fills the screen, with the four subdials, every ring and every hand style, in the same smooth text as on the Time 2 and Round 2.
+- **Black and white watches:** on the Pebble 2 and Pebble 2 Duo the color scheme is White on black or Black on white, and it starts as White on black.
+- **New settings page:** one short list, each row showing what is set now (the corners' complications, the scheme, the ring, the hands, the weather). Tap a row to change it; the phone's back button returns to the list. The preview, what is saved and the Save button stay at the top on every page. Units, the step goal and the switches are right on the list.
+- **Only what your watch shows:** the settings page hides what the watch can't show: the corners on the older watches, and the accent, background, hand and band colors on black and white ones. The preview draws your watch's own dial.
+- **Rectangular ring:** on the Pebble Time, Pebble 2 and Pebble 2 Duo, a new switch under Ring makes the ring follow the screen's edge: every ring's ticks, numerals and band on a rounded rectangle, the numerals upright. The subdials stay round.
+- **Wider corners on the Round 2:** each corner complication now spans 65 degrees, centered on its corner, up from 45.
+- **Outlined hands:** every hand, the seconds hand and the pin have a thin outline in the background color, so they stand out over the dial, the band, the subdials and each other.
 - **Hourly rain:** Chance of rain gets a second kind, Hourly: six sections from the hour before this one to four hours on, a darker blue the likelier rain is, none for no rain. This hour's section is ringed in the accent and its chance shown beside it. Corners and subdials. The sections move on with the hour between fetches.
 
 ## 1.9.0

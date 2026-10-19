@@ -19,59 +19,49 @@
 		--accent: #FFAA00;
 	}
 	* { box-sizing: border-box; }
+	[hidden] { display: none !important; }
 	body {
 		margin: 0;
-		padding: 24px 16px 40px;
 		background: var(--ground);
 		color: var(--ink);
 		font: 16px/1.4 Nunito, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-		/* Chrome moves the scroll when the preview shrinks, back above PREVIEW_AT, and it grows again: a loop.
-		   dock() already keeps the room with a margin. Safari has no scroll anchoring. */
-		overflow-anchor: none;
 	}
-	main { max-width: 30rem; margin: 0 auto; display: flex; flex-direction: column; gap: 28px; }
+	main, .page { max-width: 30rem; margin: 0 auto; padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 22px; }
 	/* 16px: iOS zooms the page on focus of anything smaller */
 	button, input, select { font: inherit; color: inherit; }
 	input, select { font-size: 16px; }
 	button { cursor: pointer; }
 	button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-	header { display: flex; align-items: baseline; justify-content: space-between; }
-	h1 { margin: 0; font-size: 30px; font-weight: 800; }
+	h1 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -.01em; }
 	h2 { margin: 0 0 12px; font-size: 12px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: var(--soft); }
 	.soft { color: var(--soft); font-size: 14px; }
 	.card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; }
 	.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 
-	/* Preview: sizes come from the watch's own metrics, see face() */
-	.preview { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 24px 16px 18px; border-radius: 24px; }
-	/* Stays in view while the page scrolls, as a bar: the watch at half the size on the left, the text
-	   beside it. .shut: closed to one thin line, a click opens it again. dock() in the script sets both. */
-	.preview { position: sticky; top: 8px; z-index: 5; }
-	.preview.small .about { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-	.preview b, .preview button { display: none; }
-	.preview button { flex-shrink: 0; align-self: flex-start; min-height: 36px; padding: 0 14px; border: 0; border-radius: 10px; background: var(--field); font-size: 13px; font-weight: 700; }
-	.preview.small { flex-direction: row; padding: 10px 12px; border-radius: 16px; box-shadow: 0 8px 32px #000; }
-	.preview.small .bezel { zoom: .5; }
-	.preview.small .about { flex: 1; }
-	/* Stacked beside the watch: side by side they left the text no room */
-	.preview .info { display: flex; flex-direction: column; gap: 20px; align-self: flex-start; flex:1; }
-	.preview .acts { display: none; }
-	.preview.small .acts { display: flex;  gap: 6px; flex-shrink: 0; justify-content: space-between; }
-	.preview.small .bezel { flex-shrink: 0; }
-	.preview.small.shut .acts { flex-direction: row; align-self: center; flex: 1; }
-	.preview.small.shut .about { flex: initial; }
-	/* Closed: .info is the row, not .about. Reversed: the title left, the buttons right */
-	.preview.small.shut .info { flex-direction: row-reverse; align-items: center; align-self: center; gap: 100px; }
-	.preview button[data-save] { background: var(--accent); color: #141414; }
-	.preview.small b, .preview.small button { display: block; }
-	.preview.small.shut { align-items: center; padding: 6px 6px 6px 14px; cursor: pointer; }
-	.preview.small.shut button { align-self: center; }
-	.preview.small.shut .bezel, .preview.small.shut .caption { display: none; }
-	.bezel { padding: 12px; background: #202226; border: 1px solid var(--edge); border-radius: 34px; }
-	.screen { overflow: hidden; line-height: 0; border-radius: 6px; }
+	/* On top of every page: the watch, what it is, Save. The preview's size: see face() */
+	.top { position: sticky; top: 0; z-index: 5; background: var(--card); border-bottom: 1px solid var(--line); }
+	.top > div { max-width: 30rem; margin: 0 auto; display: flex; align-items: center; gap: 14px; padding: 12px 16px; }
+	.about { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+	.about .soft { font-size: 13px; }
+	.crumb { max-width: 30rem; margin: 0 auto; padding: 16px 16px 0; }
+	.crumb ~ .page { padding-top: 16px; }
+	.back { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 16px 0 10px; border: 1px solid var(--edge); border-radius: 12px; background: var(--card); color: var(--accent); font-size: 16px; font-weight: 800; }
+	#save { flex-shrink: 0; align-self: flex-start; min-width: 72px; min-height: 44px; padding: 0 18px; border: 0; border-radius: 12px; background: var(--accent); color: #141414; font-size: 15px; font-weight: 800; }
+	.bezel { flex-shrink: 0; padding: 6px; background: #202226; border: 1px solid var(--edge); border-radius: 17px; }
+	.screen { overflow: hidden; line-height: 0; border-radius: 3px; }
 	.round, .round .screen { border-radius: 50%; }
 	.screen svg { display: block; font-family: Nunito, sans-serif; font-weight: 700; }
-	.caption { font-size: 12px; color: var(--dim); }
+
+	/* Index rows: each opens its page, its current value beside or under the name */
+	a.row { min-height: 60px; padding: 8px 12px 8px 16px; color: inherit; text-decoration: none; }
+	a.row > span:first-child { flex: 1; min-width: 0; font-size: 15px; font-weight: 700; }
+	a.row small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 400; }
+	a.row .val { font-size: 14px; color: var(--soft); }
+	a.row::after { content: ""; flex-shrink: 0; width: 7px; height: 7px; margin: 0 6px 0 0; border: solid var(--soft); border-width: 2px 2px 0 0; transform: rotate(45deg); }
+	a.row:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; border-radius: 16px; }
+	.dots { display: flex; gap: 4px; }
+	.dots i { width: 14px; height: 14px; border-radius: 4px; }
+	.swatch.mini { width: 20px; height: 20px; }
 
 	.corner { display: flex; flex-direction: column; gap: 6px; padding: 12px; }
 	.corner span { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--soft); }
@@ -88,7 +78,6 @@
 	.hands .scheme { flex-direction: column; justify-content: center; gap: 8px; text-align: center; }
 	.hands svg { width: 48px; height: 12px; }
 
-	.colors[hidden] { display: none; }
 	.colors { margin-top: 10px; }
 	details summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; list-style: none; cursor: pointer; font-size: 15px; font-weight: 700; }
 	details summary::-webkit-details-marker { display: none; }
@@ -103,7 +92,6 @@
 	.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; }
 	details.row { display: block; padding: 6px 16px; }
 	.row + .row { border-top: 1px solid var(--line); }
-	.row[hidden] { display: none; }
 	.row b, .row label { font-size: 15px; font-weight: 700; }
 	.row small { display: block; font-size: 13px; color: var(--soft); }
 	.goal { flex-direction: column; align-items: stretch; gap: 10px; }
@@ -131,7 +119,6 @@
 	.api .body { display: flex; flex-direction: column; gap: 10px; padding-bottom: 12px; }
 	.api button[data-api-save] { border: 0; background: var(--accent); color: #141414; }
 	.api label { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 13px; color: var(--soft); }
-	.api label[hidden] { display: none; }
 	.api input { width: 100%; min-height: 40px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--ground); font-weight: 700; }
 	.row.place { display: block; }
 	.place input { width: 100%; min-height: 40px; margin-top: 10px; padding: 0 12px; border: 0; border-radius: 10px; background: var(--ground); font-weight: 700; }
@@ -140,44 +127,112 @@
 	.api input:invalid { box-shadow: inset 0 0 0 2px #c0392b; }
 	.api button, #api-add { min-height: 44px; border: 1px solid var(--edge); border-radius: 10px; background: transparent; font-size: 15px; font-weight: 700; }
 	#api-add { width: 100%; }
-	#api-add[hidden] { display: none; }
-
-	#save { min-height: 52px; border: 0; border-radius: 16px; background: var(--accent); color: #141414; font-size: 16px; font-weight: 800; }
 </style>
 </head>
 <body>
-<main>
-	<header>
-		<h1>Ultra</h1>
-		<span class="soft">Watchface settings</span>
-	</header>
-
-	<section class="card preview" id="preview" aria-label="Preview">
+<header class="top">
+	<div>
 		<div class="bezel" id="bezel"><div class="screen" id="screen"></div></div>
-		<div class="info">
-			<div class="acts">
-				<button type="button" data-save="1">Save</button>
-				<button type="button" id="preview-toggle">Hide</button>
+		<div class="about">
+			<h1 id="title">Ultra</h1>
+			<span class="soft" id="caption"></span>
+			<span class="soft" id="status"></span>
+		</div>
+		<button type="button" id="save">Save</button>
+	</div>
+</header>
+<!-- On a page only, at the top of its content -->
+<nav class="crumb" id="crumb" hidden>
+	<button type="button" class="back" id="back"><svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4L6 9l5 5"/></svg>Settings</button>
+</nav>
+
+<main id="home">
+	<section>
+		<h2>Face</h2>
+		<div class="card">
+			<a class="row" href="#corners" id="corners-row"><span>Corners<small id="corners-sum"></small></span></a>
+			<a class="row" href="#center"><span>Center<small id="center-sum"></small></span></a>
+			<a class="row" href="#custom"><span>Custom complications<small id="custom-sum"></small></span></a>
+		</div>
+	</section>
+
+	<section>
+		<h2>Look</h2>
+		<div class="card">
+			<a class="row" href="#scheme"><span>Color scheme</span><span class="swatch mini" id="scheme-swatch"></span><span class="val" id="scheme-sum"></span></a>
+			<a class="row" href="#ring"><span>Ring</span><span class="val" id="ring-sum"></span></a>
+			<a class="row" href="#hands"><span>Hands</span><span class="dots" id="hand-dots"></span><span class="val" id="hands-sum"></span></a>
+		</div>
+	</section>
+
+	<section>
+		<h2>Data</h2>
+		<div class="card">
+			<a class="row" href="#weather"><span>Weather<small id="weather-sum"></small></span></a>
+			<div class="row">
+				<b id="units-label">Units</b>
+				<div class="seg" id="units" role="group" aria-labelledby="units-label">
+					<button type="button" data-units="0">°C km</button>
+					<button type="button" data-units="1">°F mi</button>
+				</div>
 			</div>
-			<div class="about">
-				<b>Preview</b>
-				<span class="caption" id="caption"></span>
+			<div class="row goal">
+				<div class="row" style="padding: 0">
+					<label for="goal">Daily step goal</label>
+					<output id="goal-text" for="goal"></output>
+				</div>
+				<input id="goal" type="range" min="1000" max="30000" step="500">
+				<div class="ends"><span>1,000</span><span>30,000</span></div>
 			</div>
 		</div>
 	</section>
 
 	<section>
-		<h2>Corners</h2>
-		<div class="grid" id="corners"></div>
+		<h2>Behavior</h2>
+		<div class="card">
+			<div class="row">
+				<div>
+					<b id="seconds-label">Seconds hand</b>
+					<small>Uses more battery</small>
+				</div>
+				<button type="button" class="switch" id="seconds" role="switch" aria-labelledby="seconds-label"><i></i></button>
+			</div>
+			<div class="row" id="sweep-row" hidden>
+				<div>
+					<b id="sweep-label">Sweeping seconds</b>
+					<small>The hand glides instead of ticking. Redraws 8 times a second: drains the battery much faster, expect days less. On the round watch only with Line or no hands.</small>
+				</div>
+				<button type="button" class="switch" id="sweep" role="switch" aria-labelledby="sweep-label"><i></i></button>
+			</div>
+			<div class="row">
+				<div>
+					<b id="shake-label">Shake to hide hands</b>
+					<small>Experimental. Shake the watch twice to hide the hands for 5 seconds and see the center complications.</small>
+				</div>
+				<button type="button" class="switch" id="shake" role="switch" aria-labelledby="shake-label"><i></i></button>
+			</div>
+			<div class="row">
+				<div>
+					<b id="saver-label">Battery saver</b>
+					<small>Experimental. After an hour with no steps and no pulse, the face sleeps: the seconds hand stops, and weather and custom complications refresh once an hour, until a step, a pulse or a shake wakes it. The time stays right.</small>
+				</div>
+				<button type="button" class="switch" id="saver" role="switch" aria-labelledby="saver-label"><i></i></button>
+			</div>
+		</div>
 	</section>
+</main>
 
-	<section>
-		<h2>Center</h2>
-		<div class="grid" id="centers"></div>
-	</section>
+<!-- The index's pages: one shows at a time, by the URL's hash. data-title goes in the header. -->
+<section class="page" id="page-corners" data-title="Corners" hidden>
+	<div class="grid" id="corners"></div>
+</section>
 
-	<section>
-		<h2>Custom complications</h2>
+<section class="page" id="page-center" data-title="Center" hidden>
+	<div class="grid" id="centers"></div>
+</section>
+
+<section class="page" id="page-custom" data-title="Custom complications" hidden>
+	<div>
 		<p class="soft" style="margin: 0 0 8px">Shows a value from any JSON API. Create one, then pick it in a corner or the center.</p>
 		<details class="card howto">
 		<summary>How to use</summary>
@@ -194,10 +249,11 @@
 		</details>
 		<div id="apis"></div>
 		<button type="button" id="api-add">Add complication</button>
-	</section>
+	</div>
+</section>
 
-	<section>
-		<h2>Color scheme</h2>
+<section class="page" id="page-scheme" data-title="Color scheme" hidden>
+	<div>
 		<div class="grid" id="schemes" role="group" aria-label="Color scheme"></div>
 		<div class="card colors" id="colors" hidden>
 			<details class="row" id="bg-row">
@@ -209,112 +265,67 @@
 				<div class="palette" data-color="ACCENT_COLOR" role="group" aria-label="Accent color"></div>
 			</details>
 		</div>
-	</section>
+	</div>
+</section>
 
-	<section>
-		<h2>Ring</h2>
+<section class="page" id="page-ring" data-title="Ring" hidden>
+	<div>
 		<div class="grid hands" id="rings" role="group" aria-label="Dial ring"></div>
+		<div class="card colors" id="square-row" hidden>
+			<div class="row">
+				<div>
+					<b id="square-label">Rectangular</b>
+					<small>The ring follows the screen's edge.</small>
+				</div>
+				<button type="button" class="switch" id="square" role="switch" aria-labelledby="square-label"><i></i></button>
+			</div>
+		</div>
 		<div class="card colors" id="band-row" hidden>
 			<details class="row">
 				<summary>Band<span class="chip" id="band-chip"></span></summary>
 				<div class="palette" data-color="BAND_COLOR" role="group" aria-label="Ring band color"></div>
 			</details>
 		</div>
-	</section>
+	</div>
+</section>
 
-	<section>
-		<h2>Hands</h2>
+<section class="page" id="page-hands" data-title="Hands" hidden>
+	<div>
 		<div class="grid hands" id="hands" role="group" aria-label="Hand style"></div>
-		<div class="card colors">
-			<details class="row">
-				<summary>Hour<span class="chip" id="hand-chip"></span></summary>
-				<div class="palette" data-color="HAND_COLOR" role="group" aria-label="Hour hand color"></div>
-			</details>
-			<details class="row">
-				<summary>Minute<span class="chip" id="minute-chip"></span></summary>
-				<div class="palette" data-color="MINUTE_COLOR" role="group" aria-label="Minute hand color"></div>
-			</details>
-			<details class="row">
-				<summary>Seconds and notches<span class="chip" id="second-chip"></span></summary>
-				<div class="palette" data-color="SECOND_COLOR" role="group" aria-label="Seconds hand and notch color"></div>
-			</details>
+		<div id="hand-colors">
+			<div class="card colors">
+				<details class="row">
+					<summary>Hour<span class="chip" id="hand-chip"></span></summary>
+					<div class="palette" data-color="HAND_COLOR" role="group" aria-label="Hour hand color"></div>
+				</details>
+				<details class="row">
+					<summary>Minute<span class="chip" id="minute-chip"></span></summary>
+					<div class="palette" data-color="MINUTE_COLOR" role="group" aria-label="Minute hand color"></div>
+				</details>
+				<details class="row">
+					<summary>Seconds and notches<span class="chip" id="second-chip"></span></summary>
+					<div class="palette" data-color="SECOND_COLOR" role="group" aria-label="Seconds hand and notch color"></div>
+				</details>
+			</div>
+			<p class="soft" style="margin: 8px 0 0">Picking a color scheme resets the hand and band colors. Picking an accent resets the seconds color.</p>
 		</div>
-		<p class="soft" style="margin: 8px 0 0">Picking a color scheme resets the hand and band colors. Picking an accent resets the seconds color.</p>
-	</section>
+	</div>
+</section>
 
-	<section>
-		<h2>Weather</h2>
-		<div class="card">
-			<div class="row">
-				<label for="freq">Refresh every</label>
-				<select id="freq" style="width: auto"></select>
-			</div>
-			<div class="row place">
-				<label for="place-q">Location</label>
-				<small id="place-now"></small>
-				<input id="place-q" type="search" placeholder="Search a city" autocomplete="off">
-				<div id="place-results"></div>
-			</div>
+<section class="page" id="page-weather" data-title="Weather" hidden>
+	<div class="card">
+		<div class="row">
+			<label for="freq">Refresh every</label>
+			<select id="freq" style="width: auto"></select>
 		</div>
-	</section>
-
-	<section>
-		<h2>Options</h2>
-		<div class="card">
-			<div class="row">
-				<b id="units-label">Units</b>
-				<div class="seg" id="units" role="group" aria-labelledby="units-label">
-					<button type="button" data-units="0">°C km</button>
-					<button type="button" data-units="1">°F mi</button>
-				</div>
-			</div>
-			<div class="row goal">
-				<div class="row" style="padding: 0">
-					<label for="goal">Daily step goal</label>
-					<output id="goal-text" for="goal"></output>
-				</div>
-				<input id="goal" type="range" min="1000" max="30000" step="500">
-				<div class="ends"><span>1,000</span><span>30,000</span></div>
-			</div>
-			<div class="row">
-				<div>
-					<b id="seconds-label">Seconds hand</b>
-					<small>Uses more battery</small>
-				</div>
-				<button type="button" class="switch" id="seconds" role="switch" aria-labelledby="seconds-label"><i></i></button>
-			</div>
-			<div class="row" id="sweep-row" hidden>
-				<div>
-					<b id="sweep-label">Sweeping seconds</b>
-					<small>The hand glides instead of ticking. Redraws 8 times a second: drains the battery much faster, expect days less. On the round watch only with Line or no hands.</small>
-				</div>
-				<button type="button" class="switch" id="sweep" role="switch" aria-labelledby="sweep-label"><i></i></button>
-			</div>
+		<div class="row place">
+			<label for="place-q">Location</label>
+			<small id="place-now"></small>
+			<input id="place-q" type="search" placeholder="Search a city" autocomplete="off">
+			<div id="place-results"></div>
 		</div>
-	</section>
-
-	<section>
-		<h2>Experimental</h2>
-		<div class="card">
-			<div class="row">
-				<div>
-					<b id="shake-label">Shake to hide hands</b>
-					<small>Shake the watch twice to hide the hands for 5 seconds and see the center complications.</small>
-				</div>
-				<button type="button" class="switch" id="shake" role="switch" aria-labelledby="shake-label"><i></i></button>
-			</div>
-			<div class="row">
-				<div>
-					<b id="saver-label">Battery saver</b>
-					<small>After an hour with no steps and no pulse, the face sleeps: the seconds hand stops, and weather and custom complications refresh once an hour, until a step, a pulse or a shake wakes it. The time stays right.</small>
-				</div>
-				<button type="button" class="switch" id="saver" role="switch" aria-labelledby="saver-label"><i></i></button>
-			</div>
-		</div>
-	</section>
-
-	<button type="button" id="save">Save</button>
-</main>
+	</div>
+</section>
 
 <script src="config.js"></script>
 <script>
@@ -375,15 +386,32 @@
 	// year_pct() in calendar.c; yearDay() and isoWeek() are config.js's
 	function yearPct(d) { return Math.trunc(yearDay(d) * 100 / yearDays(d.getFullYear())); }
 
-	// The #defines at the top of ultra-watchface.c, complications.h and center.c
+	// The #defines at the top of ultra-watchface.c, complications.h and center.c.
+	// lite: the older watches, no corners. bw: black and white only.
+	var LITE = { w: 144, h: 168, DIAL_R: 66, NUM_R_BIG: 54, NUM_R: 48, NUM_BIG: 11, NUM_SMALL: 7, INNER_R: 38, CHRONO_NUM: 6, SCALE: 70,
+		SUB_D: 22, SUB_R: 11, SUB_TEXT: 6, SUB_SMALL: 5, SUB_LOW: 7, lite: true };
 	var GEO = {
-		emery: { w: 200, h: 228, DIAL_R: 94, NUM_R_BIG: 77, NUM_R: 69, NUM_BIG: 14, NUM_SMALL: 9, INNER_R: 54,
-			COMP_R: 108, COMP_T: 6, SUB_D: 31, SUB_R: 16, SUB_TEXT: 8, SUB_SMALL: 6, SUB_LOW: 10, TEXT: 8, ICON: 18, THUMB: 14, scale: 1.3 },
+		emery: { w: 200, h: 228, DIAL_R: 94, NUM_R_BIG: 77, NUM_R: 69, NUM_BIG: 14, NUM_SMALL: 9, INNER_R: 54, CHRONO_NUM: 8, SCALE: 100,
+			COMP_R: 108, COMP_T: 6, COMP_SPAN: 45, COMP_LEAD: 15, SUB_D: 31, SUB_R: 16, SUB_TEXT: 8, SUB_SMALL: 6, SUB_LOW: 10, TEXT: 8, ICON: 18, THUMB: 14 },
 		// round: no corners, so nothing sits beside the corner arcs; icons and values lead the bars
-		gabbro: { w: 260, h: 260, DIAL_R: 102, NUM_R_BIG: 81, NUM_R: 84, NUM_BIG: 18, NUM_SMALL: 12, INNER_R: 59,
-			COMP_R: 118, COMP_T: 6, SUB_D: 35, SUB_R: 17, SUB_TEXT: 9, SUB_SMALL: 7, SUB_LOW: 11, TEXT: 11, ICON: 12, scale: 1.1, round: true }
+		gabbro: { w: 260, h: 260, DIAL_R: 102, NUM_R_BIG: 81, NUM_R: 84, NUM_BIG: 18, NUM_SMALL: 12, INNER_R: 59, CHRONO_NUM: 9, SCALE: 100,
+			COMP_R: 118, COMP_T: 6, COMP_SPAN: 65, COMP_LEAD: 32.5, SUB_D: 35, SUB_R: 17, SUB_TEXT: 9, SUB_SMALL: 7, SUB_LOW: 11, TEXT: 11, ICON: 12, round: true },
+		chalk: { w: 180, h: 180, DIAL_R: 83, NUM_R_BIG: 68, NUM_R: 61, NUM_BIG: 13, NUM_SMALL: 8, INNER_R: 48, CHRONO_NUM: 7, SCALE: 88,
+			SUB_D: 27, SUB_R: 14, SUB_TEXT: 7, SUB_SMALL: 6, SUB_LOW: 9, round: true, lite: true },
+		basalt: LITE,
+		diorite: Object.assign({ bw: true }, LITE),
+		flint: Object.assign({ bw: true }, LITE)
 	};
 	var g = GEO[state.platform] || GEO.emery;
+	function PX(v) { return Math.trunc(v * g.SCALE / 100); }  // PX() in ultra-watchface.c
+	// What the watch can't show: corners on lite, color on black and white. Hidden in the page, sent as none.
+	if (g.lite) {
+		CORNERS.forEach(function (c) { settings[c.key] = 0; });
+	}
+	if (g.bw) {
+		settings.SCHEME = lightScheme(settings.SCHEME) ? 3 : 2;  // black on white, white on black
+		settings.HAND_COLOR = settings.MINUTE_COLOR = settings.SECOND_COLOR = settings.BAND_COLOR = 0;
+	}
 	var C = { black: "#000000", white: "#FFFFFF", dg: "#555555", lg: "#AAAAAA", track: "#000055", green: "#00FF00",
 		accent: "#FFAA00", picton: "#55AAFF", red: "#FF0000", celeste: "#AAFFFF", melon: "#FFAAAA",
 		candy: "#AA0000", rose: "#550000", cyan: "#00FFFF",
@@ -439,7 +467,7 @@
 		return (fx ? "!" : "") + css(hexChans(fx ? c.slice(1) : c).map(function (v) { return v ? v - 1 : 0; }));
 	}
 	// HAND_* in ultra-watchface.c
-	var HAND_STEM = 12, HAND_STEM_W = 2, HAND_W = 8, HAND_EDGE = 2;
+	var HAND_STEM = PX(12), HAND_STEM_W = 2, HAND_W = PX(8), HAND_EDGE = 2;
 	// The hand styles as the buttons show them, pointing right. Index = HANDS value.
 	var HAND_ICONS = ['<path d="M3 6H45" stroke-width="5"/>',
 		'<path d="M2 6H12" stroke-width="2"/><rect x="12" y="2" width="34" height="8" rx="4" fill="currentColor" stroke="none"/>',
@@ -773,11 +801,12 @@
 			});
 		}
 
-		// Corners: outer end pinned at 10/2/4/8 o'clock, 45° toward 12/6
-		var SIDE = { SLOT_TL: 300, SLOT_TR: 60, SLOT_BR: 120, SLOT_BL: 240 };
+		// Corners: COMP_SPAN toward 12/6, starting COMP_LEAD before the corner's diagonal
+		var SIDE = g.lite ? {} : { SLOT_TL: 315, SLOT_TR: 45, SLOT_BR: 135, SLOT_BL: 225 };
 		var DIR = { SLOT_TL: 1, SLOT_TR: -1, SLOT_BR: 1, SLOT_BL: -1 };
 		for (var k in SIDE) {
-			var s = { a0: SIDE[k], a1: SIDE[k] + DIR[k] * 45, r: g.COMP_R, t: g.COMP_T };
+			var a0 = SIDE[k] - DIR[k] * g.COMP_LEAD;
+			var s = { a0: a0, a1: a0 + DIR[k] * g.COMP_SPAN, r: g.COMP_R, t: g.COMP_T };
 			var id = settings[k];
 			if (id === 1) {
 				bar(s, stepPct(), C.green, String(STEPS), "runner");
@@ -895,47 +924,78 @@
 		}
 
 		// RING_OUT.. and reach() in ultra-watchface.c: the empty center's radius and how far each hand runs, per ring
-		var OUT = g.DIAL_R + 4, MIN_TICK = 8, CHR_BAND = 22, CHR_INSET = 4, secondCol = handColor("SECOND_COLOR", C.accent);
+		var OUT = g.DIAL_R + 4, MIN_TICK = PX(8), CHR_BAND = PX(22), CHR_INSET = PX(4), secondCol = handColor("SECOND_COLOR", C.accent);
 		var sport = settings.RING === 2, tachy = settings.RING === 5, compass = settings.RING === 6, banded = sport || tachy || compass || settings.RING === 3;
 		var reach = settings.RING === 1 ? { center: OUT - MIN_TICK - 4, hour: Math.floor((OUT - MIN_TICK - 10) * 8.5 / 10), minute: OUT - MIN_TICK, second: OUT - MIN_TICK / 2 } :
 			banded ? { center: OUT - CHR_BAND - CHR_INSET, hour: OUT - CHR_BAND - CHR_INSET - 3, minute: OUT - 4, second: OUT } :
 			{ center: g.INNER_R, hour: g.INNER_R - 8, minute: g.NUM_R_BIG - g.NUM_BIG / 2, second: g.DIAL_R - 10 };
+		// ring_shape(): the rectangular ring, the screen's edge 2px in, its corners rounded 14px
+		var SQ = g.lite && !g.round && settings.SQUARE ? { hw: g.w / 2 - 2, hh: g.h / 2 - 2, rc: 14 } : null;
+		// The rounded rect `r` stands for: OUT - r px in, its corners rounding less, 4px at least
+		function inset(r) {
+			var d = OUT - r, hw = SQ.hw - d, hh = SQ.hh - d;
+			return { hw: hw, hh: hh, rc: Math.min(Math.max(SQ.rc - d, 4), hw, hh) };
+		}
+		// ring_point(): P() on the ring, where the ray meets that rounded rect
+		function R(a, r) {
+			if (!SQ) {
+				return P(a, r);
+			}
+			var q = inset(r), sx = Math.sin(rad(a)), sy = -Math.cos(rad(a));
+			var t = Math.min(q.hw / Math.abs(sx), q.hh / Math.abs(sy)), px = t * sx, py = t * sy;
+			if (Math.abs(px) > q.hw - q.rc && Math.abs(py) > q.hh - q.rc) {
+				var kx = px < 0 ? q.rc - q.hw : q.hw - q.rc, ky = py < 0 ? q.rc - q.hh : q.hh - q.rc, b = sx * kx + sy * ky;
+				t = b + Math.sqrt(b * b - kx * kx - ky * ky + q.rc * q.rc);
+			}
+			return [cx + t * sx, cy + t * sy];
+		}
+		// ring_circle(), ring_band(): a ring line `w` wide centered `r` out
+		function rring(r, c, w) {
+			if (!SQ) {
+				return ring(r, c, w);
+			}
+			var q = inset(r);
+			out.push('<rect x="' + f(cx - q.hw) + '" y="' + f(cy - q.hh) + '" width="' + f(2 * q.hw) + '" height="' + f(2 * q.hh) + '" rx="' + f(q.rc) +
+				'" fill="none" stroke="' + T(c) + '" stroke-width="' + w + '"/>');
+		}
+		// ring_text(): upright on the rectangular ring
+		function turn(rot) { return SQ ? 0 : rot; }
 		var i, hour;
 		if (settings.RING === 1) {
 			// draw_minimal
 			for (i = 0; i < 60; i++) {
 				hour = i % 5 === 0;
-				stroke(seg(P(i * 6, OUT - MIN_TICK), P(i * 6, OUT)), hour ? C.white : C.lg, hour ? 3 : 1);
+				stroke(seg(R(i * 6, OUT - MIN_TICK), R(i * 6, OUT)), hour ? C.white : C.lg, hour ? 3 : 1);
 			}
 		} else if (tachy) {
 			// draw_tachy: seconds ticks, inside them the accent band with 10..60 and a dot between each
-			var TACH_TICK = 7, tachOut = OUT - TACH_TICK - 2, tachW = tachOut - (OUT - CHR_BAND - CHR_INSET);
+			var TACH_TICK = PX(7), tachOut = OUT - TACH_TICK - 2, tachW = tachOut - (OUT - CHR_BAND - CHR_INSET);
 			for (i = 0; i < 60; i++) {
 				hour = i % 5 === 0;
-				stroke(seg(P(i * 6, OUT - TACH_TICK), P(i * 6, OUT)), hour ? C.white : C.lg, hour ? 3 : 1);
+				stroke(seg(R(i * 6, OUT - TACH_TICK), R(i * 6, OUT)), hour ? C.white : C.lg, hour ? 3 : 1);
 			}
 			var tachCol = handColor("BAND_COLOR", secondCol), tachInk = ink(tachCol);
-			ring(tachOut - tachW / 2, tachCol, tachW);
+			rring(tachOut - tachW / 2, tachCol, tachW);
 			// ponytail: straight, turned as a whole; the watch curves each digit
 			for (i = 10; i <= 60; i += 10) {
-				text(String(i), P(i * 6, OUT - 18), g.NUM_SMALL - 2, tachInk, i <= 15 || i >= 45 ? i * 6 : i * 6 + 180);
-				disc(P(i * 6 - 30, OUT - 18), 2, tachInk);
+				text(String(i), R(i * 6, OUT - PX(18)), g.NUM_SMALL - 2, tachInk, turn(i <= 15 || i >= 45 ? i * 6 : i * 6 + 180));
+				disc(R(i * 6 - 30, OUT - PX(18)), 2, tachInk);
 			}
 		} else if (compass) {
 			// draw_compass: chronograph's band, a tick every 5 degrees, N E S W upright, 30..330 turned between
-			var CMP_TICK = 7, cmpBand = CHR_BAND + CHR_INSET, cmpCol = handColor("BAND_COLOR", C.white), cmpInk = ink(cmpCol);
-			ring(OUT - cmpBand / 2, cmpCol, cmpBand);
+			var CMP_TICK = PX(7), cmpBand = CHR_BAND + CHR_INSET, cmpCol = handColor("BAND_COLOR", C.white), cmpInk = ink(cmpCol);
+			rring(OUT - cmpBand / 2, cmpCol, cmpBand);
 			for (i = 0; i < 72; i++) {
 				hour = i % 6 === 0;
-				stroke(seg(P(i * 5, OUT - 1), P(i * 5, OUT - CMP_TICK + (hour ? 0 : 3))), cmpInk, hour ? 3 : 1);
+				stroke(seg(R(i * 5, OUT - 1), R(i * 5, OUT - CMP_TICK + (hour ? 0 : 3))), cmpInk, hour ? 3 : 1);
 			}
 			// ponytail: the degrees are straight, turned as a whole; the watch curves each digit
 			for (i = 0; i < 12; i++) {
-				var cmpAt = P(i * 30, OUT - (CMP_TICK + cmpBand) / 2);
+				var cmpAt = R(i * 30, OUT - (CMP_TICK + cmpBand) / 2);
 				if (i % 3 === 0) {
-					text("NESW"[i / 3], cmpAt, (g.round ? 9 : 8) + 2, cmpInk, 0);  // CHRONO_NUM + 2
+					text("NESW"[i / 3], cmpAt, g.CHRONO_NUM + 2, cmpInk, 0);
 				} else {
-					text(String(i * 30), cmpAt, g.NUM_SMALL - 2, cmpInk, i < 3 || i > 9 ? i * 30 : i * 30 + 180);
+					text(String(i * 30), cmpAt, g.NUM_SMALL - 2, cmpInk, turn(i < 3 || i > 9 ? i * 30 : i * 30 + 180));
 				}
 			}
 		} else if (banded) {
@@ -943,22 +1003,22 @@
 			var band = sport ? CHR_BAND : CHR_BAND + CHR_INSET, TICK = sport ? [10, 7, 4] : [6, 5, 3];  // hour, minute, half
 			// ticks and numerals: black or white, whichever reads on the band
 			var bandCol = handColor("BAND_COLOR", C.white), bandInk = ink(bandCol);
-			ring(OUT - band / 2, bandCol, band);
+			rring(OUT - band / 2, bandCol, band);
 			if (sport) {
-				ring(OUT - CHR_BAND - CHR_INSET / 2, secondCol, CHR_INSET);
+				rring(OUT - CHR_BAND - CHR_INSET / 2, secondCol, CHR_INSET);
 			}
 			var tick = !sport || T(secondCol) === T(bandCol) ? bandInk : secondCol;  // the accent is the band's own color
 			for (i = 0; i < 120; i++) {
 				hour = i % 10 === 0;
-				stroke(seg(P(i * 3, OUT - 1), P(i * 3, OUT - TICK[hour ? 0 : i % 2 ? 2 : 1])), hour ? tick : bandInk, hour ? 3 : 1);
+				stroke(seg(R(i * 3, OUT - 1), R(i * 3, OUT - TICK[hour ? 0 : i % 2 ? 2 : 1])), hour ? tick : bandInk, hour ? 3 : 1);
 			}
 			// ponytail: sport's are straight, turned as a whole; the watch curves each digit
 			for (var n = 1; n <= 12; n++) {
 				var m = n * 5 % 60;
 				if (sport) {
-					text(("0" + m).slice(-2), P(n * 30, OUT - 15), g.NUM_SMALL - 2, bandInk, m <= 15 || m >= 45 ? m * 6 : m * 6 + 180);
+					text(("0" + m).slice(-2), R(n * 30, OUT - PX(15)), g.NUM_SMALL - 2, bandInk, turn(m <= 15 || m >= 45 ? m * 6 : m * 6 + 180));
 				} else {
-					text(String(n), P(n * 30, OUT - (TICK[0] + band) / 2), g.round ? 9 : 8, bandInk, 0);  // CHRONO_NUM
+					text(String(n), R(n * 30, OUT - (TICK[0] + band) / 2), g.CHRONO_NUM, bandInk, 0);
 				}
 			}
 		} else {
@@ -966,20 +1026,20 @@
 			ring(g.INNER_R, C.dg, 1);
 			for (i = 0; i < 60; i++) {
 				hour = i % 5 === 0;
-				stroke(seg(P(i * 6, g.DIAL_R - 3), P(i * 6, g.DIAL_R - (hour ? 8 : 5))), hour ? C.lg : C.dg, 1);
+				stroke(seg(R(i * 6, g.DIAL_R - 3), R(i * 6, g.DIAL_R - (hour ? 8 : 5))), hour ? C.lg : C.dg, 1);
 			}
 			// ponytail: roman's are straight, turned as a whole; the watch curves each letter
 			var ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII"], roman = settings.RING === 4;
 			for (var h = 1; h <= 12; h++) {
 				var big = h % 3 === 0;
 				if (big) {
-					stroke(seg(P(h * 30, g.DIAL_R + 1), P(h * 30, g.DIAL_R - 5)), secondCol, 3);
+					stroke(seg(R(h * 30, g.DIAL_R + 1), R(h * 30, g.DIAL_R - 5)), secondCol, 3);
 				}
-				text(roman ? ROMAN[h - 1] : String(h), P(h * 30, big ? g.NUM_R_BIG : g.NUM_R), big ? g.NUM_BIG : g.NUM_SMALL,
-					big || lightScheme(scheme) ? C.white : C.lg, !roman ? 0 : h <= 3 || h >= 9 ? h * 30 : h * 30 + 180);
+				text(roman ? ROMAN[h - 1] : String(h), R(h * 30, big ? g.NUM_R_BIG : g.NUM_R), big ? g.NUM_BIG : g.NUM_SMALL,
+					big || lightScheme(scheme) ? C.white : C.lg, turn(!roman ? 0 : h <= 3 || h >= 9 ? h * 30 : h * 30 + 180));
 			}
-			ring(g.DIAL_R, C.lg, 2);
-			ring(g.DIAL_R + 4, C.dg, 1);
+			rring(g.DIAL_R, C.lg, 2);
+			rring(g.DIAL_R + 4, C.dg, 1);
 		}
 
 		// center_draw: a subdial per CENTER_* setting, rings open at the bottom from -120° to 120°
@@ -1244,29 +1304,34 @@
 				'" rx="' + (HAND_W - e) / 2 + '" transform="rotate(' + f(a) + " " + cx + " " + cy + ')" ' +
 				(e ? 'fill="' + T(C.black) + '" stroke="' + col + '" stroke-width="' + e + '"' : 'fill="' + col + '"') + "/>");
 		}
+		// draw_hand_rimmed: in the background 1px off each way first, a thin outline
+		function rimmed(a, len, w, handCol) {
+			[[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+				out.push('<g transform="translate(' + d + ')">');
+				hand(a, len, w, C.black);
+				out.push("</g>");
+			});
+			hand(a, len, w, handCol);
+		}
 		var hands = settings.HANDS !== 6;  // HANDS_NONE
 		if (hands) {
-			hand(ha, reach.hour, 6, handColor("HAND_COLOR", C.white));
-			// A 1px rim of background, so a white hand shows over the white band
-			if (banded) {
-				[[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
-					out.push('<g transform="translate(' + d + ')">');
-					hand(ma, reach.minute, 3, C.black);
-					out.push("</g>");
-				});
-			}
-			hand(ma, reach.minute, 3, handColor("MINUTE_COLOR", C.white));
+			rimmed(ha, reach.hour, 6, handColor("HAND_COLOR", C.white));
+			rimmed(ma, reach.minute, 3, handColor("MINUTE_COLOR", C.white));
 		}
 		if (settings.SECONDS) {
-			stroke(seg(P(sa + 180, g.DIAL_R * 0.25), P(sa, reach.second)), secondCol, 2);
+			var sec = seg(P(sa + 180, g.DIAL_R * 0.25), P(sa, reach.second));
+			stroke(sec, C.black, 4);  // its outline
+			stroke(sec, secondCol, 2);
 		}
 		// Nothing to pin without hands
 		if (hands || settings.SECONDS) {
+			disc([cx, cy], 6, C.black);
 			disc([cx, cy], 5, secondCol);
 			disc([cx, cy], 2, C.black);
 		}
 
-		return '<svg viewBox="0 0 ' + g.w + " " + g.h + '" width="' + g.w * g.scale + '" height="' + g.h * g.scale +
+		// A thumbnail in the header, 114px tall
+		return '<svg viewBox="0 0 ' + g.w + " " + g.h + '" width="' + f(g.w * 114 / g.h) + '" height="114' +
 			'" role="img" aria-label="Watchface preview"><rect width="' + g.w + '" height="' + g.h + '" fill="' + T(C.black) + '"/>' +
 			out.join("") + "</svg>";
 	}
@@ -1275,14 +1340,44 @@
 		$("screen").innerHTML = face(new Date());
 	}
 
+	// A complication's name in the pickers; a kind goes by its family's
+	function compLabel(id) {
+		if (isApi(id)) {
+			return (settings.APIS[id - API_ID] || {}).title || "Custom " + (id - API_ID + 1);
+		}
+		var o = COMPLICATIONS.concat(CENTER_COMPLICATIONS).filter(function (o) { return o.value === family(id); })[0];
+		return o ? o.label : "None";
+	}
+	function names(places) { return places.map(function (p) { return compLabel(settings[p.key]); }).join(" · "); }
+	function freqLabel(m) { return m < 60 ? m + " minutes" : m === 60 ? "1 hour" : m / 60 + " hours"; }
+	var dirty = false;  // changed since the page opened
+	function edited() {
+		dirty = true;
+		render();
+	}
+
 	function render() {
 		preview();
+		$("status").textContent = dirty ? "Unsaved changes" : "Saved to watch";
+		$("corners-sum").textContent = names(CORNERS);
+		$("center-sum").textContent = names(CENTERS);
+		$("custom-sum").textContent = settings.APIS.length ? settings.APIS.length + " of " + API_MAX + " · " +
+			settings.APIS.map(function (a, i) { return compLabel(API_ID + i); }).join(", ") : "None yet";
+		$("scheme-sum").textContent = SCHEMES[settings.SCHEME];
+		$("scheme-swatch").style.background = theme(C.black, settings.SCHEME);
+		$("scheme-swatch").style.boxShadow = "inset 0 0 0 2px " + theme(C.lg, settings.SCHEME);
+		$("ring-sum").textContent = RINGS[settings.RING] + (g.lite && !g.round && settings.SQUARE ? " \u00B7 Rectangular" : "");
+		$("square").setAttribute("aria-checked", !!settings.SQUARE);
+		$("hands-sum").textContent = HANDS[settings.HANDS];
+		var place = settings.WEATHER_PLACE ? settings.WEATHER_PLACE.label : "The phone's location";
+		$("weather-sum").textContent = "Every " + freqLabel(settings.WEATHER_FREQ) + " · " + place;
+		// Black and white: white on black and black on white only
 		$("schemes").innerHTML = SCHEMES.map(function (label, i) {
 			var dots = [C.green, C.accent, C.picton].map(function (c) { return '<i style="background:' + theme(c, i) + '"></i>'; }).join("");
 			return '<button type="button" class="scheme" data-scheme="' + i + '" aria-pressed="' + (settings.SCHEME === i) +
 				'"><span class="swatch" style="background:' + theme(C.black, i) + ";box-shadow:inset 0 0 0 2px " + theme(C.lg, i) +
 				',0 0 0 1px #33363b">' + dots + "</span>" + label + "</button>";
-		}).join("");
+		}).filter(function (b, i) { return !g.bw || i === 2 || i === 3; }).join("");
 		$("colors").hidden = settings.SCHEME !== SCHEME_ACCENT;
 		$("bg-chip").style.background = css(chans(settings.BG_COLOR));
 		$("accent-chip").style.background = css(chans(settings.ACCENT_COLOR));
@@ -1293,11 +1388,13 @@
 		$("rings").innerHTML = RINGS.map(function (label, i) {
 			return '<button type="button" class="scheme" data-ring="' + i + '" aria-pressed="' + (settings.RING === i) + '">' + label + "</button>";
 		}).join("");
-		$("band-row").hidden = [2, 3, 5, 6].indexOf(settings.RING) < 0;  // sport, chronograph, tachymeter and compass
+		$("band-row").hidden = g.bw || [2, 3, 5, 6].indexOf(settings.RING) < 0;  // sport, chronograph, tachymeter and compass
 		$("band-chip").style.background = theme(handColor("BAND_COLOR", settings.RING === 5 ? handColor("SECOND_COLOR", C.accent) : C.white), settings.SCHEME);
-		$("hand-chip").style.background = theme(handColor("HAND_COLOR", C.white), settings.SCHEME);
-		$("minute-chip").style.background = theme(handColor("MINUTE_COLOR", C.white), settings.SCHEME);
-		$("second-chip").style.background = theme(handColor("SECOND_COLOR", C.accent), settings.SCHEME);
+		var handCols = [handColor("HAND_COLOR", C.white), handColor("MINUTE_COLOR", C.white), handColor("SECOND_COLOR", C.accent)].map(function (c) { return theme(c, settings.SCHEME); });
+		$("hand-chip").style.background = handCols[0];
+		$("minute-chip").style.background = handCols[1];
+		$("second-chip").style.background = handCols[2];
+		$("hand-dots").innerHTML = handCols.map(function (c) { return '<i style="background:' + c + '"></i>'; }).join("");
 		[].forEach.call(document.querySelectorAll(".palette button"), function (b) {
 			b.setAttribute("aria-pressed", settings[b.parentNode.dataset.color] === +b.dataset.argb);
 		});
@@ -1305,7 +1402,7 @@
 		$("goal").value = settings.STEP_GOAL;
 		$("goal-text").textContent = settings.STEP_GOAL.toLocaleString("en-US") + " steps";
 		$("freq").value = settings.WEATHER_FREQ;
-		$("place-now").textContent = settings.WEATHER_PLACE ? settings.WEATHER_PLACE.label : "The phone's location";
+		$("place-now").textContent = place;
 		$("seconds").setAttribute("aria-checked", !!settings.SECONDS);
 		$("sweep-row").hidden = !settings.SECONDS;
 		$("sweep").setAttribute("aria-checked", !!settings.SWEEP);
@@ -1328,7 +1425,11 @@
 	if (g.round) {
 		$("bezel").classList.add("round");
 	}
-	$("caption").textContent = state.weather ? "Health, battery and anything not fetched yet are sample values" : "Sample data";
+	var MODELS = { basalt: "Pebble Time", chalk: "Pebble Time Round", diorite: "Pebble 2", flint: "Pebble 2 Duo", emery: "Pebble Time 2", gabbro: "Pebble Round 2" };
+	$("caption").textContent = (MODELS[state.platform] ? MODELS[state.platform] + " · " : "") + (state.weather ? "sample health" : "sample data");
+	$("corners-row").hidden = !!g.lite;
+	$("square-row").hidden = !g.lite || !!g.round;  // the older rectangular watches
+	$("hand-colors").hidden = $("hand-dots").hidden = !!g.bw;
 	// <option>s, an <optgroup> around each run of the same `group`
 	function optionList(options, picked) {
 		return options.map(function (o, i) {
@@ -1418,9 +1519,7 @@
 		}).join("");
 	});
 
-	$("freq").innerHTML = WEATHER_FREQS.map(function (m) {
-		return '<option value="' + m + '">' + (m < 60 ? m + " minutes" : m === 60 ? "1 hour" : m / 60 + " hours") + "</option>";
-	}).join("");
+	$("freq").innerHTML = WEATHER_FREQS.map(function (m) { return '<option value="' + m + '">' + freqLabel(m) + "</option>"; }).join("");
 
 	// Weather place: searched on Open-Meteo's geocoding as it is typed. `found` is the last answer.
 	var found = [], searchTimer, searchRun = 0;
@@ -1475,7 +1574,7 @@
 		} else if (e.target.dataset.variant) {
 			settings[e.target.dataset.variant] = +e.target.value;
 		}
-		render();
+		edited();
 	});
 	document.addEventListener("input", function (e) {
 		var k = e.target.dataset.text, field = e.target.dataset.field;
@@ -1487,7 +1586,7 @@
 			if (field === "title") {
 				buildPickers();  // it is the option's label
 			}
-			return render();
+			return edited();
 		}
 		if (!k) {
 			return;
@@ -1496,11 +1595,11 @@
 		if (e.target.value !== settings[k]) {
 			e.target.value = settings[k];
 		}
-		render();
+		edited();
 	});
 	$("goal").addEventListener("input", function (e) {
 		settings.STEP_GOAL = +e.target.value;
-		render();
+		edited();
 	});
 	// toggle doesn't bubble: capture. Keeps apiOpen right when the summary is clicked.
 	document.addEventListener("toggle", function (e) {
@@ -1512,6 +1611,9 @@
 		var b = e.target.closest("button");
 		if (!b) {
 			return;
+		}
+		if (b.id === "back") {
+			return history.back();
 		}
 		if (b.dataset.scheme) {
 			settings.SCHEME = +b.dataset.scheme;
@@ -1537,6 +1639,8 @@
 			settings.SHAKE_HIDE = settings.SHAKE_HIDE ? 0 : 1;
 		} else if (b.id === "saver") {
 			settings.SAVER = settings.SAVER ? 0 : 1;
+		} else if (b.id === "square") {
+			settings.SQUARE = settings.SQUARE ? 0 : 1;
 		} else if (b.dataset.place) {
 			settings.WEATHER_PLACE = found[b.dataset.place] || null;  // -1: the phone's
 			found = [];
@@ -1566,7 +1670,7 @@
 			buildApis();
 			buildPickers();
 		}
-		else if (b.id === "save" || b.dataset.save || b.dataset.apiSave) {
+		else if (b.id === "save" || b.dataset.apiSave) {
 			// A card's Save saves everything too, once its fields are valid: the phone
 			// only hears from this page when it closes, and only then refreshes the watch.
 			if (b.dataset.apiSave && ![].every.call(b.closest("details").querySelectorAll("input"), function (i) { return i.reportValidity(); })) {
@@ -1579,29 +1683,24 @@
 		else {
 			return;
 		}
-		render();
+		edited();
 	});
 
-	// PREVIEW_AT: px scrolled before the preview shrinks, about where it reaches the top.
-	var PREVIEW_AT = 80, previewFull = 0;
-	function dock() {
-		var p = $("preview"), small = window.pageYOffset > PREVIEW_AT;
-		if (!p.classList.contains("small")) {
-			previewFull = p.offsetHeight;
+	// A page per index row, by the URL's hash: the phone's back button goes back to the index, where it was.
+	var homeY = 0;
+	window.addEventListener("hashchange", function () {
+		var open = "page-" + location.hash.slice(1), title = "";
+		if (!$("home").hidden) {
+			homeY = window.pageYOffset;
 		}
-		p.classList.toggle("small", small);
-		// The bar is shorter: a margin keeps the room the full preview took, so the page under it does not jump.
-		p.style.marginBottom = small ? previewFull - p.offsetHeight + "px" : "";
-		$("preview-toggle").textContent = p.classList.contains("shut") ? "Show" : "Hide";
-	}
-	document.addEventListener("scroll", dock);
-	// Hide closes the bar; a click anywhere on the closed bar opens it. Stays closed until then.
-	$("preview").addEventListener("click", function (e) {
-		var p = $("preview"), shut = p.classList.contains("shut");
-		if (p.classList.contains("small") && !e.target.closest("[data-save]") && (shut || e.target.closest("#preview-toggle"))) {
-			p.classList.toggle("shut", !shut);
-			dock();
-		}
+		[].forEach.call(document.querySelectorAll(".page"), function (p) {
+			p.hidden = p.id !== open;
+			title = p.hidden ? title : p.dataset.title;
+		});
+		$("home").hidden = !!title;
+		$("crumb").hidden = !title;
+		$("title").textContent = title || "Ultra";
+		window.scrollTo(0, title ? 0 : homeY);
 	});
 
 	render();

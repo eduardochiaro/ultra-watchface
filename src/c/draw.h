@@ -1,6 +1,11 @@
 #pragma once
 #include <pebble.h>
 
+// Old models, 64KB: no corners; the dial fills the screen.
+#if !defined(PBL_PLATFORM_EMERY) && !defined(PBL_PLATFORM_GABBRO)
+#define LITE
+#endif
+
 // Drawing kit shared by the dial and every complication.
 //
 // A Slot is an arc on a circle around `center`. Angles are Pebble TRIG angles
@@ -45,7 +50,16 @@ void rect_fill(GContext *ctx, GRect rect, int r, GColor color);
 void moon_fill(GContext *ctx, GPoint c, int r, int32_t phase, GColor color);
 // Rounded bar on the ray from `c` at `angle`, from r0 to r1 px out, `w` wide.
 void ray_bar(GContext *ctx, GPoint c, int32_t angle, int r0, int r1, int w, GColor color);
-// `n` square-ended ticks evenly around `c`, the first at `a0`, from r0 to r1 px out,
+// The dial's ring as a rounded rect `hw` x `hh` px from the center, corners rounded
+// by `rc`, instead of a circle: `out` px from the center on the circle is its edge,
+// and less is that much further in. out 0: round again. ray_ticks, ring_point and
+// ring_band follow it.
+void ring_shape(int out, int hw, int hh, int rc);
+// polar() on the ring.
+GPoint ring_point(GPoint c, int32_t angle, int r);
+// The ring's band from `r` px out, `thickness` px in toward the center.
+void ring_band(GContext *ctx, GPoint c, int r, int thickness, GColor color);
+// `n` square-ended ticks evenly around `c` on the ring, the first at `a0`, from r0 to r1 px out,
 // `w` wide. Subpixel: a short graphics_draw_line between whole pixels slants.
 void ray_ticks(GContext *ctx, GPoint c, int32_t a0, int n, int r0, int r1, int w, GColor color);
 // Polygon on that ray: each point is (px out along it, px across it).

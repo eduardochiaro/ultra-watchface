@@ -8,7 +8,7 @@ var config = require('../src/pkjs/config');
 // Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
 assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6,
-  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, SAVER: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
+  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, SAVER: 0, SQUARE: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   ZONE_TL: 0, ZONE_TR: 0, ZONE_BL: 0, ZONE_BR: 0, ZONE_T: 0, ZONE_L: 0, ZONE_R: 0, ZONE_B: 0,
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
 // Time zone: the watch gets the offset, and the name as the text of a place showing it; an unknown zone is UTC
@@ -68,7 +68,8 @@ var document = {
 function load(state) {
   els = {};
   clicks = [];
-  var ctx = { document: document, location: { search: '', href: '' }, URLSearchParams: URLSearchParams, setInterval: function () {}, Math: Math };
+  var ctx = { document: document, location: { search: '', href: '', hash: '' }, URLSearchParams: URLSearchParams, setInterval: function () {}, Math: Math,
+    window: { addEventListener: function () {}, scrollTo: function () {}, pageYOffset: 0 }, history: { back: function () {} } };
   vm.createContext(ctx);
   page.replace('var STATE = null; //$$STATE$$', 'var STATE = ' + JSON.stringify(state) + ';')
     .match(/<script>([\s\S]*?)<\/script>/g).forEach(function (s) { vm.runInContext(s.replace(/<\/?script>/g, ''), ctx); });
@@ -93,6 +94,8 @@ assert.strictEqual(els.colors.hidden, true);
 assert.strictEqual(els.seconds.attrs['aria-checked'], 'true');
 assert.ok(els.freq.value === 30 && els.freq.innerHTML.indexOf('<option value="180">3 hours') > 0 && els['place-now'].textContent === "The phone's location" && els['place-results'].innerHTML === '', 'weather: every 30 minutes, at the phone');
 assert.ok(els['sweep-row'].hidden === false && els.sweep.attrs['aria-checked'] === 'false', 'sweep: offered with the seconds hand, off');
+assert.ok(els['corners-sum'].textContent === 'Steps \u00B7 Temperature \u00B7 Battery \u00B7 Date' && els['scheme-sum'].textContent === 'White' && els.status.textContent === 'Saved to watch', 'index: current values');
+assert.ok(els['weather-sum'].textContent === "Every 30 minutes \u00B7 The phone's location" && els['custom-sum'].textContent === 'None yet');
 
 // Save navigates with the settings as payload
 var save = el(); save.id = 'save';
@@ -100,6 +103,34 @@ clicks[0]({ target: { closest: function () { return save; } } });
 var sent = JSON.parse(decodeURIComponent(ctx.location.href.split('#')[1]));
 assert.strictEqual(sent.SCHEME, 1);
 assert.strictEqual(sent.SLOT_BR, 6);
+
+// Lite: no corners, drawn or offered, sent as none; the dial at its size
+ctx = load({ settings: { SLOT_TL: 1, SLOT_TR: 2, SCHEME: 4, HAND_COLOR: 0xF0 }, platform: 'basalt' });
+svg = screen();
+assert.ok(svg.indexOf('viewBox="0 0 144 168"') > 0 && svg.indexOf('r="66"') > 0 && svg.indexOf('>6240</text>') < 0 && els['corners-row'].hidden === true, 'basalt: no corners');
+assert.ok(els.schemes.innerHTML.split('data-scheme=').length - 1 === 5 && els['hand-colors'].hidden === false, 'basalt: colors');
+clicks[0]({ target: { closest: function () { return save; } } });
+sent = JSON.parse(decodeURIComponent(ctx.location.href.split('#')[1]));
+assert.deepStrictEqual([sent.SLOT_TL, sent.SLOT_TR, sent.SLOT_BL, sent.SLOT_BR, sent.SCHEME], [0, 0, 0, 0, 4]);
+// Black and white: two schemes, no colors to pick; a color scheme becomes the one as light
+ctx = load({ settings: { SCHEME: 1, HAND_COLOR: 0xF0, BAND_COLOR: 0xC3, RING: 2 }, platform: 'diorite' });
+assert.ok(els.schemes.innerHTML.split('data-scheme=').length - 1 === 2 && els.schemes.innerHTML.indexOf('data-scheme="3" aria-pressed="true"') > 0, 'diorite: two schemes');
+assert.ok(els['hand-colors'].hidden === true && els['hand-dots'].hidden === true && els['band-row'].hidden === true && els.colors.hidden === true, 'diorite: no color pickers');
+clicks[0]({ target: { closest: function () { return save; } } });
+sent = JSON.parse(decodeURIComponent(ctx.location.href.split('#')[1]));
+assert.deepStrictEqual([sent.SCHEME, sent.HAND_COLOR, sent.BAND_COLOR], [3, 0, 0]);
+load({ settings: { SCHEME: 0 }, platform: 'flint' });
+assert.ok(els.schemes.innerHTML.indexOf('data-scheme="2" aria-pressed="true"') > 0 && screen().indexOf('viewBox="0 0 144 168"') > 0, 'flint: black is white on black');
+// Rectangular ring: offered on the rectangular older watches, rounded rects for the circles, the numerals upright
+ctx = load({ settings: { SQUARE: 1, RING: 4 }, platform: 'basalt' });
+svg = screen();
+assert.ok(els['square-row'].hidden === false && els.square.attrs['aria-checked'] === 'true' && els['ring-sum'].textContent === 'Roman \u00B7 Rectangular', 'basalt: rectangular switch, on');
+assert.ok(svg.indexOf('<rect x="6" y="6" width="132" height="156" rx="10" fill="none" stroke="#aaaaaa" stroke-width="2"') > 0 && svg.indexOf('r="66"') < 0 && svg.indexOf('r="38"') > 0, 'rectangular: the dial a rounded rect, the inner circle round');
+assert.ok(/y="18" [^>]*transform="rotate\(0 [^>]*>XII<\/text>/.test(svg) && /rotate\(0 [^>]*>VI<\/text>/.test(svg), 'rectangular: roman upright, XII 16px under the top edge');
+load({ settings: { SQUARE: 1 }, platform: 'emery' });
+assert.ok(els['square-row'].hidden === true && screen().indexOf('r="94"') > 0, 'emery: round, no switch');
+load({ settings: { RING: 3 }, platform: 'chalk' });
+assert.ok(screen().indexOf('viewBox="0 0 180 180"') > 0 && screen().indexOf('stroke-width="22"') > 0, 'chalk: chronograph band at 88%');
 
 // Hands: outline style in picked colors, fixed in any scheme; picking a scheme resets the colors
 ctx = load({ settings: { SCHEME: 1, HANDS: 2, HAND_COLOR: 0xF0, MINUTE_COLOR: 0xC3, SECOND_COLOR: 0xCC, SECONDS: 1 }, platform: 'emery' });
@@ -122,11 +153,11 @@ clicks[0]({ target: { closest: function () { return save; } } });
 sent = JSON.parse(decodeURIComponent(ctx.location.href.split('#')[1]));
 assert.deepStrictEqual([sent.ACCENT_COLOR, sent.SECOND_COLOR, sent.HAND_COLOR], [0xC3, 0, 0xF0]);
 
-// Pointer and sword hands: a polygon each for hour and minute. Dauphine: two, one shaded
+// Pointer and sword hands: a polygon each for hour and minute. Dauphine: two, one shaded. Each 4 more for its outline
 [3, 4, 5].forEach(function (style) {
   ctx = load({ settings: { HANDS: style, HAND_COLOR: 0xF0 }, platform: 'emery' });
   svg = screen();
-  assert.ok(svg.split('<polygon').length - 1 === (style === 5 ? 4 : 2) && (style !== 5 || /<polygon[^>]*fill="#aa0000"/.test(svg)) && /<polygon[^>]*fill="#ff0000"/.test(svg), 'polygon hands, style ' + style);
+  assert.ok(svg.split('<polygon').length - 1 === (style === 5 ? 20 : 10) && (style !== 5 || /<polygon[^>]*fill="#aa0000"/.test(svg)) && /<polygon[^>]*fill="#ff0000"/.test(svg), 'polygon hands, style ' + style);
   assert.ok(els.hands.innerHTML.split('data-hands=').length - 1 === 7, 'seven hand styles');
 });
 // None: no hour or minute hand, and no pin; the seconds hand stays if it's on, with its pin
@@ -147,7 +178,7 @@ ctx = load({ settings: { RING: 2, HANDS: 3 }, platform: 'emery' });
 svg = screen();
 assert.ok(svg.indexOf('r="87" fill="none" stroke="#ffffff" stroke-width="22"') > 0 && svg.indexOf('r="74" fill="none" stroke="#ffaa00" stroke-width="4"') > 0, 'sport: band and inset ring');
 assert.ok(svg.indexOf('>00</text>') > 0 && svg.indexOf('>55</text>') > 0 && svg.indexOf('>60</text>') < 0, 'sport numerals');
-assert.strictEqual(svg.split('<polygon').length - 1, 6, 'sport: the minute hand and its 4 rim copies, the hour hand');
+assert.strictEqual(svg.split('<polygon').length - 1, 10, 'sport: the hour and minute hands, 4 rim copies each');
 assert.ok(els.rings.innerHTML.indexOf('data-ring="2" aria-pressed="true"') > 0);
 load({ settings: { RING: 2, SCHEME: 2, HANDS: 3 }, platform: 'emery' });
 assert.strictEqual(screen().split('stroke="#000000" stroke-width="3"').length - 1, 12, 'mono: hour ticks black on the white band');

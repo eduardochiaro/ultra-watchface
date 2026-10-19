@@ -5,7 +5,13 @@
 
 #define PX_ANGLE (TRIG_MAX_ANGLE * 10 / 63)  // angle 1px spans at radius 1 (TRIG_MAX_ANGLE / 2π)
 
+// The font's header, glyph index and table only: an outline is read from flash
+// as its glyph is drawn, into s_glyph. The whole font would take the heap fctx
+// needs to antialias on 64KB watches.
 static FFont *s_font;
+static ResHandle s_font_res;
+static uint32_t s_paths;    // where the outlines start in the resource
+static uint8_t *s_glyph;    // the largest outline's size
 static GSize s_screen;
 
 // draw_zoom()
@@ -34,12 +40,28 @@ static void zoom_path(FContext *f) {
 
 void draw_init(GSize screen) {
   s_screen = screen;
-  s_font = ffont_create_from_resource(RESOURCE_ID_FONT);
+  s_font_res = resource_get_handle(RESOURCE_ID_FONT);
+  FFont head;
+  resource_load_byte_range(s_font_res, 0, (uint8_t *)&head, sizeof(head));
+  s_paths = sizeof(FFont) + head.glyph_index_length * sizeof(FGlyphRange) + head.glyph_table_length * sizeof(FGlyph);
+  s_font = malloc(s_paths);
+  if (s_font) {
+    resource_load_byte_range(s_font_res, 0, (uint8_t *)s_font, s_paths);
+    const FGlyph *g = (const FGlyph *)((uint8_t *)s_font + s_paths) - head.glyph_table_length;
+    int max = 0;
+    for (int k = 0; k < head.glyph_table_length; k++) {
+      max = g[k].path_data_length > max ? g[k].path_data_length : max;
+    }
+    s_glyph = malloc(max);
+  }
+#if defined(PBL_COLOR)
   fctx_enable_aa(true);
+#endif
 }
 
 void draw_deinit(void) {
-  ffont_destroy(s_font);
+  free(s_glyph);
+  free(s_font);
 }
 
 static bool color_light(GColor c) {
@@ -128,10 +150,16 @@ void slot_trim(Slot *s, int end, int px) {
   *at += *at < other ? px_angle(s, px) : -px_angle(s, px);
 }
 
+// Bit by bit, from the highest pair down.
 static int isqrt(int n) {
   int x = 0;
-  while ((x + 1) * (x + 1) <= n) {
-    x++;
+  for (int b = 1 << 30; b; b >>= 2) {
+    if (n >= x + b) {
+      n -= x + b;
+      x = (x >> 1) + b;
+    } else {
+      x >>= 1;
+    }
   }
   return x;
 }
@@ -155,6 +183,86 @@ static FPoint fpolar_f(FPoint c, int32_t angle, fixed_t r) {
 
 static FPoint fpolar(GPoint c, int32_t angle, int r) {
   return fpolar_f(FPointI(c.x, c.y), angle, INT_TO_FIXED(r));
+}
+
+// The rectangular ring, see ring_shape(). s_sq_hw 0: round.
+static int16_t s_sq_out, s_sq_hw, s_sq_hh, s_sq_rc;
+
+void ring_shape(int out, int hw, int hh, int rc) {
+  s_sq_out = out;
+  s_sq_hw = out ? hw : 0;
+  s_sq_hh = hh;
+  s_sq_rc = rc;
+}
+
+static int32_t abs_i32(int32_t v) {
+  return v < 0 ? -v : v;
+}
+
+// The rounded rect `r` stands for: `out - r` in from the outer one. Concentric,
+// so its corners round less, 4px at least.
+static void ring_rect(fixed_t r, fixed_t *hw, fixed_t *hh, fixed_t *rc) {
+  fixed_t d = INT_TO_FIXED(s_sq_out) - r;
+  *hw = INT_TO_FIXED(s_sq_hw) - d;
+  *hh = INT_TO_FIXED(s_sq_hh) - d;
+  *rc = clamp_i32(INT_TO_FIXED(s_sq_rc) - d, INT_TO_FIXED(4), *hw < *hh ? *hw : *hh);
+}
+
+// fpolar_f() on the ring: where the ray at `angle` meets that rounded rect.
+static FPoint ring_fpoint(FPoint o, int32_t angle, fixed_t r) {
+  if (!s_sq_hw) {
+    return fpolar_f(o, angle, r);
+  }
+  fixed_t hw, hh, rc;
+  ring_rect(r, &hw, &hh, &rc);
+  int32_t sx = sin_lookup(angle), sy = -cos_lookup(angle), ax = abs_i32(sx), ay = abs_i32(sy);
+  // Where it leaves the square-cornered rect; in a corner, its circle instead.
+  fixed_t t = ax * hh > ay * hw ? hw * TRIG_MAX_RATIO / ax : hh * TRIG_MAX_RATIO / ay;
+  fixed_t px = t * sx / TRIG_MAX_RATIO, py = t * sy / TRIG_MAX_RATIO;
+  if (abs_i32(px) > hw - rc && abs_i32(py) > hh - rc) {
+    fixed_t kx = px < 0 ? rc - hw : hw - rc, ky = py < 0 ? rc - hh : hh - rc;
+    int32_t b = (sx * kx + sy * ky) / TRIG_MAX_RATIO;
+    t = b + isqrt(b * b - kx * kx - ky * ky + rc * rc);
+  }
+  return FPoint(o.x + t * sx / TRIG_MAX_RATIO, o.y + t * sy / TRIG_MAX_RATIO);
+}
+
+GPoint ring_point(GPoint c, int32_t angle, int r) {
+  FPoint p = ring_fpoint(FPointI(c.x, c.y), angle, INT_TO_FIXED(r));
+  return GPoint((p.x + FIX1 / 2) / FIX1, (p.y + FIX1 / 2) / FIX1);
+}
+
+void ring_band(GContext *ctx, GPoint c, int r, int thickness, GColor color) {
+  if (!s_sq_hw) {
+    graphics_context_set_fill_color(ctx, theme(color));
+    graphics_fill_radial(ctx, GRect(c.x - r, c.y - r, 2 * r + 1, 2 * r + 1), GOvalScaleModeFitCircle, thickness, 0, TRIG_MAX_ANGLE);
+    return;
+  }
+  // The outer rounded rect clockwise, the inner one back: the band between. Each
+  // corner in 15° steps, from 12 o'clock's side on; the sides join them straight.
+  static const int8_t SX[4] = { 1, 1, -1, -1 }, SY[4] = { -1, 1, 1, -1 };
+  FPoint o = FPointI(c.x, c.y);
+  FContext f;
+  fctx_init_context(&f, ctx);
+  fctx_set_fill_color(&f, theme(color));
+  fctx_begin_fill(&f);
+  for (int inner = 0; inner < 2; inner++) {
+    fixed_t hw, hh, rc;
+    ring_rect(INT_TO_FIXED(inner ? r - thickness : r), &hw, &hh, &rc);
+    for (int i = 0; i < 28; i++) {
+      int k = inner ? 27 - i : i, q = k / 7;
+      FPoint corner = FPoint(o.x + SX[q] * (hw - rc), o.y + SY[q] * (hh - rc));
+      FPoint p = fpolar_f(corner, q * TRIG_MAX_ANGLE / 4 + k % 7 * TRIG_MAX_ANGLE / 24, rc);
+      if (i) {
+        fctx_line_to(&f, p);
+      } else {
+        fctx_move_to(&f, p);
+      }
+    }
+    fctx_close_path(&f);
+  }
+  fctx_end_fill(&f);
+  fctx_deinit_context(&f);
 }
 
 // Arc with half-circle caps, one antialiased fctx path: outer edge, cap at b,
@@ -313,7 +421,7 @@ void ray_ticks(GContext *ctx, GPoint c, int32_t a0, int n, int r0, int r1, int w
   fctx_begin_fill(&f);
   for (int i = 0; i < n; i++) {
     int32_t a = a0 + i * TRIG_MAX_ANGLE / n, across = a + TRIG_MAX_ANGLE / 4;
-    FPoint p = fpolar_f(o, a, INT_TO_FIXED(r0)), q = fpolar_f(o, a, INT_TO_FIXED(r1));
+    FPoint p = ring_fpoint(o, a, INT_TO_FIXED(r0)), q = ring_fpoint(o, a, INT_TO_FIXED(r1));
     fctx_move_to(&f, fpolar_f(p, across, h));
     fctx_line_to(&f, fpolar_f(q, across, h));
     fctx_line_to(&f, fpolar_f(q, across, -h));
@@ -379,8 +487,39 @@ static GPoint clamp_to_screen(GPoint c, int hw, int hh) {
 #endif
 }
 
+// fctx_draw_string, centered on the cap middle, each outline read from flash
+// as it is drawn (s_font has none).
+static void draw_string(FContext *f, const char *txt) {
+  FPoint advance = { 0, -s_font->cap_height / 2 };
+  fixed_t width = 0;
+  for (int pass = 0; pass < 2; pass++) {
+    advance.x = -width / 2;  // the first pass measures it
+    for (const uint8_t *p = (const uint8_t *)txt; *p;) {
+      uint16_t cp = *p++;
+      if (cp >= 0xE0) {  // UTF-8: the font has nothing past U+FFFF
+        cp = (cp & 0x0F) << 12 | (p[0] & 0x3F) << 6 | (p[1] & 0x3F);
+        p += 2;
+      } else if (cp >= 0xC0) {
+        cp = (cp & 0x1F) << 6 | (p[0] & 0x3F);
+        p++;
+      }
+      FGlyph *g = ffont_glyph_info(s_font, cp);
+      if (!g) {
+        continue;
+      }
+      if (pass) {
+        resource_load_byte_range(s_font_res, s_paths + g->path_data_offset, s_glyph, g->path_data_length);
+        fctx_draw_commands(f, advance, s_glyph, g->path_data_length);
+        advance.x += g->horiz_adv_x;
+      } else {
+        width += g->horiz_adv_x;
+      }
+    }
+  }
+}
+
 void text_draw(GContext *ctx, const char *txt, GPoint c, int size, GColor color) {
-  if (!s_font || !txt[0]) {
+  if (!s_glyph || !txt[0]) {
     return;
   }
   c = zoom_point(c);
@@ -393,7 +532,7 @@ void text_draw(GContext *ctx, const char *txt, GPoint c, int size, GColor color)
   fctx_set_offset(&f, FPointI(c.x, c.y));
   fctx_set_fill_color(&f, theme(color));
   fctx_begin_fill(&f);
-  fctx_draw_string(&f, txt, s_font, GTextAlignmentCenter, FTextAnchorCapMiddle);
+  draw_string(&f, txt);
   fctx_end_fill(&f);
   fctx_deinit_context(&f);
 }
@@ -410,7 +549,7 @@ void text_draw_along(GContext *ctx, const char *txt, GPoint c, GPoint center, in
 
 void text_draw_arc(GContext *ctx, const char *txt, GPoint center, int32_t a, int r, int size,
                    GColor color) {
-  if (!s_font || r == 0) {
+  if (!s_glyph || r == 0) {
     return;
   }
   bool top = cos_lookup(a) >= 0;
@@ -435,7 +574,7 @@ void text_draw_arc(GContext *ctx, const char *txt, GPoint center, int32_t a, int
     fctx_set_offset(&f, FPoint(INT_TO_FIXED(center.x) + sin_lookup(ang) * INT_TO_FIXED(r) / TRIG_MAX_RATIO,
                                INT_TO_FIXED(center.y) - cos_lookup(ang) * INT_TO_FIXED(r) / TRIG_MAX_RATIO));
     fctx_begin_fill(&f);
-    fctx_draw_string(&f, ch, s_font, GTextAlignmentCenter, FTextAnchorCapMiddle);
+    draw_string(&f, ch);
     fctx_end_fill(&f);
   }
   fctx_deinit_context(&f);

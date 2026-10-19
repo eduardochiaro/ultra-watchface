@@ -54,6 +54,7 @@ typedef struct {
   bool sweep;                      // the seconds hand glides, not ticks; with `seconds` only
   bool shake_hide;                 // two shakes hide the hands for a few seconds; on the pad byte, 0 on older saves
   bool saver;                      // battery saver: the face sleeps when health goes quiet; appended, 0 on older saves
+  bool square;                     // the ring as a rounded rect along the screen's edge; rect lite only, appended
 } Settings;
 
 extern Settings g_settings;

@@ -1,7 +1,7 @@
 {
   "name": "ultra-watchface",
   "author": "Eduardo Chiaro",
-  "version": "1.10.0",
+  "version": "2.0.0",
   "keywords": [
     "watchface",
     "complications",
@@ -24,6 +24,10 @@
     "sdkVersion": "3",
     "enableMultiJS": true,
     "targetPlatforms": [
+      "basalt",
+      "chalk",
+      "diorite",
+      "flint",
       "emery",
       "gabbro"
     ],
@@ -94,7 +98,8 @@
       "SAVER",
       "ASLEEP",
       "RAIN_START",
-      "RAIN_HOURS"
+      "RAIN_HOURS",
+      "SQUARE"
     ],
     "resources": {
       "media": [
