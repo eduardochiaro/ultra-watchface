@@ -78,3 +78,10 @@ const char *weather_icon(void) {
   int i = g_weather.valid ? g_weather.condition : -1;
   return i >= 0 && i < (int)ARRAY_LENGTH(ICON) ? ICON[i] : NULL;
 }
+
+const char *weather_name(void) {
+  static const char *const NAME[] = {
+    "SUNNY", "CLEAR", "PT CLOUDY", "PT CLOUDY", "CLOUDY", "FOGGY", "RAINY", "SNOWY", "STORMY",
+  };
+  return NAME[g_weather.condition];
+}

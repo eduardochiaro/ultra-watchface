@@ -28,6 +28,8 @@ static const ComplicationDraw DRAW[COMP_COUNT] = {
   [COMP_WEEK]    = comp_week_draw,
   [COMP_YEAR]    = comp_year_draw,
   [COMP_RAIN_HOURLY] = comp_rain_hourly_draw,
+  [COMP_WEATHER] = comp_weather_draw,
+  [COMP_WEATHER_TEMP] = comp_weather_temp_draw,
 };
 
 void complication_draw(ComplicationId id, GContext *ctx, const Slot *s) {
@@ -172,10 +174,18 @@ static void shaded_arc(GContext *ctx, const Slot *s, bool flip, int pct, const u
 void comp_range_draw(GContext *ctx, const Slot *slot, int pct, const char *min, const char *max,
                      const char *value, const uint8_t *fill, int n) {
   Slot b = *slot, *s = &b;
-  int size = comp_fit(ctx, value, COMP_TEXT + 2, slot_len(slot));
 #if defined(PBL_PLATFORM_GABBRO)
-  text_draw_along(ctx, value, slot_point(s, 50, 0), s->center, size, GColorWhite);
+  // No room beside the arc: the value leads the gauge, like comp_band_gauge_draw's; no min and max.
+  int left = slot_left_end(s);
+  end_label(ctx, s, left, value, comp_fit(ctx, value, COMP_TEXT, slot_len(s) / 2));
+  if (pct < 0) {
+    slot_arc(ctx, s, 0, 100, COMP_TRACK);
+    return;
+  }
+  shaded_arc(ctx, s, left, 100, fill, n);
+  slot_dot(ctx, s, left ? 100 - pct : pct, s->thickness / 2, 2, GColorWhite, GColorBlack);
 #else
+  int size = comp_fit(ctx, value, COMP_TEXT + 2, slot_len(slot));
   if (pct < 0) {
     slot_arc(ctx, s, 0, 100, COMP_TRACK);
   } else {

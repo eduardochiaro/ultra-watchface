@@ -8,7 +8,7 @@ var WEATHER_KEY = 'ultra-weather';  // last message sent, for the settings previ
 // ComplicationId in src/c/complications/complications.h
 var LOCATION_ID = 36, AQI_IDS = [7, 27];
 // Everything the weather message feeds: temperature, rain (today's, hourly), AQI, elevation, UV, conditions, humidity, sun, wind, the place.
-var WEATHER_IDS = [2, 4, 7, 10, 11, 12, 13, 23, 25, 27, 28, 39, LOCATION_ID];
+var WEATHER_IDS = [2, 4, 7, 10, 11, 12, 13, 23, 25, 27, 28, 39, 40, LOCATION_ID];
 
 // Is one of these complications in a corner or a subdial?
 function shown(ids) {

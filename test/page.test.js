@@ -84,7 +84,7 @@ assert.ok(svg.indexOf('viewBox="0 0 260 260"') > 0, 'gabbro geometry');
 assert.ok(svg.indexOf('fill="#ffffff"') > 0, 'white scheme background');
 assert.ok(svg.indexOf('>6240</text>') > 0, 'steps label');
 assert.ok(svg.indexOf('r="102"') > 0, 'gabbro dial');
-assert.ok(/font-size="15.71"[^>]*>21°<\/text>/.test(svg) && svg.split(ctx.ICONS.sun_cloud).length - 1 === 2, 'gabbro temp corner: the conditions icon and now, no gauge');
+assert.ok(/font-size="15.71"[^>]*>21°<\/text>/.test(svg) && svg.split(ctx.ICONS.sun_cloud).length - 1 === 1 && svg.indexOf('stroke="#ffaa00" stroke-width="6"') > 0, 'gabbro temp corner: now leads the shaded gauge');
 assert.ok(/font-size="15.71"[^>]*>82<tspan font-size="75%">%<\/tspan><\/text>/.test(svg), 'gabbro battery: value leads the bar, its % the small one');
 assert.ok(svg.indexOf('>PB</text>') > 0 && svg.indexOf('>290</text>') > 0 && svg.indexOf(ctx.ICONS.sun_cloud) > 0, 'default subdials: text, elevation, weather');
 assert.ok(/>(SUN|MON|TUE|WED|THU|FRI|SAT)<\/text>/.test(svg), 'calendar weekday');
@@ -316,6 +316,15 @@ svg = screen();
 assert.ok(svg.indexOf('stroke="#aa5500" stroke-width="8"') > 0 && svg.indexOf('stroke="#ffaa00" stroke-width="6"') > 0, 'hourly rain, accent scheme: shades of the accent, the likeliest the accent itself');
 ctx = load({ settings: { SLOT_TL: 23 }, weather: { TEMP: 1 }, platform: 'emery' });
 assert.ok(screen().indexOf('>\u25B46:30 \u25BE19:55</text>') > 0, 'no sun times fetched yet: the sample');
+
+// Weather: Icon or Icon + temp, a kind of one pick; in a corner the conditions' name too, in a subdial the temperature under a smaller icon
+assert.deepStrictEqual([config.family(40), config.family(12)], [12, 12]);
+load({ settings: { SLOT_TL: 12, SLOT_TR: 40, CENTER_T: 40, CENTER_R: 0 }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('>PT CLOUDY</text>') > 0 && svg.indexOf('>21° PT CLOUDY</text>') > 0 && svg.split(ctx.ICONS.sun_cloud).length - 1 === 3 && svg.indexOf('>21°</text>') > 0, 'weather corners and subdial');
+assert.ok(els.corners.innerHTML.indexOf('<option value="12" selected>Weather</option>') > 0 && els.corners.innerHTML.indexOf('<option value="40" selected>Icon + temp</option>') > 0, 'weather kind picker');
+load({ settings: { SLOT_TL: 40 }, weather: { TEMP: 1, CONDITION: -1 }, platform: 'gabbro' });
+assert.ok(screen().indexOf('>--</text>') > 0, 'no conditions yet: --');
 
 // .beat time: ".042" and the @, corner and subdial
 ctx = load({ settings: { SLOT_TL: 24, CENTER_T: 24 }, platform: 'emery' });

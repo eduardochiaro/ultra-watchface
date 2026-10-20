@@ -13,6 +13,7 @@ var COMPLICATIONS = [
   { group: 'Activity', label: 'Active minutes', value: 34 },
   { group: 'Activity', label: 'Heart rate', value: 8 },
   { group: 'Activity', label: 'Sleep', value: 33 },
+  { group: 'Weather', label: 'Weather', value: 12 },
   { group: 'Weather', label: 'Temperature', value: 2 },
   { group: 'Weather', label: 'Chance of rain', value: 4 },
   { group: 'Weather', label: 'Humidity', value: 13 },
@@ -70,7 +71,8 @@ var VARIANTS = [
   [{ label: 'Today', value: 4 }, { label: 'Hourly', value: 39 }],     // Chance of rain
   [{ label: 'Sections', value: 7 }, { label: 'Gauge', value: 27 }],   // Air quality
   [{ label: 'Sections', value: 11 }, { label: 'Gauge', value: 28 }],  // UV index
-  [{ label: 'Total', value: 29 }, { label: 'Active', value: 30 }]     // Calories
+  [{ label: 'Total', value: 29 }, { label: 'Active', value: 30 }],    // Calories
+  [{ label: 'Icon', value: 12 }, { label: 'Icon + temp', value: 40 }] // Weather
 ];
 // The listed complication `id` is a kind of; itself with no kinds.
 function family(id) {

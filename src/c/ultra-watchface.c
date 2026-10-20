@@ -367,10 +367,10 @@ static void draw_hand(GContext *ctx, GPoint c, int32_t angle, int len, int width
 }
 
 // The hand in the background color 1px off each way first: a thin outline, so
-// it reads over the dial, the band and the other hands.
+// it reads over the dial, the band and the other hands. Outline hands have their own.
 static void draw_hand_rimmed(GContext *ctx, GPoint c, int32_t angle, int len, int width, GColor color) {
   static const int8_t RIM[4][2] = { { 1, 0 }, { -1, 0 }, { 0, 1 }, { 0, -1 } };
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; g_settings.hands != HANDS_OUTLINE && i < 4; i++) {
     draw_hand(ctx, GPoint(c.x + RIM[i][0], c.y + RIM[i][1]), angle, len, width, GColorBlack);
   }
   draw_hand(ctx, c, angle, len, width, color);

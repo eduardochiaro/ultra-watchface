@@ -15,25 +15,14 @@ void center_gauge(GContext *ctx, GPoint c, int pct, GColor fill) {
   }
 }
 
-// Conditions now as one icon, no ring: text color, the accent in that scheme.
-static void conditions(GContext *ctx, GPoint c) {
-  const char *icon = weather_icon();
-  // Any bright color themes to the accent; white stays the text color.
-  GColor color = g_settings.scheme == SCHEME_ACCENT ? GColorChromeYellow : GColorWhite;
-  if (icon) {
-    text_draw(ctx, icon, c, 7 * SUB_R / 4, color);  // 28px on emery
-  } else {
-    text_draw(ctx, "--", c, SUB_TEXT, color);
-  }
-}
-
 typedef void (*Subdial)(GContext *ctx, GPoint c);
 
 static const Subdial SUBDIAL[COMP_COUNT] = {
   [COMP_TEMP] = center_temp_draw, [COMP_RAIN] = center_rain_draw, [COMP_AQI] = center_aqi_draw,
   [COMP_BATTERY] = center_battery_draw, [COMP_HEART] = center_heart_draw,
   [COMP_DISTANCE] = center_distance_draw, [COMP_ELEVATION] = center_elevation_draw, [COMP_UV] = center_uv_draw,
-  [COMP_WEATHER] = conditions, [COMP_HUMIDITY] = center_humidity_draw,
+  [COMP_WEATHER] = center_weather_draw, [COMP_WEATHER_TEMP] = center_weather_temp_draw,
+  [COMP_HUMIDITY] = center_humidity_draw,
   [COMP_SUN] = center_sun_draw, [COMP_BEAT] = center_beat_draw,
   [COMP_WIND] = center_wind_draw,
   [COMP_AQI_GAUGE] = center_aqi_gauge_draw, [COMP_UV_GAUGE] = center_uv_gauge_draw,

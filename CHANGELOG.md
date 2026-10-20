@@ -8,7 +8,10 @@
 - **Only what your watch shows:** the settings page hides what the watch can't show: the corners on the older watches, and the accent, background, hand and band colors on black and white ones. The preview draws your watch's own dial.
 - **Rectangular ring:** on the Pebble Time, Pebble 2 and Pebble 2 Duo, a new switch under Ring makes the ring follow the screen's edge: every ring's ticks, numerals and band on a rounded rectangle, the numerals upright. The subdials stay round.
 - **Wider corners on the Round 2:** each corner complication now spans 65 degrees, centered on its corner, up from 45.
-- **Outlined hands:** every hand, the seconds hand and the pin have a thin outline in the background color, so they stand out over the dial, the band, the subdials and each other.
+- **Outlined hands:** every hand style but Outline, the seconds hand and the pin have a thin outline in the background color, so they stand out over the dial, the band, the subdials and each other.
+- **Weather in the corners:** the Weather complication now fits a corner too: its icon toward the corner and the conditions curved along the arc ("CLOUDY", "PT CLOUDY"). On the Round 2 the icon leads them.
+- **Weather with temperature:** Weather gets a second kind, Icon + temp. In a corner the temperature goes before the conditions ("21° CLOUDY"); in a subdial the icon is smaller and the temperature sits under it.
+- **Temperature gauge on the Round 2:** the Temperature corner is a gauge again, the temperature leading the colored arc and its thumb, now that the corners have room. Custom gauges get the same layout. The icon-and-temperature look lives on as Weather, Icon + temp.
 - **Hourly rain:** Chance of rain gets a second kind, Hourly: six sections from the hour before this one to four hours on, a darker blue the likelier rain is, none for no rain. This hour's section is ringed in the accent and its chance shown beside it. Corners and subdials. The sections move on with the hour between fetches.
 
 ## 1.9.0

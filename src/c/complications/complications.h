@@ -25,7 +25,7 @@ typedef enum {
   COMP_DISTANCE,
   COMP_ELEVATION,
   COMP_UV,
-  COMP_WEATHER,   // subdial only
+  COMP_WEATHER,   // the conditions' icon; in a corner their name too
   COMP_HUMIDITY,
   COMP_CUSTOM,    // the user's text
   COMP_API,       // first of API_MAX custom API complications, see api.c
@@ -47,6 +47,7 @@ typedef enum {
   COMP_WEEK,      // the week's days, lit up to today
   COMP_YEAR,      // how much of the year is gone
   COMP_RAIN_HOURLY, // the chance of rain by the hour, -1h to +4h
+  COMP_WEATHER_TEMP, // COMP_WEATHER and the temperature
   COMP_COUNT
 } ComplicationId;
 
@@ -111,6 +112,8 @@ void comp_location_draw(GContext *ctx, const Slot *s);
 void comp_week_draw(GContext *ctx, const Slot *s);
 void comp_year_draw(GContext *ctx, const Slot *s);
 void comp_rain_hourly_draw(GContext *ctx, const Slot *s);
+void comp_weather_draw(GContext *ctx, const Slot *s);
+void comp_weather_temp_draw(GContext *ctx, const Slot *s);
 void comp_custom_draw(GContext *ctx, const Slot *s, const char *txt);  // not in the tables: needs its text
 void comp_zone_draw(GContext *ctx, const Slot *s, int offset, const char *name);  // nor this: minutes from UTC, and its name
 void comp_date_draw(GContext *ctx, const Slot *s, int format);  // nor this: a DateFormat
@@ -187,6 +190,8 @@ void center_location_draw(GContext *ctx, GPoint c);
 void center_week_draw(GContext *ctx, GPoint c);
 void center_year_draw(GContext *ctx, GPoint c);
 void center_rain_hourly_draw(GContext *ctx, GPoint c);
+void center_weather_draw(GContext *ctx, GPoint c);
+void center_weather_temp_draw(GContext *ctx, GPoint c);
 void center_custom_draw(GContext *ctx, GPoint c, const char *txt);
 void center_zone_draw(GContext *ctx, GPoint c, int offset, const char *name);
 void center_date_draw(GContext *ctx, GPoint c, int format);

@@ -496,6 +496,8 @@
 	});
 	// weather_icon() in weather.c, icons in ICON_SUN.. order
 	var CONDITION_ICON = ["sun", "moon", "sun_cloud", "moon_cloud", "cloud", "fog", "rain", "snow", "storm"][weather.CONDITION];
+	// weather_name() in weather.c
+	var CONDITION_NAME = ["SUNNY", "CLEAR", "PT CLOUDY", "PT CLOUDY", "CLOUDY", "FOGGY", "RAINY", "SNOWY", "STORMY"][weather.CONDITION];
 	function stepPct() { return Math.trunc(STEPS * 100 / settings.STEP_GOAL); }
 	// BANDS in aqi.c
 	var AQI = weather.AQI === undefined ? -1 : weather.AQI;
@@ -741,8 +743,14 @@
 		// comp_range_draw: min on the left end, max on the right, thumb at pct (< 0: bare track), value centered
 		function rangeGauge(s0, pct, min, max, value, cols) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, lo = leftEnd(s), cap = fitCap(value, g.TEXT + 2, slen(s0));
+			// round: no room beside the arc, the value leads the gauge; no min and max
 			if (g.round) {
-				return along(value, at(s, 50), s.r, cap, C.white);  // no gauge, just the value
+				endLabel(s, lo, value, fitCap(value, g.TEXT, slen(s) / 2));
+				if (pct < 0) {
+					return sarc(s, 0, 100, C.track);
+				}
+				shadedArc(s, lo, 100, cols);
+				return dot(s, lo ? 100 - pct : pct);
 			}
 			if (pct < 0) {
 				sarc(s, 0, 100, C.track);
@@ -811,10 +819,13 @@
 			if (id === 1) {
 				bar(s, stepPct(), C.green, String(STEPS), "runner");
 			}
-			// comp_temp_draw: round has no gauge, the conditions icon leads the value
-			if (id === 2 && g.round && CONDITION_ICON) {
-				iconText(s, CONDITION_ICON, temp(weather.TEMP) + "°", C.white);
-			} else if (id === 2) {
+			// conditions.c: the icon toward the corner, "21° CLOUDY" along the arc; round: the icon leads it
+			if ((id === 12 || id === 40) && CONDITION_ICON) {
+				iconText(s, CONDITION_ICON, (id === 40 ? temp(weather.TEMP) + "° " : "") + CONDITION_NAME, scheme === SCHEME_ACCENT ? C.accent : C.white);
+			} else if (id === 12 || id === 40) {
+				along("--", at(s, 50), s.r, g.TEXT + 2, C.white);
+			}
+			if (id === 2) {
 				rangeGauge(s, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°", TEMP_COLOR);
 			}
 			if (isApi(id)) {
@@ -1126,7 +1137,16 @@
 				text(AQI >= 0 ? String(AQI) : "--", [c[0], c[1] - 1], ST, C.white, 0);
 				text("AQI", [c[0], c[1] + SL], SS, C.white, 0);
 			},
-			// conditions() in center.c
+			// center_weather_temp_draw: the icon smaller, the temperature under it
+			40: function (c) {
+				var col = scheme === SCHEME_ACCENT ? C.accent : C.white;
+				if (!CONDITION_ICON) {
+					return text("--", c, ST, col, 0);
+				}
+				icon(CONDITION_ICON, [c[0], c[1] - Math.trunc(g.SUB_R / 3)], g.SUB_R, col);
+				text(temp(weather.TEMP) + "°", [c[0], c[1] + Math.trunc(g.SUB_R / 2) + 1], ST, C.white, 0);
+			},
+			// center_weather_draw
 			12: function (c) {
 				var name = CONDITION_ICON;
 				var col = scheme === SCHEME_ACCENT ? C.accent : C.white;
@@ -1304,9 +1324,9 @@
 				'" rx="' + (HAND_W - e) / 2 + '" transform="rotate(' + f(a) + " " + cx + " " + cy + ')" ' +
 				(e ? 'fill="' + T(C.black) + '" stroke="' + col + '" stroke-width="' + e + '"' : 'fill="' + col + '"') + "/>");
 		}
-		// draw_hand_rimmed: in the background 1px off each way first, a thin outline
+		// draw_hand_rimmed: in the background 1px off each way first, a thin outline; outline hands have their own
 		function rimmed(a, len, w, handCol) {
-			[[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+			(settings.HANDS === 2 ? [] : [[1, 0], [-1, 0], [0, 1], [0, -1]]).forEach(function (d) {
 				out.push('<g transform="translate(' + d + ')">');
 				hand(a, len, w, C.black);
 				out.push("</g>");
