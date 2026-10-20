@@ -131,10 +131,10 @@ int comp_fit(GContext *ctx, const char *txt, int size, int width) {
   return w > width ? size * width / w : size;
 }
 
-// comp_end_label at any size.
-static void end_label(GContext *ctx, Slot *s, int end, const char *txt, int size) {
+// comp_end_label at any size and color.
+static void end_label(GContext *ctx, Slot *s, int end, const char *txt, int size, GColor color) {
   int w = text_width(ctx, txt, size);
-  text_draw_along(ctx, txt, slot_past(s, end, -w / 2), s->center, size, GColorWhite);
+  text_draw_along(ctx, txt, slot_past(s, end, -w / 2), s->center, size, color);
   slot_trim(s, end, w + COMP_GAP + s->thickness / 2);
 }
 
@@ -148,7 +148,7 @@ void comp_fill_gauge(GContext *ctx, const Slot *s, int pct, GColor fill, GColor 
   if (icon) {
     comp_icon(ctx, &b, icon, fill);
   }
-  end_label(ctx, &b, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&b) / 2));
+  end_label(ctx, &b, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&b) / 2), GColorWhite);
   slot_arc(ctx, &b, 0, 100, track);
   if (pct > 0) {
     slot_arc(ctx, &b, left, left ? 100 - pct : pct, fill);
@@ -175,13 +175,16 @@ void comp_range_draw(GContext *ctx, const Slot *slot, int pct, const char *min, 
                      const char *value, const uint8_t *fill, int n) {
   Slot b = *slot, *s = &b;
 #if defined(PBL_PLATFORM_GABBRO)
-  // No room beside the arc: the value leads the gauge, like comp_band_gauge_draw's; no min and max.
+  // No room beside the arc: the value leads, like comp_band_gauge_draw's, then min, the gauge
+  // and max, those two dimmer.
   int left = slot_left_end(s);
-  end_label(ctx, s, left, value, comp_fit(ctx, value, COMP_TEXT, slot_len(s) / 2));
+  end_label(ctx, s, left, value, comp_fit(ctx, value, COMP_TEXT, slot_len(s) / 2), GColorWhite);
   if (pct < 0) {
     slot_arc(ctx, s, 0, 100, COMP_TRACK);
     return;
   }
+  end_label(ctx, s, left, min, COMP_TEXT, GColorLightGray);
+  end_label(ctx, s, 100 - left, max, COMP_TEXT, GColorLightGray);
   shaded_arc(ctx, s, left, 100, fill, n);
   slot_dot(ctx, s, left ? 100 - pct : pct, s->thickness / 2, 2, GColorWhite, GColorBlack);
 #else
@@ -265,7 +268,7 @@ void comp_band_draw(GContext *ctx, const Slot *slot, int v, const Band *bands, c
   const char *label = caption;
   text_draw_along(ctx, value, slot_point(slot, 50, COMP_THUMB), slot->center, COMP_TEXT + 2, GColorWhite);
 #endif
-  end_label(ctx, &s, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&s) / 2));
+  end_label(ctx, &s, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&s) / 2), GColorWhite);
   uint8_t argb[BANDS_MAX];
   int n = band_colors(v, bands, argb);
   comp_sections(ctx, &s, left, argb, n, -1);
@@ -320,7 +323,7 @@ void comp_band_gauge_draw(GContext *ctx, const Slot *slot, int v, const Band *ba
   const char *label = caption;
   text_draw_along(ctx, value, slot_point(slot, 50, COMP_THUMB), slot->center, COMP_TEXT + 2, GColorWhite);
 #endif
-  end_label(ctx, &s, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&s) / 2));
+  end_label(ctx, &s, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&s) / 2), GColorWhite);
   if (pct < 0) {
     slot_arc(ctx, &s, 0, 100, COMP_TRACK);
     return;
@@ -350,7 +353,7 @@ void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color
   int size = comp_fit(ctx, txt, COMP_TEXT, slot_len(&b) - lead);
   slot_trim(&b, left, (slot_len(&b) - lead - text_width(ctx, txt, size)) / 2);
   comp_icon(ctx, &b, icon, color);
-  end_label(ctx, &b, left, txt, size);
+  end_label(ctx, &b, left, txt, size, GColorWhite);
 #else
   text_draw_along(ctx, txt, slot_point(s, 50, 0), s->center, comp_fit(ctx, txt, COMP_TEXT + 2, slot_len(s)), GColorWhite);
   comp_icon(ctx, &b, icon, color);
@@ -360,7 +363,7 @@ void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color
 // Label laid along the arc at an end; the arc is trimmed to make room so
 // label + arc stay inside the slot's original span.
 void comp_end_label(GContext *ctx, Slot *s, int end, const char *txt) {
-  end_label(ctx, s, end, txt, COMP_TEXT);
+  end_label(ctx, s, end, txt, COMP_TEXT, GColorWhite);
 }
 
 // Just past the arc, toward the screen corner. Gabbro has no corners: the icon

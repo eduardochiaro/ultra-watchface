@@ -631,10 +631,10 @@
 		// comp_fit(): `cap`, or the largest below it at which str fits `px`
 		function fitCap(str, cap, px) { return Math.min(cap, cap * px / (width(str, cap) || 1)); }
 		function slen(s) { return Math.abs(s.a1 - s.a0) * Math.PI / 180 * s.r; }
-		function endLabel(s, end, str, cap) {
+		function endLabel(s, end, str, cap, col) {
 			cap = cap || g.TEXT;
 			var w = width(str, cap);
-			along(str, past(s, end, -w / 2), s.r, cap, C.white);
+			along(str, past(s, end, -w / 2), s.r, cap, col || C.white);
 			trim(s, end, w + 4 + s.t / 2);
 		}
 
@@ -743,12 +743,14 @@
 		// comp_range_draw: min on the left end, max on the right, thumb at pct (< 0: bare track), value centered
 		function rangeGauge(s0, pct, min, max, value, cols) {
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, lo = leftEnd(s), cap = fitCap(value, g.TEXT + 2, slen(s0));
-			// round: no room beside the arc, the value leads the gauge; no min and max
+			// round: no room beside the arc, the value leads, then min, the gauge and max, those two dimmer
 			if (g.round) {
 				endLabel(s, lo, value, fitCap(value, g.TEXT, slen(s) / 2));
 				if (pct < 0) {
 					return sarc(s, 0, 100, C.track);
 				}
+				endLabel(s, lo, min, g.TEXT, C.lg);
+				endLabel(s, 100 - lo, max, g.TEXT, C.lg);
 				shadedArc(s, lo, 100, cols);
 				return dot(s, lo ? 100 - pct : pct);
 			}
