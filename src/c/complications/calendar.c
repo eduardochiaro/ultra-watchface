@@ -1,10 +1,10 @@
 #include "complications.h"
 #include "../settings.h"
+#include "../lang.h"
 
 // Yesterday, today and tomorrow as boxes along the arc, left to right, with
 // the weekday outside. Today is in light red, the others gray. Gabbro has no
 // room beside the arc: the weekday leads the boxes, "WED 30 1 2".
-static const char *const DAYS[] = { "SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT" };
 
 // Box centers apart and half a box, in % of the arc the boxes get.
 #if defined(PBL_PLATFORM_GABBRO)
@@ -17,7 +17,7 @@ static const char *const DAYS[] = { "SUN", "MON", "TUE", "WED", "THU", "FRI", "S
 
 static void corner_calendar(GContext *ctx, const Slot *slot) {
   time_t now = time(NULL);
-  const char *wday = DAYS[localtime(&now)->tm_wday];
+  const char *wday = words()->days[localtime(&now)->tm_wday];
   Slot b = *slot;
   int left = slot_left_end(&b);
 #if defined(PBL_PLATFORM_GABBRO)
@@ -48,15 +48,11 @@ static void center_calendar(GContext *ctx, GPoint c) {
   }
   disc_fill(ctx, c, r, r, fixed(GColorWhite));
   disc_fill(ctx, c, r, cut, GColorRed);
-  text_draw(ctx, DAYS[t->tm_wday], GPoint(c.x, c.y + (cut - r) / 2), SUB_SMALL - 1, ink_on(GColorRed));
+  text_draw(ctx, words()->days[t->tm_wday], GPoint(c.x, c.y + (cut - r) / 2), SUB_SMALL - 1, ink_on(GColorRed));
   char buf[3];
   snprintf(buf, sizeof(buf), "%d", t->tm_mday);
   text_draw(ctx, buf, GPoint(c.x, c.y + (cut + r) / 2), SUB_TEXT + 2, fixed(GColorBlack));
 }
-
-// In full; short is the first 3 letters.
-static const char *const MONTHS[] = { "JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST",
-                                      "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER" };
 
 static int year_days(int year) {
   return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) ? 366 : 365;
@@ -79,16 +75,17 @@ static int iso_week(const struct tm *t) {
 // A format as up to three parts, "" for none: a subdial stacks them, a corner
 // joins them. Numeric is day/month, month/day with imperial units.
 static void date_parts(DateFormat format, const struct tm *t, char *head, char *value, char *low) {
+  const Words *w = words();
   head[0] = low[0] = 0;
   snprintf(value, DATE_PART, "%d", t->tm_mday);
   switch (format) {
     case DATE_MONTH: {
-      snprintf(head, DATE_PART, "%.3s", MONTHS[t->tm_mon]);
+      strcpy(head, w->mons[t->tm_mon]);
       break;
     }
     case DATE_FULL: {
-      strcpy(head, DAYS[t->tm_wday]);
-      snprintf(low, DATE_PART, "%.3s", MONTHS[t->tm_mon]);
+      strcpy(head, w->days[t->tm_wday]);
+      strcpy(low, w->mons[t->tm_mon]);
       break;
     }
     case DATE_NUMERIC: {
@@ -98,12 +95,12 @@ static void date_parts(DateFormat format, const struct tm *t, char *head, char *
       break;
     }
     case DATE_WEEK: {
-      strcpy(head, "WEEK");
+      strcpy(head, w->week);
       snprintf(value, DATE_PART, "%d", iso_week(t));
       break;
     }
     case DATE_YEARDAY: {
-      strcpy(head, "DAY");
+      strcpy(head, w->day);
       snprintf(value, DATE_PART, "%d", t->tm_yday + 1);
       break;
     }
@@ -112,7 +109,7 @@ static void date_parts(DateFormat format, const struct tm *t, char *head, char *
       break;
     }
     default: {  // DATE_WEEKDAY
-      strcpy(head, DAYS[t->tm_wday]);
+      strcpy(head, w->days[t->tm_wday]);
       break;
     }
   }
@@ -138,9 +135,9 @@ void comp_date_draw(GContext *ctx, const Slot *s, int format) {
   snprintf(buf, sizeof(buf), "%s%s%s%s%s", head, head[0] ? sep : "", value, low[0] ? sep : "", low);
   if (format == DATE_FULL) {
 #if defined(PBL_PLATFORM_GABBRO)
-    snprintf(buf, sizeof(buf), "%s %s %s", head, value, MONTHS[today()->tm_mon]);
+    snprintf(buf, sizeof(buf), "%s %s %s", head, value, words()->months[today()->tm_mon]);
 #else
-    snprintf(buf, sizeof(buf), "%s %s", value, MONTHS[today()->tm_mon]);
+    snprintf(buf, sizeof(buf), "%s %s", value, words()->months[today()->tm_mon]);
     text_draw_along(ctx, head, slot_point(s, 50, COMP_THUMB + 2), s->center, COMP_TEXT + 2, GColorWhite);
 #endif
   }
@@ -157,9 +154,9 @@ void center_date_draw(GContext *ctx, GPoint c, int format) {
   char head[DATE_PART], value[DATE_PART], low[DATE_PART];
   date_parts(format, today(), head, value, low);
   bool pair = head[0] && !low[0];  // two lines: room for a bigger value
-  text_draw(ctx, head, GPoint(c.x, c.y - 9), SUB_SMALL + 1, GColorOrange);
+  center_fit_text(ctx, head, GPoint(c.x, c.y - 9), SUB_SMALL + 1, 2 * SUB_R, GColorOrange);
   center_fit_text(ctx, value, GPoint(c.x, c.y + (pair ? 4 : head[0] ? 1 : low[0] ? -2 : 0)), SUB_TEXT + (pair ? 5 : 3), 2 * SUB_R, GColorWhite);
-  text_draw(ctx, low, GPoint(c.x, c.y + SUB_LOW + 1), SUB_SMALL, GColorLightGray);
+  center_fit_text(ctx, low, GPoint(c.x, c.y + SUB_LOW + 1), SUB_SMALL, 2 * SUB_R, GColorLightGray);
 }
 
 // The week as 7 sections, Monday first, lit up to today: the weekday for a
@@ -175,14 +172,14 @@ void comp_week_draw(GContext *ctx, const Slot *s) {
   struct tm *t = today();
   Band bands[7];
   week_bands(t, bands);
-  comp_band_draw(ctx, s, t->tm_mday, bands, DAYS[t->tm_wday]);
+  comp_band_draw(ctx, s, t->tm_mday, bands, words()->days[t->tm_wday]);
 }
 
 void center_week_draw(GContext *ctx, GPoint c) {
   struct tm *t = today();
   Band bands[7];
   week_bands(t, bands);
-  center_band_draw(ctx, c, t->tm_mday, bands, DAYS[t->tm_wday]);
+  center_band_draw(ctx, c, t->tm_mday, bands, words()->days[t->tm_wday]);
 }
 
 // How much of the year is gone, in %; the year into `year`.

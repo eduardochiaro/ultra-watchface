@@ -34,7 +34,7 @@ int weather_rain_hour(int dh);
 
 // The icon glyph (ICON_SUN.. in draw.h) for the conditions now, NULL if unknown.
 const char *weather_icon(void);
-// Their name, short: "CLOUDY", "PT CLOUDY". Only when weather_icon() has one.
+// Their name, short, in the face's language: "CLOUDY", "PT CLOUDY". Only when weather_icon() has one.
 const char *weather_name(void);
 
 void weather_init(void);

@@ -8,16 +8,16 @@ var config = require('../src/pkjs/config');
 // Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
 assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6,
-  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, SAVER: 0, SQUARE: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
+  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, SAVER: 0, SQUARE: 0, LANG: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   ZONE_TL: 0, ZONE_TR: 0, ZONE_BL: 0, ZONE_BR: 0, ZONE_T: 0, ZONE_L: 0, ZONE_R: 0, ZONE_B: 0,
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
 // Time zone: the watch gets the offset, and the name as the text of a place showing it; an unknown zone is UTC
 msg = config.toMessage(config.withDefaults({ SLOT_TL: 32, ZONE_TL: 'PST', TEXT_TL: 'mine', CENTER_T: 32, ZONE_T: 'CST-CN', CENTER_B: 0, ZONE_B: 'IST', ZONE_L: 'nope' }));
 assert.deepStrictEqual([msg.ZONE_TL, msg.TEXT_TL, msg.ZONE_T, msg.TEXT_T, msg.ZONE_B, msg.TEXT_B, msg.ZONE_L], [-480, 'PST', 480, 'CST', 330, '', 0]);
 assert.ok(config.ZONES.every(function (z) { return z.name.length <= 4 && config.zone(z.value) === z; }), 'zone names fit a subdial, values are unique');
-// Text: only glyphs the watch font has, 12 max
-var texts = config.withDefaults({ TEXT_TL: 'Héllo <b>&"x" 12:30 and more', TEXT_B: 'Hello' });
-assert.deepStrictEqual([texts.TEXT_TL, texts.TEXT_B], ['Hllo bx 12:3', 'Hell']);
+// Text: only glyphs the watch font has, 12 bytes max; one it lacks loses its accent
+var texts = config.withDefaults({ TEXT_TL: 'Héllo <b>&"x" 12:30 and more', TEXT_B: 'Hello', TEXT_TR: 'São ÉÉÉÉÉÉÉ' });
+assert.deepStrictEqual([texts.TEXT_TL, texts.TEXT_B, texts.TEXT_TR], ['Héllo bx 12', 'Hell', 'Sao ÉÉÉÉ']);
 
 // Custom API complications: cleaned on the way in, kept off the settings message
 var apis = config.withDefaults({ APIS: [{ url: ' https://x.test/a ', freq: 0.2, type: '2', title: ' Solar power ', header: '{{u}}', text: '{{a}}', min: 5 }, null, { name: 'KW' }] }).APIS;
@@ -32,7 +32,7 @@ var buildMessage = require('../src/pkjs/api').buildMessage;
 var data = { results: { data: { points: [{ value: 1 }, { value: 12.3456, hi: 20 }] } }, on: true };
 assert.deepStrictEqual(buildMessage({ type: 2, header: 'KW', text: '{{ results.data.points[1].value }} kW', min: '10', max: '{{results.data.points[1].hi}}' }, 3, data),
   { API_INDEX: 3, API_TYPE: 2, API_NAME: 'KW', API_TEXT: '12.35 kW', API_PCT: 23, API_MIN: '10', API_MAX: '20' });
-assert.strictEqual(buildMessage({ type: 0, header: '', text: 'CO2 {{nope.x}} {{on}} é', min: '0', max: '100' }, 0, data).API_TEXT, 'CO2 -- true ');
+assert.strictEqual(buildMessage({ type: 0, header: '', text: 'CO2 {{nope.x}} {{on}} é', min: '0', max: '100' }, 0, data).API_TEXT, 'CO2 -- true é');
 assert.strictEqual(buildMessage({ type: 1, header: '', text: '{{results.data.points[0].value}}', min: 'abc', max: '100' }, 0, data).API_PCT, -1, 'min not a number');
 assert.strictEqual(buildMessage({ type: 1, header: '', text: '{{results.data.points[0].value}}', min: '-50000', max: '2' }, 0, data).API_MIN, '-50k');
 assert.deepStrictEqual(buildMessage({ type: 1, header: 'X', text: '{{a}}', min: '0', max: '1' }, 1, null),
@@ -68,6 +68,7 @@ var document = {
 function load(state) {
   els = {};
   clicks = [];
+  document.documentElement = {};
   var ctx = { document: document, location: { search: '', href: '', hash: '' }, URLSearchParams: URLSearchParams, setInterval: function () {}, Math: Math,
     window: { addEventListener: function () {}, scrollTo: function () {}, pageYOffset: 0 }, history: { back: function () {} } };
   vm.createContext(ctx);
@@ -93,7 +94,7 @@ assert.ok(svg.indexOf('stroke="#ffaa00" stroke-width="2"') > 0, 'seconds hand');
 assert.ok(els.schemes.innerHTML.indexOf('data-scheme="1" aria-pressed="true"') > 0);
 assert.strictEqual(els.colors.hidden, true);
 assert.strictEqual(els.seconds.attrs['aria-checked'], 'true');
-assert.ok(els.freq.value === 30 && els.freq.innerHTML.indexOf('<option value="180">3 hours') > 0 && els['place-now'].textContent === "The phone's location" && els['place-results'].innerHTML === '', 'weather: every 30 minutes, at the phone');
+assert.ok(els.freq.value === 30 && els.freq.innerHTML.indexOf('<option value="180">Every 3 hours') > 0 && els['place-now'].textContent === "The phone's location" && els['place-results'].innerHTML === '', 'weather: every 30 minutes, at the phone');
 assert.ok(els['sweep-row'].hidden === false && els.sweep.attrs['aria-checked'] === 'false', 'sweep: offered with the seconds hand, off');
 assert.ok(els['corners-sum'].textContent === 'Steps \u00B7 Temperature \u00B7 Battery \u00B7 Date' && els['scheme-sum'].textContent === 'White' && els.status.textContent === 'Saved to watch', 'index: current values');
 assert.ok(els['weather-sum'].textContent === "Every 30 minutes \u00B7 The phone's location" && els['custom-sum'].textContent === 'None yet');
@@ -274,7 +275,7 @@ assert.strictEqual(svg.split('>ppm</text>').length - 1, 2, 'header pattern: as l
 var sizes = svg.split('font-size="').map(parseFloat);  // [i + 1]: of the text after split i
 assert.ok(sizes[svg.split('>Living room 1234 ppm</text>')[0].split('font-size="').length - 1] < sizes[svg.split('>KW 12.3</text>')[0].split('font-size="').length - 1], 'a long corner text shrinks');
 assert.ok(els.corners.innerHTML.indexOf('<option value="15" selected>KW</option>') > 0 && els.corners.innerHTML.indexOf('>Rain &lt;b></option>') > 0 && els.centers.innerHTML.indexOf('<option value="17" selected>Custom 3</option></optgroup>') > 0, 'API options, in their group');
-assert.ok(els.apis.innerHTML.indexOf('<details class="card api" data-card="0"><summary>KW \u00B7 Gauge</summary>') === 0, 'saved cards start collapsed');
+assert.ok(els.apis.innerHTML.indexOf('<details class="card api" data-card="0"><summary data-edit="Edit">KW \u00B7 Gauge</summary>') === 0, 'saved cards start collapsed');
 assert.ok(els.apis.innerHTML.indexOf('value="https://x.test/&quot;a&quot;"') > 0 && els.apis.innerHTML.split('data-api-remove').length - 1 === 3, 'API cards');
 // A card's Save sends everything, like the page's
 var cardSave = el(); cardSave.dataset.apiSave = '0';
@@ -427,6 +428,46 @@ load({ settings: { SLOT_TL: 27 }, weather: { AQI: 75 }, platform: 'gabbro' });
 assert.ok(screen().indexOf('>AQI 75</text>') > 0 && screen().indexOf('stroke="#aa0000"') > 0, 'gabbro gauge corner: the value leads the arc');
 assert.ok(svg.indexOf('>75</text>') > 0 && svg.indexOf('>KCAL</text>') > 0 && svg.split(ctx.ICONS.flame).length - 1 === 2, 'gauge and calories subdials');
 assert.ok(svg.indexOf('stroke="#aa0000"') > 0 && svg.indexOf('>AQI</text>') > 0, 'every band color on the gauge, its caption in the subdial');
+
+// Languages. The face's words: lang.c's WORDS is FACE, language by language, field by field, in font glyphs only
+var i18n = require('../src/pkjs/i18n'), fs = require('fs');
+var cWords = fs.readFileSync('src/c/lang.c', 'utf8').split('WORDS[] = {')[1].split('\n};')[0].match(/"[^"]*"/g).map(JSON.parse);
+var jsWords = [].concat.apply([], i18n.LANG_CODES.map(function (c) {
+  var w = i18n.FACE[c];
+  return [].concat(w.days, w.months, w.mons, w.week, w.day, w.weather, w.active, w.sleep, w.points);
+}));
+assert.deepStrictEqual(cWords, jsWords, 'lang.c matches FACE');
+var fontChars = require('../package.json').scripts.font.split('"')[1];
+assert.ok(jsWords.every(function (w) { return w.split('').every(function (ch) { return fontChars.indexOf(ch) >= 0; }); }), 'face words: font glyphs only');
+assert.ok('ÀÁÂÄÇÈÉÊËÌÍÎÏÑÒÓÔÖÙÚÛÜßàáâäçèéêëìíîïñòóôöùúûü'.split('').every(function (ch) { return fontChars.indexOf(ch) >= 0 && config.clean(ch, 2) === ch; }), 'clean() keeps what the font has');
+// The page's: every language has every key, and every English text on the page is one
+var keys = Object.keys(i18n.PAGE.fr).sort();
+i18n.LANG_CODES.slice(1).forEach(function (c) {
+  assert.deepStrictEqual(Object.keys(i18n.PAGE[c]).sort(), keys, c + ': every key');
+  assert.ok(keys.every(function (k) { return i18n.PAGE[c][k]; }), c + ': no empty text');
+});
+var html = fs.readFileSync('src/pkjs/config.html', 'utf8'), markup = html.split('<body>')[1].split('<script')[0];
+var english = (markup.match(/>[^<]+</g) || []).map(function (t) { return t.slice(1, -1).trim(); })
+  .concat((markup.match(/(placeholder|aria-label|data-title)="[^"]+"/g) || []).map(function (a) { return a.split('"')[1]; }))
+  .concat((html.match(/_\("[^"]+"/g) || []).map(function (c) { return c.slice(3, -1).replace(/\\'/g, "'"); }))
+  .concat(config.COMPLICATIONS.concat(config.CENTER_COMPLICATIONS, config.ZONES, [].concat.apply([], config.VARIANTS)).map(function (o) { return o.group; }).filter(Boolean))
+  .concat(config.COMPLICATIONS.concat(config.CENTER_COMPLICATIONS, [].concat.apply([], config.VARIANTS), config.CORNERS, config.CENTERS).map(function (o) { return o.label; }))
+  .concat(config.DATE_FORMATS, config.API_TYPES, config.SCHEMES, config.HANDS, config.RINGS)
+  .filter(function (t) { return t && ['Ultra', '°C km', '°F mi'].indexOf(t) < 0; });  // names, units
+var missing = english.filter(function (t) { return !(t in i18n.PAGE.fr); });
+assert.deepStrictEqual(missing.filter(function (t, i) { return missing.indexOf(t) === i; }), [], 'every English text has a translation');
+assert.deepStrictEqual([i18n.langCode(0, 'de_DE'), i18n.langCode(0, 'pt_BR'), i18n.langCode(0), i18n.langCode(5, 'de_DE')], ['de', 'en', 'en', 'it'], 'Auto: the watch\'s, else English; a picked one wins');
+assert.strictEqual(i18n.tr('fr', '{0} of {1}', 3, 8), '3 sur 8');
+// The page and preview in French; Auto follows the watch
+load({ settings: { LANG: 2, SLOT_TL: 6, DATE_TL: 3, SLOT_TR: 12, SECONDS: 1 }, weather: { CONDITION: 4 }, platform: 'emery' });
+svg = screen();
+assert.ok(els['scheme-sum'].textContent === 'Noir' && els['corners-sum'].textContent === 'Date · Météo · Batterie · Risque de pluie' && els.status.textContent === 'Enregistré sur la montre', 'french index');
+assert.ok(els.freq.innerHTML.indexOf('>Toutes les 3 heures<') > 0 && els.corners.innerHTML.indexOf('<optgroup label="Activité">') > 0 && els.corners.innerHTML.indexOf('>Pas</option>') > 0, 'french pickers');
+assert.ok(/>(DIM|LUN|MAR|MER|JEU|VEN|SAM)<\/text>/.test(svg) && /(JANVIER|FÉVRIER|MARS|AVRIL|MAI|JUIN|JUILLET|AOÛT|SEPTEMBRE|OCTOBRE|NOVEMBRE|DÉCEMBRE)<\/text>/.test(svg) && svg.indexOf('>NUAGEUX</text>') > 0, 'french face');
+assert.ok(els.lang.innerHTML.indexOf('<option value="2" selected>Français</option>') > 0 && ctx.document.documentElement.lang === 'fr', 'language picked');
+load({ settings: { RING: 6 }, language: 'de_DE', platform: 'emery' });
+assert.ok(els.lang.innerHTML.indexOf('<option value="0" selected>Automatisch · Deutsch</option>') === 0 && els['ring-sum'].textContent === 'Kompass' && />O<\/text>/.test(screen()), 'auto: the watch\'s German, the compass east an O');
+console.log('ok languages');
 
 // getWeather asks only what the face shows: nothing at all without a weather complication, the AQI only for its own
 function fetched(settings) {

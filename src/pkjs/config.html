@@ -114,7 +114,7 @@
 	.howto summary::after { content: "+"; color: var(--soft); }
 	.howto[open] summary::after { content: "\2212"; }
 	.api summary { display: flex; align-items: center; justify-content: space-between; min-height: 44px; font-weight: 700; cursor: pointer; }
-	.api summary::after { content: "Edit"; font-size: 13px; color: var(--soft); }
+	.api summary::after { content: attr(data-edit); font-size: 13px; color: var(--soft); }
 	.api[open] summary::after { content: ""; }
 	.api .body { display: flex; flex-direction: column; gap: 10px; padding-bottom: 12px; }
 	.api button[data-api-save] { border: 0; background: var(--accent); color: #141414; }
@@ -176,13 +176,17 @@
 					<button type="button" data-units="1">°F mi</button>
 				</div>
 			</div>
+			<div class="row">
+				<label for="lang">Language</label>
+				<select id="lang" style="width: auto"></select>
+			</div>
 			<div class="row goal">
 				<div class="row" style="padding: 0">
 					<label for="goal">Daily step goal</label>
 					<output id="goal-text" for="goal"></output>
 				</div>
 				<input id="goal" type="range" min="1000" max="30000" step="500">
-				<div class="ends"><span>1,000</span><span>30,000</span></div>
+				<div class="ends"><span id="goal-min"></span><span id="goal-max"></span></div>
 			</div>
 		</div>
 	</section>
@@ -315,7 +319,7 @@
 <section class="page" id="page-weather" data-title="Weather" hidden>
 	<div class="card">
 		<div class="row">
-			<label for="freq">Refresh every</label>
+			<label for="freq">Refresh</label>
 			<select id="freq" style="width: auto"></select>
 		</div>
 		<div class="row place">
@@ -327,6 +331,7 @@
 	</div>
 </section>
 
+<script src="i18n.js"></script>
 <script src="config.js"></script>
 <script>
 (function () {
@@ -338,6 +343,34 @@
 	// The emulator hands back a localhost URL to navigate to; a real phone takes
 	// the pebblejs://close form. Same payload either way.
 	var returnTo = new URLSearchParams(location.search).get("return_to");
+	// The page's language and the face's words in it: LANG, or the watch's for Auto
+	var LOCALE = state.language || (typeof navigator === "object" && navigator.language), LC, W;
+	function setLang() {
+		LC = langCode(settings.LANG, LOCALE);
+		W = FACE[LC];
+		document.documentElement.lang = LC;
+	}
+	setLang();
+	// `s` in the page's language, {0}.. filled from the rest
+	function _(s) { return tr.apply(null, [LC].concat([].slice.call(arguments))); }
+	// The page's own text and labels, from their English, kept on the node
+	function translate() {
+		[].forEach.call(document.querySelectorAll("body *:not(script):not(style)"), function (n) {
+			[].forEach.call(n.childNodes, function (c) {
+				if (c.nodeType === 3 && c.nodeValue.trim()) {
+					c.en = c.en || c.nodeValue;
+					c.nodeValue = c.en.replace(c.en.trim(), _(c.en.trim()));
+				}
+			});
+			["placeholder", "aria-label", "data-title"].forEach(function (a) {
+				if (n.hasAttribute(a)) {
+					n.en = n.en || {};
+					n.en[a] = n.en[a] || n.getAttribute(a);
+					n.setAttribute(a, _(n.en[a]));
+				}
+			});
+		});
+	}
 
 	// Last weather sent to the watch, else a sample. Health and battery live on
 	// the watch only, so the preview always samples them.
@@ -368,15 +401,12 @@
 	}
 	function isApi(id) { return id >= API_ID && id < API_ID + API_MAX; }
 	function esc(v) { return String(v).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
-	var DAYS = ["SUN", "MON", "TUE", "WED", "THU", "FRI", "SAT"];
-	// MONTHS in calendar.c: in full, short is the first 3 letters
-	var MONTHS = ["JANUARY", "FEBRUARY", "MARCH", "APRIL", "MAY", "JUNE", "JULY", "AUGUST", "SEPTEMBER", "OCTOBER", "NOVEMBER", "DECEMBER"];
 	// date_parts() in calendar.c: [head, value, low] of a DATE_FORMATS index past Calendar
 	function dateParts(fmt, d) {
 		var day = String(d.getDate()), mon = d.getMonth() + 1, y = String(d.getFullYear());
-		return [null, [DAYS[d.getDay()], day, ""], [MONTHS[d.getMonth()].slice(0, 3), day, ""], [DAYS[d.getDay()], day, MONTHS[d.getMonth()].slice(0, 3)],
-			["", settings.UNITS === 1 ? mon + "/" + day : day + "/" + mon, y], ["WEEK", String(isoWeek(d)), ""],
-			["DAY", String(yearDay(d) + 1), ""], ["", y, ""]][fmt];
+		return [null, [W.days[d.getDay()], day, ""], [W.mons[d.getMonth()], day, ""], [W.days[d.getDay()], day, W.mons[d.getMonth()]],
+			["", settings.UNITS === 1 ? mon + "/" + day : day + "/" + mon, y], [W.week, String(isoWeek(d)), ""],
+			[W.day, String(yearDay(d) + 1), ""], ["", y, ""]][fmt];
 	}
 	// week_bands() in calendar.c: the week's days of the month, Monday first, the last open-ended
 	function weekBands(d) {
@@ -496,8 +526,6 @@
 	});
 	// weather_icon() in weather.c, icons in ICON_SUN.. order
 	var CONDITION_ICON = ["sun", "moon", "sun_cloud", "moon_cloud", "cloud", "fog", "rain", "snow", "storm"][weather.CONDITION];
-	// weather_name() in weather.c
-	var CONDITION_NAME = ["SUNNY", "CLEAR", "PT CLOUDY", "PT CLOUDY", "CLOUDY", "FOGGY", "RAINY", "SNOWY", "STORMY"][weather.CONDITION];
 	function stepPct() { return Math.trunc(STEPS * 100 / settings.STEP_GOAL); }
 	// BANDS in aqi.c
 	var AQI = weather.AQI === undefined ? -1 : weather.AQI;
@@ -561,7 +589,7 @@
 		var v = weather.WIND;
 		return v === undefined || v < 0 ? -1 : settings.UNITS === 1 ? Math.trunc(v * 1000 / 1609) : v;
 	}
-	function windFrom() { return ["N", "NE", "E", "SE", "S", "SW", "W", "NW"][Math.trunc((weather.WIND_DIR * 2 + 45) / 90) % 8]; }
+	function windFrom() { return W.points[Math.trunc((weather.WIND_DIR * 2 + 45) / 90) % 8]; }
 	function elevation() {
 		var m = weather.ELEVATION === undefined ? 0 : weather.ELEVATION;
 		return String(settings.UNITS === 1 ? Math.trunc(m * 3281 / 1000) : m);
@@ -797,9 +825,9 @@
 			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
 			// round: the weekday leads the boxes, which share what is left of the arc
 			if (g.round) {
-				endLabel(s, left, DAYS[now.getDay()]);
+				endLabel(s, left, W.days[now.getDay()]);
 			} else {
-				along(DAYS[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
+				along(W.days[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
 			}
 			s.t = g.TEXT + 5;
 			var today = ink(C.melon), step = g.round ? 34 : 22, half = g.round ? 14 : 9;
@@ -823,7 +851,7 @@
 			}
 			// conditions.c: the icon toward the corner, "21° CLOUDY" along the arc; round: the icon leads it
 			if ((id === 12 || id === 40) && CONDITION_ICON) {
-				iconText(s, CONDITION_ICON, (id === 40 ? temp(weather.TEMP) + "° " : "") + CONDITION_NAME, scheme === SCHEME_ACCENT ? C.accent : C.white);
+				iconText(s, CONDITION_ICON, (id === 40 ? temp(weather.TEMP) + "° " : "") + W.weather[weather.CONDITION], scheme === SCHEME_ACCENT ? C.accent : C.white);
 			} else if (id === 12 || id === 40) {
 				along("--", at(s, 50), s.r, g.TEXT + 2, C.white);
 			}
@@ -850,15 +878,15 @@
 				var date = dateParts(fmt, now).filter(Boolean).join(fmt === 4 ? "/" : " ");
 				// The full date: the month in full, the weekday beside the arc; round: one line
 				if (fmt === 3) {
-					date = (g.round ? DAYS[now.getDay()] + " " : "") + now.getDate() + " " + MONTHS[now.getMonth()];
+					date = (g.round ? W.days[now.getDay()] + " " : "") + now.getDate() + " " + W.months[now.getMonth()];
 					if (!g.round) {
-						along(DAYS[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
+						along(W.days[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
 					}
 				}
 				along(date, at(s, 50), s.r, fitCap(date, g.TEXT + 2, slen(s)), C.white);
 			}
 			if (id === 37) {
-				bandGauge(s, now.getDate(), weekBands(now), DAYS[now.getDay()]);
+				bandGauge(s, now.getDate(), weekBands(now), W.days[now.getDay()]);
 			}
 			if (id === 38) {
 				// comp_year_draw: the year curved by the middle; round: it leads the bar
@@ -1006,7 +1034,7 @@
 			for (i = 0; i < 12; i++) {
 				var cmpAt = R(i * 30, OUT - (CMP_TICK + cmpBand) / 2);
 				if (i % 3 === 0) {
-					text("NESW"[i / 3], cmpAt, g.CHRONO_NUM + 2, cmpInk, 0);
+					text(W.points[i / 3 * 2], cmpAt, g.CHRONO_NUM + 2, cmpInk, 0);
 				} else {
 					text(String(i * 30), cmpAt, g.NUM_SMALL - 2, cmpInk, turn(i < 3 || i > 9 ? i * 30 : i * 30 + 180));
 				}
@@ -1178,7 +1206,7 @@
 				}
 				disc(c, dr, "!" + C.white);
 				out.push('<path d="M' + f(c[0] - hw) + " " + (c[1] + cut) + "A" + dr + " " + dr + " 0 0 1 " + f(c[0] + hw) + " " + (c[1] + cut) + 'Z" fill="' + T(C.red) + '"/>');
-				text(DAYS[now.getDay()], [c[0], c[1] + Math.trunc((cut - dr) / 2)], SS - 1, ink(C.red), 0);
+				text(W.days[now.getDay()], [c[0], c[1] + Math.trunc((cut - dr) / 2)], SS - 1, ink(C.red), 0);
 				text(String(now.getDate()), [c[0], c[1] + Math.trunc((cut + dr) / 2)], ST + 2, "!" + C.black, 0);
 			},
 			3: function (c) {
@@ -1237,7 +1265,7 @@
 			37: function (c) {
 				sections(-120, 120, g.SUB_R, 3, false, now.getDate(), weekBands(now), c);
 				text(String(now.getDate()), [c[0], c[1] - 1], ST, C.white, 0);
-				text(DAYS[now.getDay()], [c[0], c[1] + SL], SS, C.white, 0);
+				text(W.days[now.getDay()], [c[0], c[1] + SL], SS, C.white, 0);
 			},
 			// center_year_draw: like humidity, the year under the value
 			38: function (c) {
@@ -1253,11 +1281,11 @@
 			},
 			// center_sleep_draw, center_active_draw: a caption, the value under it
 			33: function (c) {
-				text("SLEEP", [c[0], c[1] - g.SUB_R + 5], SS - 1, "#AA55FF", 0);
+				fit(W.sleep, [c[0], c[1] - g.SUB_R + 5], SS - 1, 2 * g.SUB_R - 4, "#AA55FF");
 				fit(sleepText(), [c[0], c[1] + 2], ST + 2, 2 * g.SUB_R - 4, C.white);
 			},
 			34: function (c) {
-				text("ACTIVE", [c[0], c[1] - g.SUB_R + 5], SS - 1, C.yellow, 0);
+				fit(W.active, [c[0], c[1] - g.SUB_R + 5], SS - 1, 2 * g.SUB_R - 4, C.yellow);
 				fit(String(ACTIVE_MIN), [c[0], c[1] + 1], ST + 3, 2 * g.SUB_R - 4, C.white);
 				text("MIN", [c[0], c[1] + SL + 2], SS + 1, C.white, 0);
 			},
@@ -1354,7 +1382,7 @@
 
 		// A thumbnail in the header, 114px tall
 		return '<svg viewBox="0 0 ' + g.w + " " + g.h + '" width="' + f(g.w * 114 / g.h) + '" height="114' +
-			'" role="img" aria-label="Watchface preview"><rect width="' + g.w + '" height="' + g.h + '" fill="' + T(C.black) + '"/>' +
+			'" role="img" aria-label="' + _("Watchface preview") + '"><rect width="' + g.w + '" height="' + g.h + '" fill="' + T(C.black) + '"/>' +
 			out.join("") + "</svg>";
 	}
 
@@ -1365,13 +1393,13 @@
 	// A complication's name in the pickers; a kind goes by its family's
 	function compLabel(id) {
 		if (isApi(id)) {
-			return (settings.APIS[id - API_ID] || {}).title || "Custom " + (id - API_ID + 1);
+			return (settings.APIS[id - API_ID] || {}).title || _("Custom {0}", id - API_ID + 1);
 		}
 		var o = COMPLICATIONS.concat(CENTER_COMPLICATIONS).filter(function (o) { return o.value === family(id); })[0];
-		return o ? o.label : "None";
+		return _(o ? o.label : "None");
 	}
 	function names(places) { return places.map(function (p) { return compLabel(settings[p.key]); }).join(" · "); }
-	function freqLabel(m) { return m < 60 ? m + " minutes" : m === 60 ? "1 hour" : m / 60 + " hours"; }
+	function freqLabel(m) { return m < 60 ? _("Every {0} minutes", m) : m === 60 ? _("Every hour") : _("Every {0} hours", m / 60); }
 	var dirty = false;  // changed since the page opened
 	function edited() {
 		dirty = true;
@@ -1380,35 +1408,35 @@
 
 	function render() {
 		preview();
-		$("status").textContent = dirty ? "Unsaved changes" : "Saved to watch";
+		$("status").textContent = _(dirty ? "Unsaved changes" : "Saved to watch");
 		$("corners-sum").textContent = names(CORNERS);
 		$("center-sum").textContent = names(CENTERS);
-		$("custom-sum").textContent = settings.APIS.length ? settings.APIS.length + " of " + API_MAX + " · " +
-			settings.APIS.map(function (a, i) { return compLabel(API_ID + i); }).join(", ") : "None yet";
-		$("scheme-sum").textContent = SCHEMES[settings.SCHEME];
+		$("custom-sum").textContent = settings.APIS.length ? _("{0} of {1}", settings.APIS.length, API_MAX) + " · " +
+			settings.APIS.map(function (a, i) { return compLabel(API_ID + i); }).join(", ") : _("None yet");
+		$("scheme-sum").textContent = _(SCHEMES[settings.SCHEME]);
 		$("scheme-swatch").style.background = theme(C.black, settings.SCHEME);
 		$("scheme-swatch").style.boxShadow = "inset 0 0 0 2px " + theme(C.lg, settings.SCHEME);
-		$("ring-sum").textContent = RINGS[settings.RING] + (g.lite && !g.round && settings.SQUARE ? " \u00B7 Rectangular" : "");
+		$("ring-sum").textContent = _(RINGS[settings.RING]) + (g.lite && !g.round && settings.SQUARE ? " \u00B7 " + _("Rectangular") : "");
 		$("square").setAttribute("aria-checked", !!settings.SQUARE);
-		$("hands-sum").textContent = HANDS[settings.HANDS];
-		var place = settings.WEATHER_PLACE ? settings.WEATHER_PLACE.label : "The phone's location";
-		$("weather-sum").textContent = "Every " + freqLabel(settings.WEATHER_FREQ) + " · " + place;
+		$("hands-sum").textContent = _(HANDS[settings.HANDS]);
+		var place = settings.WEATHER_PLACE ? settings.WEATHER_PLACE.label : _("The phone's location");
+		$("weather-sum").textContent = freqLabel(settings.WEATHER_FREQ) + " · " + place;
 		// Black and white: white on black and black on white only
 		$("schemes").innerHTML = SCHEMES.map(function (label, i) {
 			var dots = [C.green, C.accent, C.picton].map(function (c) { return '<i style="background:' + theme(c, i) + '"></i>'; }).join("");
 			return '<button type="button" class="scheme" data-scheme="' + i + '" aria-pressed="' + (settings.SCHEME === i) +
 				'"><span class="swatch" style="background:' + theme(C.black, i) + ";box-shadow:inset 0 0 0 2px " + theme(C.lg, i) +
-				',0 0 0 1px #33363b">' + dots + "</span>" + label + "</button>";
+				',0 0 0 1px #33363b">' + dots + "</span>" + _(label) + "</button>";
 		}).filter(function (b, i) { return !g.bw || i === 2 || i === 3; }).join("");
 		$("colors").hidden = settings.SCHEME !== SCHEME_ACCENT;
 		$("bg-chip").style.background = css(chans(settings.BG_COLOR));
 		$("accent-chip").style.background = css(chans(settings.ACCENT_COLOR));
 		$("hands").innerHTML = HANDS.map(function (label, i) {
 			return '<button type="button" class="scheme" data-hands="' + i + '" aria-pressed="' + (settings.HANDS === i) +
-				'"><svg viewBox="0 0 48 12" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true">' + HAND_ICONS[i] + "</svg>" + label + "</button>";
+				'"><svg viewBox="0 0 48 12" fill="none" stroke="currentColor" stroke-linecap="round" aria-hidden="true">' + HAND_ICONS[i] + "</svg>" + _(label) + "</button>";
 		}).join("");
 		$("rings").innerHTML = RINGS.map(function (label, i) {
-			return '<button type="button" class="scheme" data-ring="' + i + '" aria-pressed="' + (settings.RING === i) + '">' + label + "</button>";
+			return '<button type="button" class="scheme" data-ring="' + i + '" aria-pressed="' + (settings.RING === i) + '">' + _(label) + "</button>";
 		}).join("");
 		$("band-row").hidden = g.bw || [2, 3, 5, 6].indexOf(settings.RING) < 0;  // sport, chronograph, tachymeter and compass
 		$("band-chip").style.background = theme(handColor("BAND_COLOR", settings.RING === 5 ? handColor("SECOND_COLOR", C.accent) : C.white), settings.SCHEME);
@@ -1422,7 +1450,9 @@
 		});
 		[].forEach.call($("units").children, function (b, i) { b.setAttribute("aria-pressed", settings.UNITS === i); });
 		$("goal").value = settings.STEP_GOAL;
-		$("goal-text").textContent = settings.STEP_GOAL.toLocaleString("en-US") + " steps";
+		$("goal-text").textContent = _("{0} steps", settings.STEP_GOAL.toLocaleString(LC));
+		$("goal-min").textContent = (1000).toLocaleString(LC);
+		$("goal-max").textContent = (30000).toLocaleString(LC);
 		$("freq").value = settings.WEATHER_FREQ;
 		$("place-now").textContent = place;
 		$("seconds").setAttribute("aria-checked", !!settings.SECONDS);
@@ -1448,7 +1478,7 @@
 		$("bezel").classList.add("round");
 	}
 	var MODELS = { basalt: "Pebble Time", chalk: "Pebble Time Round", diorite: "Pebble 2", flint: "Pebble 2 Duo", emery: "Pebble Time 2", gabbro: "Pebble Round 2" };
-	$("caption").textContent = (MODELS[state.platform] ? MODELS[state.platform] + " · " : "") + (state.weather ? "sample health" : "sample data");
+	function caption() { $("caption").textContent = (MODELS[state.platform] ? MODELS[state.platform] + " · " : "") + _(state.weather ? "sample health" : "sample data"); }
 	$("corners-row").hidden = !!g.lite;
 	$("square-row").hidden = !g.lite || !!g.round;  // the older rectangular watches
 	$("hand-colors").hidden = $("hand-dots").hidden = !!g.bw;
@@ -1456,25 +1486,28 @@
 	function optionList(options, picked) {
 		return options.map(function (o, i) {
 			var before = (options[i - 1] || {}).group, after = (options[i + 1] || {}).group;
-			return (o.group && o.group !== before ? '<optgroup label="' + o.group + '">' : "") +
+			return (o.group && o.group !== before ? '<optgroup label="' + _(o.group) + '">' : "") +
 				'<option value="' + o.value + '"' + (picked === o.value ? " selected" : "") + ">" + o.label + "</option>" +
 				(o.group && o.group !== after ? "</optgroup>" : "");
 		}).join("");
 	}
+	// Their labels in the page's language
+	function said(options) { return options.map(function (o) { return { group: o.group, label: _(o.label), value: o.value }; }); }
 	function pickers(places, options) {
+		options = said(options);
 		options = options.slice(0, -1).concat(settings.APIS.map(function (a, i) {
-			return { group: "Custom", label: esc(a.title) || "Custom " + (i + 1), value: API_ID + i };
+			return { group: "Custom", label: esc(a.title) || _("Custom {0}", i + 1), value: API_ID + i };
 		}), options.slice(-1));  // None stays last
 		return places.map(function (c) {
-			var at = c.key.split("_")[1], t = "TEXT_" + at;
-			return '<label class="card corner"><span>' + c.label + '</span><select data-slot="' + c.key + '">' +
-				optionList(options, family(settings[c.key])) + '</select><input type="text" data-text="' + t + '" data-slot-key="' + c.key + '" value="' + settings[t] +
-				'" maxlength="' + (t.length === 6 ? 4 : 12) + '" autocomplete="off" placeholder="Text" aria-label="' + c.label + ' text">' +
-				'<select data-zone="ZONE_' + at + '" data-slot-key="' + c.key + '" aria-label="' + c.label + ' time zone">' +
-				optionList(ZONES, settings["ZONE_" + at]) + '</select><select data-date="DATE_' + at + '" data-slot-key="' + c.key + '" aria-label="' + c.label + ' date format">' +
-				optionList(DATE_FORMATS.map(function (label, i) { return { label: label, value: i }; }), settings["DATE_" + at]) + "</select>" +
+			var at = c.key.split("_")[1], t = "TEXT_" + at, label = _(c.label);
+			return '<label class="card corner"><span>' + label + '</span><select data-slot="' + c.key + '">' +
+				optionList(options, family(settings[c.key])) + '</select><input type="text" data-text="' + t + '" data-slot-key="' + c.key + '" value="' + esc(settings[t]) +
+				'" maxlength="' + (t.length === 6 ? 4 : 12) + '" autocomplete="off" placeholder="' + _("Text") + '" aria-label="' + _("{0} text", label) + '">' +
+				'<select data-zone="ZONE_' + at + '" data-slot-key="' + c.key + '" aria-label="' + _("{0} time zone", label) + '">' +
+				optionList(ZONES, settings["ZONE_" + at]) + '</select><select data-date="DATE_' + at + '" data-slot-key="' + c.key + '" aria-label="' + _("{0} date format", label) + '">' +
+				optionList(DATE_FORMATS.map(function (label, i) { return { label: _(label), value: i }; }), settings["DATE_" + at]) + "</select>" +
 				VARIANTS.map(function (v) {
-					return '<select data-variant="' + c.key + '" data-family="' + v[0].value + '" aria-label="' + c.label + ' kind">' + optionList(v, settings[c.key]) + "</select>";
+					return '<select data-variant="' + c.key + '" data-family="' + v[0].value + '" aria-label="' + _("{0} kind", label) + '">' + optionList(said(v), settings[c.key]) + "</select>";
 				}).join("") + "</label>";
 		}).join("");
 	}
@@ -1489,24 +1522,24 @@
 			'<input data-api="' + i + '" data-field="' + key + '" value="' + esc(settings.APIS[i][key]) + '" autocomplete="off" ' + attrs + "></label>";
 	}
 	// Its one line when collapsed: "Solar power · Gauge"
-	function apiLabel(i) { return esc(settings.APIS[i].title || "Custom " + (i + 1)) + " \u00B7 " + API_TYPES[settings.APIS[i].type]; }
+	function apiLabel(i) { return esc(settings.APIS[i].title || _("Custom {0}", i + 1)) + " \u00B7 " + _(API_TYPES[settings.APIS[i].type]); }
 	// Cards being edited. The saved ones start collapsed.
 	var apiOpen = [];
 	function buildApis() {
 		var num = 'type="text" inputmode="decimal" pattern="-?[0-9]+(\\.[0-9]+)?|.*\\{\\{.+\\}\\}.*"';
 		$("apis").innerHTML = settings.APIS.map(function (a, i) {
-			return '<details class="card api" data-card="' + i + '"' + (apiOpen[i] ? " open" : "") + "><summary>" + apiLabel(i) + '</summary><div class="body">' +
-				field(i, "url", "URL", 'type="url" pattern="https?://.+" placeholder="https://example.com/data.json"') +
-				field(i, "title", "Title", 'type="text" placeholder="Shown in Settings"') +
-				'<div class="grid">' + field(i, "header", "Header", 'type="text" placeholder="KW or {{unit}}"') +
-				'<label>Type<select data-api="' + i + '" data-field="type">' + API_TYPES.map(function (t, n) {
-					return '<option value="' + n + '"' + (a.type === n ? " selected" : "") + ">" + t + "</option>";
+			return '<details class="card api" data-card="' + i + '"' + (apiOpen[i] ? " open" : "") + '><summary data-edit="' + _("Edit") + '">' + apiLabel(i) + '</summary><div class="body">' +
+				field(i, "url", _("URL"), 'type="url" pattern="https?://.+" placeholder="https://example.com/data.json"') +
+				field(i, "title", _("Title"), 'type="text" placeholder="' + _("Shown in Settings") + '"') +
+				'<div class="grid">' + field(i, "header", _("Header"), 'type="text" placeholder="KW or {{unit}}"') +
+				"<label>" + _("Type") + '<select data-api="' + i + '" data-field="type">' + API_TYPES.map(function (t, n) {
+					return '<option value="' + n + '"' + (a.type === n ? " selected" : "") + ">" + _(t) + "</option>";
 				}).join("") + "</select></label></div>" +
-				field(i, "text", "Text", 'type="text" placeholder="{{results.data.points[1].value}}"') +
-				'<div class="grid">' + field(i, "min", "Min", num) + field(i, "max", "Max", num) + "</div>" +
-				field(i, "freq", "Refresh every (minutes)", 'type="number" min="1" step="1"') +
-				'<div class="grid"><button type="button" data-api-remove="' + i + '">Remove</button>' +
-				'<button type="button" data-api-save="' + i + '">Save and close</button></div></div></details>';
+				field(i, "text", _("Text"), 'type="text" placeholder="{{results.data.points[1].value}}"') +
+				'<div class="grid">' + field(i, "min", _("Min"), num) + field(i, "max", _("Max"), num) + "</div>" +
+				field(i, "freq", _("Refresh every (minutes)"), 'type="number" min="1" step="1"') +
+				'<div class="grid"><button type="button" data-api-remove="' + i + '">' + _("Remove") + "</button>" +
+				'<button type="button" data-api-save="' + i + '">' + _("Save and close") + "</button></div></div></details>";
 		}).join("");
 	}
 	buildApis();
@@ -1541,12 +1574,20 @@
 		}).join("");
 	});
 
-	$("freq").innerHTML = WEATHER_FREQS.map(function (m) { return '<option value="' + m + '">' + freqLabel(m) + "</option>"; }).join("");
+	// Pickers with words in them, built again when the language changes
+	function buildWords() {
+		$("freq").innerHTML = WEATHER_FREQS.map(function (m) { return '<option value="' + m + '">' + freqLabel(m) + "</option>"; }).join("");
+		$("lang").innerHTML = ["Auto"].concat(LANG_NAMES).map(function (name, i) {
+			return '<option value="' + i + '"' + (settings.LANG === i ? " selected" : "") + ">" + (i ? name : _(name) + " \u00B7 " + LANG_NAMES[LANG_CODES.indexOf(langCode(0, LOCALE))]) + "</option>";
+		}).join("");
+		caption();
+	}
+	buildWords();
 
 	// Weather place: searched on Open-Meteo's geocoding as it is typed. `found` is the last answer.
 	var found = [], searchTimer, searchRun = 0;
 	function buildPlaces(note) {
-		$("place-results").innerHTML = (settings.WEATHER_PLACE ? '<button type="button" data-place="-1">Use the phone\'s location</button>' : "") +
+		$("place-results").innerHTML = (settings.WEATHER_PLACE ? '<button type="button" data-place="-1">' + _("Use the phone's location") + "</button>" : "") +
 			found.map(function (p, i) { return '<button type="button" data-place="' + i + '">' + esc(p.label) + "</button>"; }).join("") +
 			(note ? "<small>" + note + "</small>" : "");
 	}
@@ -1571,15 +1612,15 @@
 						return { name: r.name, label: parts.join(", "), lat: r.latitude, lon: r.longitude };
 					});
 				} catch (err) {}
-				buildPlaces(found.length ? "" : "No place found.");
+				buildPlaces(found.length ? "" : _("No place found."));
 			};
 			xhr.onerror = xhr.ontimeout = function () {
 				if (mine === searchRun) {
-					buildPlaces("Search failed. Check the connection.");
+					buildPlaces(_("Search failed. Check the connection."));
 				}
 			};
 			xhr.timeout = 10000;
-			xhr.open("GET", "https://geocoding-api.open-meteo.com/v1/search?count=6&language=en&format=json&name=" + encodeURIComponent(q));
+			xhr.open("GET", "https://geocoding-api.open-meteo.com/v1/search?count=6&language=" + LC + "&format=json&name=" + encodeURIComponent(q));
 			xhr.send();
 		}, 300);
 	});
@@ -1587,6 +1628,14 @@
 	document.addEventListener("change", function (e) {
 		if (e.target.id === "freq") {
 			settings.WEATHER_FREQ = +e.target.value;
+		} else if (e.target.id === "lang") {
+			settings.LANG = +e.target.value;
+			setLang();
+			translate();
+			buildWords();
+			buildPickers();
+			buildApis();
+			buildPlaces();
 		} else if (e.target.dataset.slot) {
 			settings[e.target.dataset.slot] = +e.target.value;
 		} else if (e.target.dataset.zone) {
@@ -1725,6 +1774,7 @@
 		window.scrollTo(0, title ? 0 : homeY);
 	});
 
+	translate();
 	render();
 	setInterval(preview, 1000);  // live hands
 })();

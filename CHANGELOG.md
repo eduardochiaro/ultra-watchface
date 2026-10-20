@@ -12,6 +12,8 @@
 - **Weather in the corners:** the Weather complication now fits a corner too: its icon toward the corner and the conditions curved along the arc ("CLOUDY", "PT CLOUDY"). On the Round 2 the icon leads them.
 - **Weather with temperature:** Weather gets a second kind, Icon + temp. In a corner the temperature goes before the conditions ("21° CLOUDY"); in a subdial the icon is smaller and the temperature sits under it.
 - **Temperature gauge on the Round 2:** the Temperature corner is a gauge again, now that the corners have room: the temperature leads, then today's min, the colored arc and its thumb, and the max, min and max dimmer. Custom gauges get the same layout. The icon-and-temperature look lives on as Weather, Icon + temp.
+- **Languages:** the face and the settings page in English, French, German, Dutch, Italian or Spanish. A new Language picker under Data; Auto, the default, follows the watch's language. On the face: weekdays and months, the weather's conditions, the Date heads (week, day), the Active and Sleep captions, the wind's and the compass ring's points. The city search answers in it too.
+- **Accented letters:** the watch font has them now (É, Ä, Ñ, Ü…), so the Text complication keeps them, and so do city names: "Zürich", not "Zrich". A letter it still lacks loses its accent: "São" is "Sao".
 - **Hourly rain:** Chance of rain gets a second kind, Hourly: six sections from the hour before this one to four hours on, a darker blue the likelier rain is, none for no rain. This hour's section is ringed in the accent and its chance shown beside it. Corners and subdials. The sections move on with the hour between fetches.
 
 ## 1.9.0

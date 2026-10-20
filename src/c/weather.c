@@ -1,5 +1,6 @@
 #include "weather.h"
 #include "draw.h"
+#include "lang.h"
 
 // Bumped when Weather changes shape. Fields added at the end don't count: a
 // shorter saved copy leaves them as initialized below.
@@ -80,8 +81,5 @@ const char *weather_icon(void) {
 }
 
 const char *weather_name(void) {
-  static const char *const NAME[] = {
-    "SUNNY", "CLEAR", "PT CLOUDY", "PT CLOUDY", "CLOUDY", "FOGGY", "RAINY", "SNOWY", "STORMY",
-  };
-  return NAME[g_weather.condition];
+  return words()->weather[g_weather.condition];
 }

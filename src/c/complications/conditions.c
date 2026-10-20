@@ -16,7 +16,7 @@ static void corner(GContext *ctx, const Slot *s, bool temp) {
     text_draw_along(ctx, "--", slot_point(s, 50, 0), s->center, COMP_TEXT + 2, GColorWhite);
     return;
   }
-  char buf[20];
+  char buf[24];
   if (temp) {
     snprintf(buf, sizeof(buf), "%d° %s", g_weather.temp, weather_name());
   } else {

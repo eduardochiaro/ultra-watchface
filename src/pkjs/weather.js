@@ -49,9 +49,6 @@ function place(geo, lat, lon) {
   // ponytail: the administrative words seen so far; add the next one that shows up.
   var name = String(geo.city || geo.locality || '')
     .replace(/^(Gemeente|City of|Municipality of) /i, '').replace(/ (Municipality|Kommune?)$/i, '');
-  if (name.normalize) {
-    name = name.normalize('NFD');  // "São" -> "Sa~o": the accent is cleaned off
-  }
   name = config.clean(name, 16).trim();
   if (!name) {
     return {
@@ -59,9 +56,9 @@ function place(geo, lat, lon) {
       LOCATION_CODE: config.clean(geo.countryCode || '', 4)
     };
   }
-  var words = name.replace(/[^A-Za-z ]/g, ' ').split(' ').filter(Boolean);
+  var words = name.replace(/[^A-Za-zÀ-ÿ ]/g, ' ').split(' ').filter(Boolean);
   var code = words.length > 1 ? words.map(function(w) { return w[0]; }).join('') : (words[0] || name).slice(0, 3);
-  return { LOCATION: name, LOCATION_CODE: code.slice(0, 4).toUpperCase() };
+  return { LOCATION: name, LOCATION_CODE: config.clean(code.toUpperCase(), 4) };
 }
 
 // WMO weather code -> icon index on the watch (ICON_SUN.. in draw.h), -1 = unknown.

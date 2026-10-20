@@ -2,6 +2,7 @@
 #include "draw.h"
 #include "settings.h"
 #include "weather.h"
+#include "lang.h"
 #include "complications/complications.h"
 
 // Dial geometry, tuned per screen.
@@ -260,8 +261,7 @@ static void draw_compass(GContext *ctx, GPoint c) {
   char buf[4];
   for (int h = 0; h < 12; h++) {
     if (h % 3 == 0) {
-      snprintf(buf, sizeof(buf), "%c", "NESW"[h / 3]);
-      text_draw(ctx, buf, ring_point(c, DEG(h * 30), r), CHRONO_NUM + 2, ink);
+      text_draw(ctx, words()->points[h / 3 * 2], ring_point(c, DEG(h * 30), r), CHRONO_NUM + 2, ink);
     } else {
       snprintf(buf, sizeof(buf), "%d", h * 30);
       ring_text(ctx, buf, c, DEG(h * 30), r, CHR_NUM, ink);
@@ -759,6 +759,9 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     }
     if ((t = dict_find(iter, MESSAGE_KEY_SQUARE))) {
       g_settings.square = t->value->int32;
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_LANG))) {
+      g_settings.lang = t->value->int32;
     }
     if ((t = dict_find(iter, MESSAGE_KEY_UNITS))) {
       g_settings.imperial = t->value->int32;

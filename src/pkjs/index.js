@@ -33,13 +33,13 @@ Pebble.addEventListener('ready', function() {
 });
 
 // The page is handed over whole, with the saved settings, the last weather and
-// API values, and the watch model written into it.
+// API values, and the watch model and language written into it.
 Pebble.addEventListener('showConfiguration', function() {
   var watch = Pebble.getActiveWatchInfo && Pebble.getActiveWatchInfo();
   var weather = null, apis = null;
   try { weather = JSON.parse(localStorage.getItem(getWeather.WEATHER_KEY)); } catch (e) {}
   try { apis = JSON.parse(localStorage.getItem(api.API_KEY)); } catch (e) {}
-  var state = { settings: config.savedSettings(), weather: weather, api: apis, platform: watch && watch.platform };
+  var state = { settings: config.savedSettings(), weather: weather, api: apis, platform: watch && watch.platform, language: watch && watch.language };
   var json = JSON.stringify(state).replace(/</g, '\\u003c');
   var page = PAGE.replace('var STATE = null; //$$STATE$$', function() {
     return 'var STATE = ' + json + ';';

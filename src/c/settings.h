@@ -55,6 +55,7 @@ typedef struct {
   bool shake_hide;                 // two shakes hide the hands for a few seconds; on the pad byte, 0 on older saves
   bool saver;                      // battery saver: the face sleeps when health goes quiet; appended, 0 on older saves
   bool square;                     // the ring as a rounded rect along the screen's edge; rect lite only, appended
+  uint8_t lang;                    // the face's words: 0 the watch's language, else LANG_CODES (i18n.js) + 1; appended
 } Settings;
 
 extern Settings g_settings;

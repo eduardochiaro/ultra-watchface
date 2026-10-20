@@ -167,8 +167,9 @@ var RINGS = ['Default', 'Minimal', 'Sport', 'Chronograph', 'Roman', 'Tachymeter'
 
 // Mirrors g_settings in C. weather.js asks Open-Meteo for the chosen
 // temperature unit; the watch converts distance and elevation. Colors are GColor8 argb (0xC0 = black,
-// 0xF8 = chrome yellow); a hand or band color of 0 follows the scheme.
-var DEFAULTS = { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6, SCHEME: 0, UNITS: 0, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, SAVER: 0, SQUARE: 0,
+// 0xF8 = chrome yellow); a hand or band color of 0 follows the scheme. LANG: 0
+// follows the watch's language, else a LANG_CODES index + 1 (i18n.js).
+var DEFAULTS = { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6, SCHEME: 0, UNITS: 0, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, SAVER: 0, SQUARE: 0, LANG: 0,
   BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   // The Time zone complication's zone, per place: ZONE_ + the SLOT_/CENTER_ suffix, a ZONES value.
   ZONE_TL: 'UTC', ZONE_TR: 'UTC', ZONE_BL: 'UTC', ZONE_BR: 'UTC', ZONE_T: 'UTC', ZONE_L: 'UTC', ZONE_R: 'UTC', ZONE_B: 'UTC',
@@ -193,9 +194,22 @@ function cleanPlace(p) {
   return { name: String(p.name || '').slice(0, 40), label: String(p.label || p.name || '').slice(0, 80), lat: lat, lon: lon };
 }
 
-// Only characters the watch font has, `n` at most.
+// Only characters the watch font has, `n` bytes at most: the watch keeps
+// UTF-8, an accented letter takes 2. One the font lacks loses its accent: "ã" is "a".
+var FONT = /[ %,\-./0-9:A-Za-zÀÁÂÄÇÈÉÊËÌÍÎÏÑÒÓÔÖÙÚÛÜßàáâäçèéêëìíîïñòóôöùúûü]/;
 function clean(s, n) {
-  return String(s).replace(/[^ %,\-./0-9:A-Za-z]/g, '').slice(0, n);
+  var out = '', bytes = 0;
+  s = String(s);
+  (s.normalize ? s.normalize('NFC') : s).split('').every(function (c) {
+    c = FONT.test(c) ? c : c.normalize ? c.normalize('NFD')[0] : '';
+    if (!FONT.test(c)) {
+      return true;
+    }
+    bytes += c > '\x7f' ? 2 : 1;
+    out += bytes <= n ? c : '';
+    return bytes < n;
+  });
+  return out;
 }
 
 // Corners fit 12, subdials 4 (TEXT_T etc.).

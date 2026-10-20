@@ -1,6 +1,7 @@
 #include "complications.h"
 #include "../settings.h"
 #include "../weather.h"
+#include "../lang.h"
 
 // Wind speed in the unit setting, -1 before any reading.
 static int wind_speed(void) {
@@ -12,8 +13,7 @@ static int wind_speed(void) {
 
 // Where it blows from, to the nearest of 8 points.
 static const char *wind_from(void) {
-  static const char *const POINT[] = { "N", "NE", "E", "SE", "S", "SW", "W", "NW" };
-  return POINT[(g_weather.wind_dir * 2 + 45) / 90 % 8];
+  return words()->points[(g_weather.wind_dir * 2 + 45) / 90 % 8];
 }
 
 // No bar: "14km/h NW" curved along the arc's middle, the icon toward the corner

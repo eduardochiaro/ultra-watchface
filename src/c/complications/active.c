@@ -1,4 +1,5 @@
 #include "complications.h"
+#include "../lang.h"
 
 // Minutes active today.
 static int active_minutes(void) {
@@ -20,7 +21,7 @@ void comp_active_draw(GContext *ctx, const Slot *s) {
 void center_active_draw(GContext *ctx, GPoint c) {
   char buf[8];
   snprintf(buf, sizeof(buf), "%d", active_minutes());
-  text_draw(ctx, "ACTIVE", GPoint(c.x, c.y - SUB_R + 5), SUB_SMALL - 1, GColorYellow);
+  center_fit_text(ctx, words()->active, GPoint(c.x, c.y - SUB_R + 5), SUB_SMALL - 1, 2 * SUB_R - 4, GColorYellow);
   center_fit_text(ctx, buf, GPoint(c.x, c.y + 1), SUB_TEXT + 3, 2 * SUB_R - 4, GColorWhite);
   text_draw(ctx, "MIN", GPoint(c.x, c.y + SUB_LOW + 2), SUB_SMALL + 1, GColorWhite);
 }
