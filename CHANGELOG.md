@@ -11,7 +11,7 @@
 - **Outlined hands:** every hand style but Outline, the seconds hand and the pin have a thin outline in the background color, so they stand out over the dial, the band, the subdials and each other.
 - **Weather in the corners:** the Weather complication now fits a corner too: its icon toward the corner and the conditions curved along the arc ("CLOUDY", "PT CLOUDY"). On the Round 2 the icon leads them.
 - **Weather with temperature:** Weather gets a second kind, Icon + temp. In a corner the temperature goes before the conditions ("21° CLOUDY"); in a subdial the icon is smaller and the temperature sits under it.
-- **Temperature gauge on the Round 2:** the Temperature corner is a gauge again, the temperature leading the colored arc and its thumb, now that the corners have room. Custom gauges get the same layout. The icon-and-temperature look lives on as Weather, Icon + temp.
+- **Temperature gauge on the Round 2:** the Temperature corner is a gauge again, now that the corners have room: the temperature leads, then today's min, the colored arc and its thumb, and the max, min and max dimmer. Custom gauges get the same layout. The icon-and-temperature look lives on as Weather, Icon + temp.
 - **Hourly rain:** Chance of rain gets a second kind, Hourly: six sections from the hour before this one to four hours on, a darker blue the likelier rain is, none for no rain. This hour's section is ringed in the accent and its chance shown beside it. Corners and subdials. The sections move on with the hour between fetches.
 
 ## 1.9.0
