@@ -184,11 +184,12 @@ var CLOCKWISE = ['SLOT_TL', 'SLOT_TR', 'SLOT_BR', 'SLOT_BL'];
 
 // The corners as runs, each clockwise from the first whose gap before it is
 // open, with the corner whose complication it shows: the one at its left end,
-// else at its bottom. All four make a ring open at the bottom. The loop in
-// draw_face() and run_owner() in ultra-watchface.c.
+// else at its bottom. All four make one ring (`ring`), its labels at 6 o'clock.
+// The loop in draw_face() and run_owner() in ultra-watchface.c.
 function runs(join, round) {
   join &= round ? 15 : 5;
-  if (join === 15) {
+  var ring = join === 15;
+  if (ring) {
     join = 11;
   }
   function left(i) { return i === 0 || i === 3; }
@@ -203,7 +204,7 @@ function runs(join, round) {
     }
     var last = run[run.length - 1];
     var own = left(i) !== left(last) ? (left(i) ? i : last) : (i >= 2 ? i : last);
-    out.push({ corners: run.map(function (k) { return CLOCKWISE[k]; }), owner: CLOCKWISE[own] });
+    out.push({ corners: run.map(function (k) { return CLOCKWISE[k]; }), owner: CLOCKWISE[own], ring: ring });
   }
   return out;
 }

@@ -516,7 +516,7 @@ static void draw_face(GContext *ctx, GRect b, GPoint c) {
   // open, drawn as one slot with its owner's complication.
   uint8_t join = g_settings.join & JOINABLE;
   if (join == JOIN_ALL) {
-    join &= ~JOIN_BOTTOM;  // a ring, open at the bottom
+    join &= ~JOIN_BOTTOM;  // one run from the bottom left, closed below
   }
   for (int i = 0; i < SLOT_POS_COUNT; i++) {
     if (join & (1 << (i + SLOT_POS_COUNT - 1) % SLOT_POS_COUNT)) {
@@ -543,6 +543,12 @@ static void draw_face(GContext *ctx, GRect b, GPoint c) {
       s.c0 = m - h;
       s.c1 = m + h;
 #endif
+      if (join != (g_settings.join & JOINABLE)) {
+        // All four: a ring from 6 o'clock, its labels leading there, the bar all the
+        // way round, stopping a gap short of them.
+        s.a0 = DEG(180);
+        s.a1 = DEG(540) - (COMP_GAP + COMP_T / 2) * (TRIG_MAX_ANGLE * 10 / 63) / COMP_R;
+      }
     }
     corner_draw(ctx, own, &s);
   }

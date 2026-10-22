@@ -36,7 +36,7 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 | Setting | What it does |
 | --- | --- |
 | Corners | The four arc gauges outside the dial: top left, top right, bottom left, bottom right. |
-| Join corners | One complication across two corners, its bar running on through the gap. Time 2: the top pair and the bottom pair. Round 2: any neighbors, up to all four as one ring open at the bottom. The run shows the complication picked in its left corner (the bottom one for a side). |
+| Join corners | One complication across two corners, its bar running on through the gap. Time 2: the top pair and the bottom pair. Round 2: any neighbors, up to all four as one closed ring, its labels at 6 o'clock. The run shows the complication picked in its left corner (the bottom one for a side). |
 | Center | The four subdials inside the dial: top, left, right, bottom. |
 | Time zone | Pick **Time zone** in any slot, then its zone under it. Every slot showing one has its own. |
 | Date | Pick **Date** in any slot, then its format under it: Calendar (yesterday, today and tomorrow in a corner, a tear-off page in a subdial), Weekday and day (TUE 6), Month and day (OCT 6), Full date (TUE over 6 OCTOBER in a corner, TUE 6 OCT in a subdial), Numeric (6/10/2026; month first with °F and miles), Week number (ISO from Monday; from Sunday or Saturday, week 1 is the one 1 January is in), Day of year or Year. Every slot showing one has its own. |

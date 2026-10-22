@@ -5,7 +5,7 @@
 typedef enum { SLOT_POS_TL, SLOT_POS_TR, SLOT_POS_BR, SLOT_POS_BL, SLOT_POS_COUNT } SlotPos;
 // Corners joined across the gap after them, clockwise: one complication, its bar
 // running on through the gap. Emery has room between the top two and the bottom
-// two only; all four on gabbro is a ring, open at the bottom.
+// two only; all four on gabbro is one ring, its labels at 6 o'clock.
 enum { JOIN_TOP = 1, JOIN_RIGHT = 2, JOIN_BOTTOM = 4, JOIN_LEFT = 8, JOIN_ALL = 15 };
 #if defined(PBL_PLATFORM_GABBRO)
 #define JOINABLE JOIN_ALL

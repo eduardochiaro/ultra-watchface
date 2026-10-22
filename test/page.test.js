@@ -470,7 +470,7 @@ assert.deepStrictEqual(owned(0, true), ['SLOT_TL:SLOT_TL', 'SLOT_TR:SLOT_TR', 'S
 assert.deepStrictEqual(owned(1 | 4, false), ['SLOT_TL+SLOT_TR:SLOT_TL', 'SLOT_BR+SLOT_BL:SLOT_BL']);
 assert.deepStrictEqual(owned(2 | 8, false), owned(0, false), 'emery: no sides');
 assert.deepStrictEqual(owned(2 | 8, true), ['SLOT_TR+SLOT_BR:SLOT_BR', 'SLOT_BL+SLOT_TL:SLOT_BL'], 'gabbro sides: the bottom corner');
-assert.deepStrictEqual(owned(15, true), ['SLOT_BL+SLOT_TL+SLOT_TR+SLOT_BR:SLOT_BL'], 'all four: a ring open at the bottom');
+assert.deepStrictEqual(owned(15, true), ['SLOT_BL+SLOT_TL+SLOT_TR+SLOT_BR:SLOT_BL'], 'all four: one ring');
 assert.deepStrictEqual(owned(2 | 4 | 8, true), ['SLOT_TR+SLOT_BR+SLOT_BL+SLOT_TL:SLOT_TL'], 'open at the top');
 assert.deepStrictEqual(owned(1 | 2, true), ['SLOT_TL+SLOT_TR+SLOT_BR:SLOT_TL', 'SLOT_BL:SLOT_BL'], 'one large, one small');
 assert.strictEqual(config.toMessage(config.withDefaults({ JOIN: 21 })).JOIN, 5);

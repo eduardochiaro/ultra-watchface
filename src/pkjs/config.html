@@ -893,6 +893,10 @@
 					s.c0 = (lo + hi) / 2 - h;
 					s.c1 = (lo + hi) / 2 + h;
 				}
+				if (run.ring) {  // all four: from 6 o'clock all the way round, a gap short of its labels
+					s.a0 = 180;
+					s.a1 = 540 - (4 + g.COMP_T / 2) / g.COMP_R * 180 / Math.PI;
+				}
 			}
 			cornerDraw(k, s);
 		});
