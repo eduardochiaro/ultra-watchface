@@ -2,7 +2,8 @@
 
 An analog watchface for Pebble with eight complications you choose yourself. Four gauges curve around the corners, four subdials sit inside the dial, and every one is yours to swap.
 
-- **Eight slots, your pick.** Steps, distance, calories, active minutes, sleep, heart rate, battery, the date in eight formats, week and year progress, temperature, rain (today or by the hour), humidity, wind, air quality and UV index (as sections or a gauge), elevation, location, sunrise and sunset, moon phase, digital time, other time zones, .beat time, current weather, your own text, or a value from any JSON API.
+- **Eight slots, your pick.** Steps, distance, calories, active minutes, sleep, heart rate, battery, the date in eight formats, the week, year, month, week and day progress, days until or since a date, temperature, rain (today or by the hour), humidity, wind, air quality and UV index (as sections or a gauge), pressure, elevation, location, sunrise and sunset, moon phase, digital time, other time zones, .beat time, current weather, your own text, or a value from any JSON API.
+- **Joined corners.** Let one corner's bar run on into its neighbor: one long gauge across the top or bottom, or, on the Round 2, up a side or all the way round.
 - **Five color schemes.** Black, White, two monochromes, or Accent: any background and accent from the watch's 64 colors.
 - **Seven rings.** Default, Minimal, Sport, Chronograph, Roman, Tachymeter or Compass, the banded ones in a color you pick.
 - **Six hands.** Line, Bar, Outline, Pointer, Sword or Dauphine hands, each in its own color. Or none, with the time in a complication.
@@ -35,16 +36,19 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 | Setting | What it does |
 | --- | --- |
 | Corners | The four arc gauges outside the dial: top left, top right, bottom left, bottom right. |
+| Join corners | One complication across two corners, its bar running on through the gap. Time 2: the top pair and the bottom pair. Round 2: any neighbors, up to all four as one ring open at the bottom. The run shows the complication picked in its left corner (the bottom one for a side). |
 | Center | The four subdials inside the dial: top, left, right, bottom. |
 | Time zone | Pick **Time zone** in any slot, then its zone under it. Every slot showing one has its own. |
-| Date | Pick **Date** in any slot, then its format under it: Calendar (yesterday, today and tomorrow in a corner, a tear-off page in a subdial), Weekday and day (TUE 6), Month and day (OCT 6), Full date (TUE over 6 OCTOBER in a corner, TUE 6 OCT in a subdial), Numeric (6/10/2026; month first with °F and miles), Week number (ISO, weeks start on Monday), Day of year or Year. Every slot showing one has its own. |
+| Date | Pick **Date** in any slot, then its format under it: Calendar (yesterday, today and tomorrow in a corner, a tear-off page in a subdial), Weekday and day (TUE 6), Month and day (OCT 6), Full date (TUE over 6 OCTOBER in a corner, TUE 6 OCT in a subdial), Numeric (6/10/2026; month first with °F and miles), Week number (ISO from Monday; from Sunday or Saturday, week 1 is the one 1 January is in), Day of year or Year. Every slot showing one has its own. |
+| Days until / since | Pick **Days until / since** in any slot, then its date and a name under it: "64 DAYS LEFT" before the date, "3 DAYS AGO" after. The name (up to 12 characters in a corner, 4 in a subdial) goes beside the arc or above the count. |
 | Text | Pick **Text** in any slot to show your own label: up to 12 characters in a corner, 4 in a subdial. |
 | Custom complications | Show a value from any JSON API. Create up to 8, then pick them in any corner or subdial. See below. |
 | Color scheme | Black, White, White on black, Black on white, or Accent. Accent adds a background and an accent color picker. |
 | Ring | Default, Minimal (ticks only, no numerals), Sport (a white band of minute numerals over an accent ring), Chronograph (the white band alone, black on white, hours 1 to 12), Roman (Default with its hours in Roman numerals, turned along the dial), Tachymeter (seconds ticks around a colored band of 10 to 60, a dot between each) or Compass (a compass bezel: N, E, S, W and the degrees between, 30 to 330, on a band; it is fixed and does not turn to north). Minimal, Sport, Chronograph, Tachymeter and Compass leave a larger center: the subdials grow to fill it and the hands run longer. Sport, Chronograph, Tachymeter and Compass take a band color; ticks and numerals turn black or white to stay readable on it. Tachymeter's band follows the seconds color until it has its own. Picking a color scheme resets it. |
 | Hands | Line, Bar, Outline, Pointer, Sword or Dauphine for the hour and minute hands, or None to hide them (the seconds hand has its own switch), and a color each for the hour, minute and seconds hands. The seconds color is also the 12, 3, 6 and 9 notches'. Picking a color scheme resets the colors; picking an accent resets the seconds color. |
 | Weather | **Refresh every** 15 or 30 minutes, 1, 2 or 3 hours. **Location**: the phone's, or search a city and pick it; weather, air quality, sun times and the Location complication are then that city's, and the phone's position is not asked. |
-| Units | °C, km and km/h, or °F, miles and mph. |
+| Units | °C, km, km/h and hPa, or °F, miles, mph and inHg. |
+| Week starts on | Monday, Sunday or Saturday. The Week complication's first section, Week progress and the week number follow it. |
 | Daily step goal | 1,000 to 30,000 steps. Fills the steps, distance and calories gauges. |
 | Seconds hand | Off by default. Uses more battery. It rests during Quiet Time and at 20% battery or less. |
 | Sweeping seconds | With the seconds hand on: it glides instead of ticking, 8 steps a second. Drains the battery much faster. On the round watch only with Line or no hands. |
@@ -79,9 +83,10 @@ Limits:
 - Two complications on the same URL make two requests.
 
 ### Good to know
-- Weather, rain, humidity, wind, air quality, UV, elevation, location and sunrise/sunset need location access for the Pebble app and a connection to your phone.
+- Weather, rain, humidity, wind, air quality, UV, pressure, elevation, location and sunrise/sunset need location access for the Pebble app and a connection to your phone.
 - Calories come as a total (active and resting, so it grows even with no steps) or active only.
-- **Week** shows the week as seven sections, Monday first, lit up to today, with the weekday and the day. **Year progress** is a bar of how much of the year is gone.
+- **Week** shows the week as seven sections from the day it starts on, lit up to today, with the weekday and the day. **Progress** is a bar of how much of the year, month, week (from the day it starts on) or day is gone.
+- **Pressure** is at sea level. A subdial shows it on a barometer's scale from 970 to 1050 hPa (28.6 to 31.0 inHg).
 - Each Time zone complication has its own zone, picked by abbreviation (PST, CET, IST). An abbreviation is a fixed offset: switch PST to PDT yourself when daylight saving starts or ends.
 - The moon is drawn as seen from the northern hemisphere, from the mean lunar cycle: up to half a day off.
 - Steps, distance, calories, active minutes, sleep and heart rate come from Pebble Health, so it has to be turned on. Heart rate needs a watch with a sensor.

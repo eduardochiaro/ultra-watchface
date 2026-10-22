@@ -463,6 +463,35 @@ static void draw_cache(GContext *ctx) {
   graphics_release_frame_buffer(ctx, fb);
 }
 
+#if !defined(LITE)
+// Which corner of a run, first to last clockwise, shows its complication: the
+// one at its left end, else at its bottom. config.js runs() too.
+static int run_owner(int first, int last) {
+  bool left_first = first == SLOT_POS_TL || first == SLOT_POS_BL;
+  bool left_last = last == SLOT_POS_TL || last == SLOT_POS_BL;
+  if (left_first != left_last) {
+    return left_first ? first : last;
+  }
+  return first == SLOT_POS_BR || first == SLOT_POS_BL ? first : last;
+}
+
+// Text and the time zone need their corner's string, the date its format, the
+// countdown both; the rest draw from what they measure.
+static void corner_draw(GContext *ctx, int i, const Slot *s) {
+  if (g_settings.slots[i] == COMP_CUSTOM) {
+    comp_custom_draw(ctx, s, g_settings.slot_text[i]);
+  } else if (g_settings.slots[i] == COMP_ZONE) {
+    comp_zone_draw(ctx, s, g_settings.zone[i], g_settings.slot_text[i]);
+  } else if (g_settings.slots[i] == COMP_CALENDAR) {
+    comp_date_draw(ctx, s, g_settings.zone[i]);
+  } else if (g_settings.slots[i] == COMP_COUNTDOWN) {
+    comp_countdown_draw(ctx, s, g_settings.zone[i], g_settings.slot_text[i]);
+  } else {
+    complication_draw(g_settings.slots[i], ctx, s);
+  }
+}
+#endif
+
 static void draw_face(GContext *ctx, GRect b, GPoint c) {
   graphics_context_set_fill_color(ctx, theme(GColorBlack));
   graphics_fill_rect(ctx, b, 0, GCornerNone);
@@ -472,23 +501,50 @@ static void draw_face(GContext *ctx, GRect b, GPoint c) {
 #if !defined(LITE)  // lite has none: its dial fills the screen
   static const int16_t SIDE[SLOT_POS_COUNT] = { 315, 45, 135, 225 };  // TL TR BR BL
   static const int8_t DIR[SLOT_POS_COUNT] = { 1, -1, 1, -1 };
+  Slot at[SLOT_POS_COUNT];
   for (int i = 0; i < SLOT_POS_COUNT; i++) {
     int32_t a0 = DEG(SIDE[i]) - DIR[i] * COMP_LEAD;
-    Slot s = {
+    at[i] = (Slot){
       .center = c, .radius = COMP_R, .thickness = COMP_T,
       .a0 = a0,
       .a1 = a0 + DIR[i] * DEG(COMP_SPAN),
     };
-    // Text and the time zone need their slot's string, the date its format; the rest draw from what they measure.
-    if (g_settings.slots[i] == COMP_CUSTOM) {
-      comp_custom_draw(ctx, &s, g_settings.slot_text[i]);
-    } else if (g_settings.slots[i] == COMP_ZONE) {
-      comp_zone_draw(ctx, &s, g_settings.zone[i], g_settings.slot_text[i]);
-    } else if (g_settings.slots[i] == COMP_CALENDAR) {
-      comp_date_draw(ctx, &s, g_settings.zone[i]);
-    } else {
-      complication_draw(g_settings.slots[i], ctx, &s);
+    at[i].c0 = at[i].a0;
+    at[i].c1 = at[i].a1;
+  }
+  // Joined corners are one run, clockwise from the first whose gap before it is
+  // open, drawn as one slot with its owner's complication.
+  uint8_t join = g_settings.join & JOINABLE;
+  if (join == JOIN_ALL) {
+    join &= ~JOIN_BOTTOM;  // a ring, open at the bottom
+  }
+  for (int i = 0; i < SLOT_POS_COUNT; i++) {
+    if (join & (1 << (i + SLOT_POS_COUNT - 1) % SLOT_POS_COUNT)) {
+      continue;  // in the run before it
     }
+    int last = i;
+    while (join & (1 << last)) {
+      last = (last + 1) % SLOT_POS_COUNT;
+    }
+    int own = run_owner(i, last);
+    Slot s = at[own];
+    if (last != i) {
+      // From the first's outer end round to the last's, from the owner's end.
+      int32_t lo = at[i].a0 < at[i].a1 ? at[i].a0 : at[i].a1;
+      int32_t hi = at[last].a0 > at[last].a1 ? at[last].a0 : at[last].a1;
+      if (hi <= lo) {
+        hi += TRIG_MAX_ANGLE;
+      }
+      s.a0 = own == i ? lo : hi;
+      s.a1 = own == i ? hi : lo;
+#if defined(PBL_PLATFORM_GABBRO)
+      // Round: what sits by the middle goes by the run's middle.
+      int32_t m = (lo + hi) / 2, h = (s.a1 > s.a0 ? 1 : -1) * DEG(COMP_SPAN) / 2;
+      s.c0 = m - h;
+      s.c1 = m + h;
+#endif
+    }
+    corner_draw(ctx, own, &s);
   }
 #endif
 
@@ -717,7 +773,7 @@ static void subscribe_ticks(void) {
 }
 
 // Every corner and subdial, in g_settings.zone order: its complication, its
-// COMP_CUSTOM text or COMP_ZONE name, and its COMP_ZONE offset or COMP_CALENDAR format.
+// COMP_CUSTOM text or COMP_ZONE name, and its COMP_ZONE offset, COMP_CALENDAR format or COMP_COUNTDOWN day.
 #define PLACE(key, text_key, zone_key, id, text) \
   { MESSAGE_KEY_##key, MESSAGE_KEY_##text_key, MESSAGE_KEY_##zone_key, &g_settings.id, g_settings.text, sizeof(g_settings.text) }
 
@@ -762,6 +818,12 @@ static void inbox_received(DictionaryIterator *iter, void *context) {
     }
     if ((t = dict_find(iter, MESSAGE_KEY_LANG))) {
       g_settings.lang = t->value->int32;
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_WEEK_START))) {
+      g_settings.week_start = clamp_i32(t->value->int32, 0, 6);
+    }
+    if ((t = dict_find(iter, MESSAGE_KEY_JOIN))) {
+      g_settings.join = t->value->int32 & JOIN_ALL;
     }
     if ((t = dict_find(iter, MESSAGE_KEY_UNITS))) {
       g_settings.imperial = t->value->int32;

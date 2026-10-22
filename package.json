@@ -100,7 +100,10 @@
       "RAIN_START",
       "RAIN_HOURS",
       "SQUARE",
-      "LANG"
+      "LANG",
+      "WEEK_START",
+      "PRESSURE",
+      "JOIN"
     ],
     "resources": {
       "media": [
@@ -123,6 +126,6 @@
   "devDependencies": {
     "opentype.js": "^2.0.0",
     "pebble-fctx-compiler": "^1.2.2",
-    "svg-path-parser": "^1.0.1"
+    "svg-path-parser": "^1.1.0"
   }
 }

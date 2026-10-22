@@ -180,6 +180,10 @@
 				<label for="lang">Language</label>
 				<select id="lang" style="width: auto"></select>
 			</div>
+			<div class="row">
+				<label for="week-start">Week starts on</label>
+				<select id="week-start" style="width: auto"></select>
+			</div>
 			<div class="row goal">
 				<div class="row" style="padding: 0">
 					<label for="goal">Daily step goal</label>
@@ -228,6 +232,8 @@
 
 <!-- The index's pages: one shows at a time, by the URL's hash. data-title goes in the header. -->
 <section class="page" id="page-corners" data-title="Corners" hidden>
+	<p class="soft" style="margin: 0 0 8px">Joined corners show one complication, its bar running on through the gap between them.</p>
+	<div class="card" id="joins" style="margin-bottom: 12px"></div>
 	<div class="grid" id="corners"></div>
 </section>
 
@@ -374,13 +380,13 @@
 
 	// Last weather sent to the watch, else a sample. Health and battery live on
 	// the watch only, so the preview always samples them.
-	var SAMPLE = { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, SUNRISE: 390, SUNSET: 1195, WIND: 14, WIND_DIR: 315, LOCATION: "Seattle", LOCATION_CODE: "SEA",
+	var SAMPLE = { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, SUNRISE: 390, SUNSET: 1195, WIND: 14, WIND_DIR: 315, PRESSURE: 1016, LOCATION: "Seattle", LOCATION_CODE: "SEA",
 		RAIN_START: Math.floor(Date.now() / 3600000) - 1, RAIN_HOURS: [10, 20, 40, 70, 90, 50, 20, 0, 0], imperial: false };
 	var weather = state.weather || SAMPLE;
 	// What the phone has not fetched yet, a complication just picked: the sample's,
 	// so the preview shows it drawn. Not the temperatures: they come in the saved unit.
 	Object.keys(SAMPLE).forEach(function (k) {
-		var unknown = weather[k] === undefined || (weather[k] === -1 && /^(AQI|UV|HUMIDITY|WIND)$/.test(k));
+		var unknown = weather[k] === undefined || (weather[k] === -1 && /^(AQI|UV|HUMIDITY|WIND|PRESSURE)$/.test(k));
 		if (unknown && k.indexOf("TEMP") !== 0) {
 			weather[k] = SAMPLE[k];
 		}
@@ -405,16 +411,33 @@
 	function dateParts(fmt, d) {
 		var day = String(d.getDate()), mon = d.getMonth() + 1, y = String(d.getFullYear());
 		return [null, [W.days[d.getDay()], day, ""], [W.mons[d.getMonth()], day, ""], [W.days[d.getDay()], day, W.mons[d.getMonth()]],
-			["", settings.UNITS === 1 ? mon + "/" + day : day + "/" + mon, y], [W.week, String(isoWeek(d)), ""],
+			["", settings.UNITS === 1 ? mon + "/" + day : day + "/" + mon, y], [W.week, String(weekNumber(d, settings.WEEK_START)), ""],
 			[W.day, String(yearDay(d) + 1), ""], ["", y, ""]][fmt];
 	}
-	// week_bands() in calendar.c: the week's days of the month, Monday first, the last open-ended
+	// week_bands() in calendar.c: the week's days of the month from its first, the last open-ended
 	function weekBands(d) {
-		var monday = d.getDate() - (d.getDay() + 6) % 7;
-		return [0, 1, 2, 3, 4, 5, 6].map(function (i) { return [i < 6 ? monday + i : Infinity, C.accent]; });
+		var first = d.getDate() - (d.getDay() + 6 - settings.WEEK_START) % 7;
+		return [0, 1, 2, 3, 4, 5, 6].map(function (i) { return [i < 6 ? first + i : Infinity, C.accent]; });
 	}
-	// year_pct() in calendar.c; yearDay() and isoWeek() are config.js's
-	function yearPct(d) { return Math.trunc(yearDay(d) * 100 / yearDays(d.getFullYear())); }
+	// progress() in calendar.c: [%, name] of the year (38), month (42), week (45) or day (43); yearDay() is config.js's
+	function progress(id, d) {
+		if (id === 45) {
+			var wd = (d.getDay() + 6 - settings.WEEK_START) % 7;
+			return [Math.trunc((wd * 1440 + d.getHours() * 60 + d.getMinutes()) * 100 / (7 * 1440)), W.week];
+		}
+		if (id === 43) {
+			return [Math.trunc((d.getHours() * 60 + d.getMinutes()) * 100 / 1440), W.days[d.getDay()]];
+		}
+		if (id === 42) {
+			return [Math.trunc((d.getDate() - 1) * 100 / new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()), W.mons[d.getMonth()]];
+		}
+		return [Math.trunc(yearDay(d) * 100 / yearDays(d.getFullYear())), String(d.getFullYear())];
+	}
+	// count() in countdown.c: [count, words] to the place's day, or since it; countDay() is config.js's
+	function countdown(iso, d) {
+		var n = countDay(iso) - Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 86400000;
+		return countDay(iso) ? [String(Math.abs(n)), n >= 0 ? W.left : W.ago] : ["--", ""];
+	}
 
 	// The #defines at the top of ultra-watchface.c, complications.h and center.c.
 	// lite: the older watches, no corners. bw: black and white only.
@@ -568,6 +591,14 @@
 	// BANDS in uv.c
 	var UV = weather.UV === undefined ? -1 : weather.UV;
 	var UV_BANDS = [[2, "#00FF00"], [5, "#FFFF00"], [7, "#FF5500"], [10, "#FF0000"], [Infinity, "#AA00FF"]];
+	// pressure_range() in pressure.c: 970 to 1050 hPa, blue to yellow; inHg to 2 decimals
+	var PRESS = weather.PRESSURE === undefined ? -1 : weather.PRESSURE, PRESS_COLS = ["#0055FF", "#55AAFF", "#AAFFFF", "#FFFF55"];
+	function pressure() {
+		var imp = settings.UNITS === 1, inHg = Math.trunc((PRESS * 2953 + 500) / 1000);
+		var v = PRESS <= 0 ? "--" : imp ? Math.trunc(inHg / 100) + "." + ("0" + inHg % 100).slice(-2) : String(PRESS);
+		return { min: imp ? "28.6" : "970", max: imp ? "31.0" : "1050", value: v, unit: imp ? "inHg" : "hPa",
+			pct: PRESS <= 0 ? -1 : Math.max(0, Math.min(100, Math.trunc((PRESS - 970) * 100 / 80))) };
+	}
 	// sun_known(), sun_time() in sun.c
 	var SUN = weather.SUNRISE !== weather.SUNSET;
 	// ponytail: always 24h; the 12h setting lives on the watch
@@ -639,7 +670,9 @@
 
 		// Slot helpers from draw.c: a0 is the pinned end, percentages run a0 -> a1
 		function at(s, p) { return s.a0 + (s.a1 - s.a0) * p / 100; }
-		function leftEnd(s) { return P(s.a0, s.r)[0] <= P(s.a1, s.r)[0] ? 0 : 100; }
+		function leftEnd(s) { return P(s.a1, s.r)[0] < P(s.a0, s.r)[0] - 1 ? 100 : 0; }
+		// slot_mid(): the middle of its corner's arc, c0 to c1; joined, the bar runs on past it
+		function mid(s) { return (s.c0 + s.c1) / 2; }
 		function deg(s, px) { return px / s.r * 180 / Math.PI * (s.a1 > s.a0 ? 1 : -1); }
 		function past(s, end, px) { return end === 0 ? s.a0 - deg(s, px) : s.a1 + deg(s, px); }
 		function trim(s, end, px) { if (end === 0) {
@@ -668,13 +701,13 @@
 
 		// slot_corner(): px past the arc's outer edge, toward the nearest screen corner
 		function corner(s, px) {
-			var m = P(at(s, 50), s.r), k = [m[0] < cx ? 0 : g.w, m[1] < cy ? 0 : g.h];
+			var m = P(mid(s), s.r), k = [m[0] < cx ? 0 : g.w, m[1] < cy ? 0 : g.h];
 			var dx = k[0] - cx, dy = k[1] - cy, e = (s.r + Math.trunc(s.t / 2) + px) / Math.hypot(dx, dy);
 			return [cx + dx * e, cy + dy * e];
 		}
 		// comp_fill_gauge: label on the left end, filling from the left
 		function bar(s0, pct, c, label, ic) {
-			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
+			var s = { a0: s0.a0, a1: s0.a1, c0: s0.c0, c1: s0.c1, r: s0.r, t: s0.t }, left = leftEnd(s);
 			pct = clamp(pct);
 			if (ic) {
 				compIcon(s, ic, c);
@@ -720,7 +753,7 @@
 				compIcon(s, ic, c);
 				return endLabel(s, left, label, cap);
 			}
-			along(label, at(s, 50), s.r, fitCap(label, g.TEXT + 2, slen(s)), C.white);
+			along(label, mid(s), s.r, fitCap(label, g.TEXT + 2, slen(s)), C.white);
 			compIcon(s, ic, c);
 		}
 		// comp_sections(): a section per color, 2px apart; `mark` 2px thicker
@@ -739,28 +772,28 @@
 		}
 		// comp_band_draw: caption on the end, value by the middle; round: both lead the sections
 		function bandGauge(s0, v, bands, caption) {
-			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s), value = v >= 0 ? String(v) : "--";
+			var s = { a0: s0.a0, a1: s0.a1, c0: s0.c0, c1: s0.c1, r: s0.r, t: s0.t }, left = leftEnd(s), value = v >= 0 ? String(v) : "--";
 			var label = g.round ? caption + " " + value : caption;
 			endLabel(s, left, label, fitCap(label, g.TEXT, slen(s) / 2));
 			sections(s.a0, s.a1, s.r, s.t, left, v, bands);
 			if (!g.round) {
-				along(value, at(s0, 50), s0.r + g.THUMB, g.TEXT + 2, C.white);
+				along(value, mid(s0), s0.r + g.THUMB, g.TEXT + 2, C.white);
 			}
 		}
 		// comp_rain_hourly_draw: laid out like bar, the sections for its fill
 		function rainHourly(s0) {
-			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
+			var s = { a0: s0.a0, a1: s0.a1, c0: s0.c0, c1: s0.c1, r: s0.r, t: s0.t }, left = leftEnd(s);
 			compIcon(s, "umbrella", C.picton);
 			endLabel(s, left, RAIN_NOW >= 0 ? RAIN_NOW + CORNER_PCT : "--");
 			cells(s.a0, s.a1, s.r, s.t, left, rainCols(scheme), 1);
 		}
 		// comp_band_gauge_draw: laid out like bandGauge, the sections one shaded arc with a thumb
 		function bandRange(s0, v, bands, top, caption) {
-			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s), value = v >= 0 ? String(v) : "--", pct = bandPct(v, bands, top);
+			var s = { a0: s0.a0, a1: s0.a1, c0: s0.c0, c1: s0.c1, r: s0.r, t: s0.t }, left = leftEnd(s), value = v >= 0 ? String(v) : "--", pct = bandPct(v, bands, top);
 			var label = g.round ? caption + " " + value : caption;
 			endLabel(s, left, label, fitCap(label, g.TEXT, slen(s) / 2));
 			if (!g.round) {
-				along(value, at(s0, 50), s0.r + g.THUMB, g.TEXT + 2, C.white);
+				along(value, mid(s0), s0.r + g.THUMB, g.TEXT + 2, C.white);
 			}
 			if (pct < 0) {
 				return sarc(s, 0, 100, C.track);
@@ -770,7 +803,7 @@
 		}
 		// comp_range_draw: min on the left end, max on the right, thumb at pct (< 0: bare track), value centered
 		function rangeGauge(s0, pct, min, max, value, cols) {
-			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, lo = leftEnd(s), cap = fitCap(value, g.TEXT + 2, slen(s0));
+			var s = { a0: s0.a0, a1: s0.a1, c0: s0.c0, c1: s0.c1, r: s0.r, t: s0.t }, lo = leftEnd(s), cap = fitCap(value, g.TEXT + 2, slen(s0));
 			// round: no room beside the arc, the value leads, then min, the gauge and max, those two dimmer
 			if (g.round) {
 				endLabel(s, lo, value, fitCap(value, g.TEXT, slen(s) / 2));
@@ -790,7 +823,7 @@
 				shadedArc(s, lo, 100, cols);
 				dot(s, lo ? 100 - pct : pct);
 			}
-			along(value, at(s, 50), s.r + g.THUMB, cap, C.white);
+			along(value, mid(s), s.r + g.THUMB, cap, C.white);
 		}
 		// temp_range() in temp.c
 		function tempPct() {
@@ -812,7 +845,7 @@
 		// comp_battery_draw: like bar(), "BOLT 82% BAR", the bolt in its own color
 		function batteryColor() { return BATTERY > 70 ? C.green : BATTERY < 15 ? C.red : C.accent; }  // level_color()
 		function battery(s0) {
-			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
+			var s = { a0: s0.a0, a1: s0.a1, c0: s0.c0, c1: s0.c1, r: s0.r, t: s0.t }, left = leftEnd(s);
 			compIcon(s, "bolt", C.white);
 			endLabel(s, left, BATTERY + CORNER_PCT);
 			sarc(s, 0, 100, C.track);
@@ -822,12 +855,13 @@
 		}
 		// comp_calendar_draw: weekday outside, yesterday/today/tomorrow boxes
 		function calendar(s0) {
-			var s = { a0: s0.a0, a1: s0.a1, r: s0.r, t: s0.t }, left = leftEnd(s);
+			// the boxes stay in the corner's arc when it is joined
+			var s = { a0: s0.c0, a1: s0.c1, c0: s0.c0, c1: s0.c1, r: s0.r, t: s0.t }, left = leftEnd(s);
 			// round: the weekday leads the boxes, which share what is left of the arc
 			if (g.round) {
 				endLabel(s, left, W.days[now.getDay()]);
 			} else {
-				along(W.days[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
+				along(W.days[now.getDay()], mid(s), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
 			}
 			s.t = g.TEXT + 5;
 			var today = ink(C.melon), step = g.round ? 34 : 22, half = g.round ? 14 : 9;
@@ -839,12 +873,30 @@
 			});
 		}
 
-		// Corners: COMP_SPAN toward 12/6, starting COMP_LEAD before the corner's diagonal
-		var SIDE = g.lite ? {} : { SLOT_TL: 315, SLOT_TR: 45, SLOT_BR: 135, SLOT_BL: 225 };
+		// Corners: COMP_SPAN toward 12/6, starting COMP_LEAD before the corner's diagonal.
+		// Joined ones are one slot, from the first's outer end round to the last's, from the owner's end.
+		var SIDE = { SLOT_TL: 315, SLOT_TR: 45, SLOT_BR: 135, SLOT_BL: 225 };
 		var DIR = { SLOT_TL: 1, SLOT_TR: -1, SLOT_BR: 1, SLOT_BL: -1 };
-		for (var k in SIDE) {
-			var a0 = SIDE[k] - DIR[k] * g.COMP_LEAD;
-			var s = { a0: a0, a1: a0 + DIR[k] * g.COMP_SPAN, r: g.COMP_R, t: g.COMP_T };
+		function cornerSlot(k) {
+			var a0 = SIDE[k] - DIR[k] * g.COMP_LEAD, a1 = a0 + DIR[k] * g.COMP_SPAN;
+			return { a0: a0, a1: a1, c0: a0, c1: a1, r: g.COMP_R, t: g.COMP_T };
+		}
+		(g.lite ? [] : runs(settings.JOIN, g.round)).forEach(function (run) {
+			var k = run.owner, s = cornerSlot(k), first = cornerSlot(run.corners[0]), last = cornerSlot(run.corners[run.corners.length - 1]);
+			if (run.corners.length > 1) {
+				var lo = Math.min(first.a0, first.a1), hi = Math.max(last.a0, last.a1);
+				hi += hi <= lo ? 360 : 0;
+				s.a0 = k === run.corners[0] ? lo : hi;
+				s.a1 = k === run.corners[0] ? hi : lo;
+				if (g.round) {  // what sits by the middle goes by the run's middle
+					var h = (s.a1 > s.a0 ? 1 : -1) * g.COMP_SPAN / 2;
+					s.c0 = (lo + hi) / 2 - h;
+					s.c1 = (lo + hi) / 2 + h;
+				}
+			}
+			cornerDraw(k, s);
+		});
+		function cornerDraw(k, s) {
 			var id = settings[k];
 			if (id === 1) {
 				bar(s, stepPct(), C.green, String(STEPS), "runner");
@@ -853,7 +905,7 @@
 			if ((id === 12 || id === 40) && CONDITION_ICON) {
 				iconText(s, CONDITION_ICON, (id === 40 ? temp(weather.TEMP) + "° " : "") + W.weather[weather.CONDITION], scheme === SCHEME_ACCENT ? C.accent : C.white);
 			} else if (id === 12 || id === 40) {
-				along("--", at(s, 50), s.r, g.TEXT + 2, C.white);
+				along("--", mid(s), s.r, g.TEXT + 2, C.white);
 			}
 			if (id === 2) {
 				rangeGauge(s, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°", TEMP_COLOR);
@@ -880,26 +932,45 @@
 				if (fmt === 3) {
 					date = (g.round ? W.days[now.getDay()] + " " : "") + now.getDate() + " " + W.months[now.getMonth()];
 					if (!g.round) {
-						along(W.days[now.getDay()], at(s, 50), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
+						along(W.days[now.getDay()], mid(s), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
 					}
 				}
-				along(date, at(s, 50), s.r, fitCap(date, g.TEXT + 2, slen(s)), C.white);
+				along(date, mid(s), s.r, fitCap(date, g.TEXT + 2, slen(s)), C.white);
 			}
 			if (id === 37) {
 				bandGauge(s, now.getDate(), weekBands(now), W.days[now.getDay()]);
 			}
-			if (id === 38) {
-				// comp_year_draw: the year curved by the middle; round: it leads the bar
-				bar(s, yearPct(now), C.accent, yearPct(now) + CORNER_PCT, g.round ? { name: String(now.getFullYear()) } : null);
+			if (id === 38 || id === 42 || id === 43 || id === 45) {
+				// progress_draw: the year, month, week or weekday curved by the middle; round: it leads the bar
+				var pr = progress(id, now);
+				bar(s, pr[0], C.accent, pr[0] + CORNER_PCT, g.round ? { name: pr[1] } : null);
 				if (!g.round) {
-					along(String(now.getFullYear()), at(s, 50), s.r + g.THUMB, g.TEXT + 2, C.white);
+					along(pr[1], mid(s), s.r + g.THUMB, g.TEXT + 2, C.white);
+				}
+			}
+			// comp_countdown_draw: "64 DAYS LEFT" on the arc, the name beside it; round: one line
+			if (id === COUNT_ID) {
+				var name = settings["TEXT_" + k.slice(5)], cd = countdown(settings["COUNT_" + k.slice(5)], now);
+				var days = (g.round && name ? name + " " : "") + cd.filter(Boolean).join(" ");
+				if (!g.round && name) {
+					along(name, mid(s), s.r + g.THUMB + 2, g.TEXT + 2, C.white);
+				}
+				along(days, mid(s), s.r, fitCap(days, g.TEXT + 2, slen(s)), C.white);
+			}
+			if (id === 44) {
+				// comp_pressure_draw: no gauge, the value along the arc, the unit for an icon; round: one line, "1013 hPa"
+				var pv = pressure();
+				if (g.round) {
+					along(pv.value + " " + pv.unit, mid(s), s.r, fitCap(pv.value + " " + pv.unit, g.TEXT + 2, slen(s)), C.white);
+				} else {
+					iconText(s, { name: pv.unit }, pv.value, C.picton);
 				}
 			}
 			if (id === 13) {
 				bar(s, HUM, C.cyan, HUM >= 0 ? HUM + CORNER_PCT : "--", "drop");
 			}
 			if (id === 14) {
-				along(settings["TEXT_" + k.slice(5)], at(s, 50), s.r, fitCap(settings["TEXT_" + k.slice(5)], g.TEXT + 2, slen(s)), C.white);
+				along(settings["TEXT_" + k.slice(5)], mid(s), s.r, fitCap(settings["TEXT_" + k.slice(5)], g.TEXT + 2, slen(s)), C.white);
 			}
 			if (id === 8) {
 				iconText(s, "heart", BPM + " BPM", C.red);
@@ -933,7 +1004,7 @@
 				if (g.round) {
 					iconText(s, { name: "@" }, beats(now), C.red);
 				} else {
-					along(beats(now), at(s, 50), s.r, g.TEXT + 2, C.white);
+					along(beats(now), mid(s), s.r, g.TEXT + 2, C.white);
 					text("@", corner(s, 4 + g.ICON / 2), g.ICON - 4, C.red, 0);
 				}
 			}
@@ -941,12 +1012,12 @@
 			if (id === 31 || id === 32) {
 				var z = zone(settings["ZONE_" + k.slice(5)]);
 				var label = id === 31 ? clock(now.getHours(), now.getMinutes()) : z.name + " " + zoneClock(now, z.offset);
-				along(label, at(s, 50), s.r, fitCap(label, g.TEXT + 2, slen(s)), C.white);
+				along(label, mid(s), s.r, fitCap(label, g.TEXT + 2, slen(s)), C.white);
 			}
 			// location.c: the city, text only; "--" in weather saved before it had one
 			if (id === 36) {
 				var place = weather.LOCATION || "--";
-				along(place, at(s, 50), s.r, fitCap(place, g.TEXT + 2, slen(s)), C.white);
+				along(place, mid(s), s.r, fitCap(place, g.TEXT + 2, slen(s)), C.white);
 			}
 			if (id === 33) {
 				iconText(s, { name: "ZZ" }, sleepText(), "#AA55FF");
@@ -1267,11 +1338,27 @@
 				text(String(now.getDate()), [c[0], c[1] - 1], ST, C.white, 0);
 				text(W.days[now.getDay()], [c[0], c[1] + SL], SS, C.white, 0);
 			},
-			// center_year_draw: like humidity, the year under the value
-			38: function (c) {
-				gauge(c, yearPct(now), C.accent);
-				fit(yearPct(now) + SMALL_PCT, [c[0], c[1] - 1], ST + 2, INNER, C.white);
-				text(String(now.getFullYear()), [c[0], c[1] + SL], SS, C.white, 0);
+			// center_progress_draw: like humidity, the year, month, week or weekday under the value
+			38: function (c, t, z, fmt, cnt, id) {
+				var pr = progress(id || 38, now);
+				gauge(c, pr[0], C.accent);
+				fit(pr[0] + SMALL_PCT, [c[0], c[1] - 1], ST + 2, INNER, C.white);
+				text(pr[1], [c[0], c[1] + SL], SS, C.white, 0);
+			},
+			42: function (c) { SUBDIAL[38](c, "", null, 0, "", 42); },
+			43: function (c) { SUBDIAL[38](c, "", null, 0, "", 43); },
+			45: function (c) { SUBDIAL[38](c, "", null, 0, "", 45); },
+			// center_countdown_draw: like the Date's parts, the name small in orange, the count big, its words under it
+			41: function (c, t, z, fmt, cnt) {
+				var cd = countdown(cnt, now);
+				fit(t, [c[0], c[1] - 9], SS + 1, 2 * g.SUB_R, C.accent);
+				fit(cd[0], [c[0], c[1] + (t ? 1 : -2)], ST + 3, 2 * g.SUB_R, C.white);
+				fit(cd[1], [c[0], c[1] + SL + 1], SS, 2 * g.SUB_R, C.lg);
+			},
+			// center_pressure_draw: the unit above the value, no min and max
+			44: function (c) {
+				var pv = pressure();
+				subRange(c, pv.pct, pv.min, pv.max, pv.value, pv.unit, PRESS_COLS);
 			},
 			// center_time_draw, center_zone_draw: the time across the subdial, the zone's name above
 			31: function (c) { fit(clock(now.getHours(), now.getMinutes()), c, ST + 3, 2 * g.SUB_R, C.white); },
@@ -1319,8 +1406,8 @@
 			if (isApi(settings[pos])) {
 				apiSubdial(SUBDIAL_AT[pos], apiView(settings[pos] - API_ID));
 			} else if (SUBDIAL[settings[pos]]) {
-				// The place's text, zone and date format: only Text, Time zone and Date take them
-				SUBDIAL[settings[pos]](SUBDIAL_AT[pos], settings["TEXT_" + pos.slice(7)], settings[pos] === ZONE_ID ? zone(settings["ZONE_" + pos.slice(7)]) : undefined, settings["DATE_" + pos.slice(7)]);
+				// The place's text, zone, date format and countdown day: only Text, Time zone, Date and the countdown take them
+				SUBDIAL[settings[pos]](SUBDIAL_AT[pos], settings["TEXT_" + pos.slice(7)], settings[pos] === ZONE_ID ? zone(settings["ZONE_" + pos.slice(7)]) : undefined, settings["DATE_" + pos.slice(7)], settings["COUNT_" + pos.slice(7)]);
 			}
 		}
 		out.push("</g>");
@@ -1398,6 +1485,8 @@
 		var o = COMPLICATIONS.concat(CENTER_COMPLICATIONS).filter(function (o) { return o.value === family(id); })[0];
 		return _(o ? o.label : "None");
 	}
+	// The corners showing a complication: one per run of joined ones
+	function owners() { return runs(settings.JOIN, g.round).map(function (r) { return r.owner; }); }
 	function names(places) { return places.map(function (p) { return compLabel(settings[p.key]); }).join(" · "); }
 	function freqLabel(m) { return m < 60 ? _("Every {0} minutes", m) : m === 60 ? _("Every hour") : _("Every {0} hours", m / 60); }
 	var dirty = false;  // changed since the page opened
@@ -1409,7 +1498,7 @@
 	function render() {
 		preview();
 		$("status").textContent = _(dirty ? "Unsaved changes" : "Saved to watch");
-		$("corners-sum").textContent = names(CORNERS);
+		$("corners-sum").textContent = names(CORNERS.filter(function (c) { return owners().indexOf(c.key) >= 0; }));
 		$("center-sum").textContent = names(CENTERS);
 		$("custom-sum").textContent = settings.APIS.length ? _("{0} of {1}", settings.APIS.length, API_MAX) + " · " +
 			settings.APIS.map(function (a, i) { return compLabel(API_ID + i); }).join(", ") : _("None yet");
@@ -1460,7 +1549,12 @@
 		$("sweep").setAttribute("aria-checked", !!settings.SWEEP);
 		$("shake").setAttribute("aria-checked", !!settings.SHAKE_HIDE);
 		$("saver").setAttribute("aria-checked", !!settings.SAVER);
-		[].forEach.call(document.querySelectorAll("[data-text]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== 14; });
+		$("week-start").value = settings.WEEK_START;
+		// A joined corner's card goes: its run shows the owner's complication.
+		[].forEach.call(document.querySelectorAll("[data-join]"), function (b) { b.setAttribute("aria-checked", !!(settings.JOIN & b.dataset.join)); });
+		[].forEach.call(document.querySelectorAll("[data-corner]"), function (l) { l.hidden = owners().indexOf(l.dataset.corner) < 0; });
+		[].forEach.call(document.querySelectorAll("[data-text]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== 14 && settings[i.dataset.slotKey] !== COUNT_ID; });
+		[].forEach.call(document.querySelectorAll("[data-count]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== COUNT_ID; });
 		[].forEach.call(document.querySelectorAll("[data-zone]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== ZONE_ID; });
 		[].forEach.call(document.querySelectorAll("[data-date]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== DATE_ID; });
 		[].forEach.call(document.querySelectorAll("[data-variant]"), function (i) {
@@ -1500,18 +1594,24 @@
 		}), options.slice(-1));  // None stays last
 		return places.map(function (c) {
 			var at = c.key.split("_")[1], t = "TEXT_" + at, label = _(c.label);
-			return '<label class="card corner"><span>' + label + '</span><select data-slot="' + c.key + '">' +
+			return '<label class="card corner"' + (c.key.indexOf("SLOT_") === 0 ? ' data-corner="' + c.key + '"' : "") + "><span>" + label + '</span><select data-slot="' + c.key + '">' +
 				optionList(options, family(settings[c.key])) + '</select><input type="text" data-text="' + t + '" data-slot-key="' + c.key + '" value="' + esc(settings[t]) +
 				'" maxlength="' + (t.length === 6 ? 4 : 12) + '" autocomplete="off" placeholder="' + _("Text") + '" aria-label="' + _("{0} text", label) + '">' +
 				'<select data-zone="ZONE_' + at + '" data-slot-key="' + c.key + '" aria-label="' + _("{0} time zone", label) + '">' +
 				optionList(ZONES, settings["ZONE_" + at]) + '</select><select data-date="DATE_' + at + '" data-slot-key="' + c.key + '" aria-label="' + _("{0} date format", label) + '">' +
 				optionList(DATE_FORMATS.map(function (label, i) { return { label: _(label), value: i }; }), settings["DATE_" + at]) + "</select>" +
+				'<input type="date" data-count="COUNT_' + at + '" data-slot-key="' + c.key + '" value="' + esc(settings["COUNT_" + at]) +
+				'" min="1970-01-02" max="2059-09-18" aria-label="' + _("{0} date", label) + '">' +
 				VARIANTS.map(function (v) {
 					return '<select data-variant="' + c.key + '" data-family="' + v[0].value + '" aria-label="' + _("{0} kind", label) + '">' + optionList(said(v), settings[c.key]) + "</select>";
 				}).join("") + "</label>";
 		}).join("");
 	}
 	function buildPickers() {
+		$("joins").innerHTML = JOINS.filter(function (j) { return g.round || !j.round; }).map(function (j) {
+			return '<div class="row"><b id="join-' + j.value + '">' + _(j.label) + '</b><button type="button" class="switch" data-join="' + j.value +
+				'" role="switch" aria-labelledby="join-' + j.value + '"><i></i></button></div>';
+		}).join("");
 		$("corners").innerHTML = pickers(CORNERS, COMPLICATIONS);
 		$("centers").innerHTML = pickers(CENTERS, CENTER_COMPLICATIONS);
 	}
@@ -1577,6 +1677,7 @@
 	// Pickers with words in them, built again when the language changes
 	function buildWords() {
 		$("freq").innerHTML = WEATHER_FREQS.map(function (m) { return '<option value="' + m + '">' + freqLabel(m) + "</option>"; }).join("");
+		$("week-start").innerHTML = optionList(said(WEEK_STARTS), settings.WEEK_START);
 		$("lang").innerHTML = ["Auto"].concat(LANG_NAMES).map(function (name, i) {
 			return '<option value="' + i + '"' + (settings.LANG === i ? " selected" : "") + ">" + (i ? name : _(name) + " \u00B7 " + LANG_NAMES[LANG_CODES.indexOf(langCode(0, LOCALE))]) + "</option>";
 		}).join("");
@@ -1628,6 +1729,10 @@
 	document.addEventListener("change", function (e) {
 		if (e.target.id === "freq") {
 			settings.WEATHER_FREQ = +e.target.value;
+		} else if (e.target.id === "week-start") {
+			settings.WEEK_START = +e.target.value;
+		} else if (e.target.dataset.count) {
+			settings[e.target.dataset.count] = e.target.value;
 		} else if (e.target.id === "lang") {
 			settings.LANG = +e.target.value;
 			setLang();
@@ -1700,7 +1805,9 @@
 				settings.SECOND_COLOR = 0;  // the accent takes over
 			}
 		}
-		else if (b.dataset.units) {
+		else if (b.dataset.join) {
+			settings.JOIN ^= +b.dataset.join;
+		} else if (b.dataset.units) {
 			settings.UNITS = +b.dataset.units;
 		} else if (b.id === "seconds") {
 			settings.SECONDS = settings.SECONDS ? 0 : 1;

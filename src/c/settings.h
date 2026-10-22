@@ -3,6 +3,15 @@
 
 // Corner slots, clockwise from top-left. Same order as the SLOT_* message keys.
 typedef enum { SLOT_POS_TL, SLOT_POS_TR, SLOT_POS_BR, SLOT_POS_BL, SLOT_POS_COUNT } SlotPos;
+// Corners joined across the gap after them, clockwise: one complication, its bar
+// running on through the gap. Emery has room between the top two and the bottom
+// two only; all four on gabbro is a ring, open at the bottom.
+enum { JOIN_TOP = 1, JOIN_RIGHT = 2, JOIN_BOTTOM = 4, JOIN_LEFT = 8, JOIN_ALL = 15 };
+#if defined(PBL_PLATFORM_GABBRO)
+#define JOINABLE JOIN_ALL
+#else
+#define JOINABLE (JOIN_TOP | JOIN_BOTTOM)
+#endif
 // Subdials, same order as the CENTER_* message keys.
 typedef enum { CENTER_POS_T, CENTER_POS_L, CENTER_POS_R, CENTER_POS_B, CENTER_POS_COUNT } CenterPos;
 
@@ -48,14 +57,17 @@ typedef struct {
   uint8_t band_color;              // the band's; 0 = the scheme's white, tachymeter's the seconds color
   // COMP_ZONE: minutes from UTC, per corner then per subdial. Its name ("PST")
   // is that place's slot_text or center_text.
-  // ponytail: a COMP_CALENDAR place keeps its DateFormat here, a place shows
-  // one or the other; its own array and message keys if a third wants in.
+  // ponytail: a COMP_CALENDAR place keeps its DateFormat here, a COMP_COUNTDOWN
+  // place its day (days since 1970-01-01, 0 none); a place shows one of the
+  // three. Their own arrays and message keys if a fourth wants in.
   int16_t zone[SLOT_POS_COUNT + CENTER_POS_COUNT];
   bool sweep;                      // the seconds hand glides, not ticks; with `seconds` only
   bool shake_hide;                 // two shakes hide the hands for a few seconds; on the pad byte, 0 on older saves
   bool saver;                      // battery saver: the face sleeps when health goes quiet; appended, 0 on older saves
   bool square;                     // the ring as a rounded rect along the screen's edge; rect lite only, appended
   uint8_t lang;                    // the face's words: 0 the watch's language, else LANG_CODES (i18n.js) + 1; appended
+  uint8_t week_start;              // days after Monday the week starts: 0 Monday, 6 Sunday; appended, 0 on older saves
+  uint8_t join;                    // JOIN_* bits; appended, 0 on older saves
 } Settings;
 
 extern Settings g_settings;

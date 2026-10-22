@@ -20,12 +20,14 @@ var COMPLICATIONS = [
   { group: 'Weather', label: 'Wind', value: 25 },
   { group: 'Weather', label: 'Air quality', value: 7 },
   { group: 'Weather', label: 'UV index', value: 11 },
+  { group: 'Weather', label: 'Pressure', value: 44 },
   { group: 'Time and date', label: 'Digital time', value: 31 },
   { group: 'Time and date', label: 'Time zone', value: 32 },
   { group: 'Time and date', label: '.beat time', value: 24 },
   { group: 'Time and date', label: 'Date', value: 6 },
   { group: 'Time and date', label: 'Week', value: 37 },
-  { group: 'Time and date', label: 'Year progress', value: 38 },
+  { group: 'Time and date', label: 'Progress', value: 38 },
+  { group: 'Time and date', label: 'Days until / since', value: 41 },
   { group: 'Sun and moon', label: 'Sunrise / sunset', value: 23 },
   { group: 'Sun and moon', label: 'Moon phase', value: 35 },
   { group: 'Place', label: 'Location', value: 36 },
@@ -49,12 +51,14 @@ var CENTER_COMPLICATIONS = [
   { group: 'Weather', label: 'Wind', value: 25 },
   { group: 'Weather', label: 'Air quality', value: 7 },
   { group: 'Weather', label: 'UV index', value: 11 },
+  { group: 'Weather', label: 'Pressure', value: 44 },
   { group: 'Time and date', label: 'Digital time', value: 31 },
   { group: 'Time and date', label: 'Time zone', value: 32 },
   { group: 'Time and date', label: '.beat time', value: 24 },
   { group: 'Time and date', label: 'Date', value: 6 },
   { group: 'Time and date', label: 'Week', value: 37 },
-  { group: 'Time and date', label: 'Year progress', value: 38 },
+  { group: 'Time and date', label: 'Progress', value: 38 },
+  { group: 'Time and date', label: 'Days until / since', value: 41 },
   { group: 'Sun and moon', label: 'Sunrise / sunset', value: 23 },
   { group: 'Sun and moon', label: 'Moon phase', value: 35 },
   { group: 'Place', label: 'Location', value: 36 },
@@ -72,7 +76,8 @@ var VARIANTS = [
   [{ label: 'Sections', value: 7 }, { label: 'Gauge', value: 27 }],   // Air quality
   [{ label: 'Sections', value: 11 }, { label: 'Gauge', value: 28 }],  // UV index
   [{ label: 'Total', value: 29 }, { label: 'Active', value: 30 }],    // Calories
-  [{ label: 'Icon', value: 12 }, { label: 'Icon + temp', value: 40 }] // Weather
+  [{ label: 'Icon', value: 12 }, { label: 'Icon + temp', value: 40 }], // Weather
+  [{ label: 'Year', value: 38 }, { label: 'Month', value: 42 }, { label: 'Week', value: 45 }, { label: 'Day', value: 43 }] // Progress
 ];
 // The listed complication `id` is a kind of; itself with no kinds.
 function family(id) {
@@ -122,7 +127,7 @@ var DATE_ID = 6;  // COMP_CALENDAR
 var DATE_FORMATS = ['Calendar', 'Weekday and day', 'Month and day', 'Full date', 'Numeric', 'Week number', 'Day of year', 'Year'];
 var PLAIN_ID = 26;  // COMP_CALENDAR_PLAIN, retired: a subdial's Date as weekday and day
 
-// The settings preview's, here to be tested: calendar.c's year_days(), tm_yday and iso_week().
+// The settings preview's, here to be tested: calendar.c's year_days(), tm_yday, iso_week() and week_number().
 function yearDays(y) { return y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0) ? 366 : 365; }
 function yearDay(d) { return Math.round((Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) - Date.UTC(d.getFullYear(), 0, 1)) / 86400000); }
 // ISO 8601: weeks start on Monday, and a week is of the year its Thursday is in.
@@ -134,6 +139,25 @@ function isoWeek(d) {
     thu -= yearDays(y);
   }
   return Math.trunc(thu / 7) + 1;
+}
+// The week starting `start` days after Monday: ISO from Monday; from another day, week 1 is the one 1 January is in.
+function weekNumber(d, start) {
+  if (!start) {
+    return isoWeek(d);
+  }
+  var yd = yearDay(d), jan1 = ((d.getDay() + 6 - start) % 7 - yd % 7 + 7) % 7;
+  return Math.trunc((yd + jan1) / 7) + 1;
+}
+
+// The Week starts on setting: days after Monday. Monday, Sunday, Saturday.
+var WEEK_STARTS = [{ label: 'Monday', value: 0 }, { label: 'Sunday', value: 6 }, { label: 'Saturday', value: 5 }];
+
+// The countdown's day, one picked per place showing it, "2026-12-25" or "".
+// The watch gets it as days since 1970-01-01, in an int16: up to 2059-09-18; 0 for none.
+var COUNT_ID = 41;  // COMP_COUNTDOWN
+function countDay(iso) {
+  var m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(iso || ''), day = m ? Date.UTC(+m[1], m[2] - 1, +m[3]) / 86400000 : 0;
+  return day > 0 && day <= 32767 ? day : 0;
 }
 
 // Custom API complications (src/pkjs/api.js): settings.APIS[i] is complication
@@ -147,6 +171,42 @@ var CORNERS = [
   { key: 'SLOT_BL', label: 'Bottom left' },
   { key: 'SLOT_BR', label: 'Bottom right' }
 ];
+
+// JOIN bits: a corner joined to the next one clockwise, across the gap between
+// them. JOIN_* in settings.h; emery joins the top and the bottom only.
+var JOINS = [
+  { label: 'Join the top corners', value: 1 },
+  { label: 'Join the right corners', value: 2, round: true },
+  { label: 'Join the bottom corners', value: 4 },
+  { label: 'Join the left corners', value: 8, round: true }
+];
+var CLOCKWISE = ['SLOT_TL', 'SLOT_TR', 'SLOT_BR', 'SLOT_BL'];
+
+// The corners as runs, each clockwise from the first whose gap before it is
+// open, with the corner whose complication it shows: the one at its left end,
+// else at its bottom. All four make a ring open at the bottom. The loop in
+// draw_face() and run_owner() in ultra-watchface.c.
+function runs(join, round) {
+  join &= round ? 15 : 5;
+  if (join === 15) {
+    join = 11;
+  }
+  function left(i) { return i === 0 || i === 3; }
+  var out = [];
+  for (var i = 0; i < 4; i++) {
+    if (join & (1 << (i + 3) % 4)) {
+      continue;
+    }
+    var run = [i];
+    while (join & (1 << run[run.length - 1])) {
+      run.push((run[run.length - 1] + 1) % 4);
+    }
+    var last = run[run.length - 1];
+    var own = left(i) !== left(last) ? (left(i) ? i : last) : (i >= 2 ? i : last);
+    out.push({ corners: run.map(function (k) { return CLOCKWISE[k]; }), owner: CLOCKWISE[own] });
+  }
+  return out;
+}
 
 var CENTERS = [
   { key: 'CENTER_T', label: 'Top' },
@@ -169,13 +229,16 @@ var RINGS = ['Default', 'Minimal', 'Sport', 'Chronograph', 'Roman', 'Tachymeter'
 // temperature unit; the watch converts distance and elevation. Colors are GColor8 argb (0xC0 = black,
 // 0xF8 = chrome yellow); a hand or band color of 0 follows the scheme. LANG: 0
 // follows the watch's language, else a LANG_CODES index + 1 (i18n.js).
-var DEFAULTS = { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6, SCHEME: 0, UNITS: 0, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, SAVER: 0, SQUARE: 0, LANG: 0,
+var DEFAULTS = { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6, SCHEME: 0, UNITS: 0, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, SAVER: 0, SQUARE: 0, LANG: 0, WEEK_START: 0, JOIN: 0,
   BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   // The Time zone complication's zone, per place: ZONE_ + the SLOT_/CENTER_ suffix, a ZONES value.
   ZONE_TL: 'UTC', ZONE_TR: 'UTC', ZONE_BL: 'UTC', ZONE_BR: 'UTC', ZONE_T: 'UTC', ZONE_L: 'UTC', ZONE_R: 'UTC', ZONE_B: 'UTC',
   // The Date complication's format, per place: DATE_ + the SLOT_/CENTER_ suffix, a DATE_FORMATS index.
   // On the phone: the watch gets it as the ZONE_ of a place showing the date.
   DATE_TL: 0, DATE_TR: 0, DATE_BL: 0, DATE_BR: 0, DATE_T: 0, DATE_L: 0, DATE_R: 0, DATE_B: 0,
+  // The countdown's day, per place: COUNT_ + the SLOT_/CENTER_ suffix. Its name is the place's TEXT_.
+  // On the phone: the watch gets it as the ZONE_ of a place showing the countdown, a countDay().
+  COUNT_TL: '', COUNT_TR: '', COUNT_BL: '', COUNT_BR: '', COUNT_T: '', COUNT_L: '', COUNT_R: '', COUNT_B: '',
   // The Text complication's text, per place: TEXT_ + the SLOT_/CENTER_ suffix.
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '',
   // Weather: minutes between refreshes, a WEATHER_FREQS value, and where it is for:
@@ -252,6 +315,15 @@ function value(k, v) {
   if (k.indexOf('DATE_') === 0) {
     return DATE_FORMATS[v] ? Number(v) : 0;
   }
+  if (k.indexOf('COUNT_') === 0) {
+    return countDay(v) ? String(v) : '';
+  }
+  if (k === 'JOIN') {
+    return Number(v) & 15;
+  }
+  if (k === 'WEEK_START') {
+    return WEEK_STARTS.some(function (w) { return w.value === Number(v); }) ? Number(v) : 0;
+  }
   return typeof DEFAULTS[k] === 'string' ? cleanText(k, v) : Number(v);
 }
 
@@ -280,15 +352,16 @@ function savedSettings() {
 function toMessage(settings) {
   var msg = {};
   for (var k in DEFAULTS) {
-    if (k !== 'APIS' && k.indexOf('WEATHER_') !== 0 && k.indexOf('DATE_') !== 0) {  // the phone's own
+    if (k !== 'APIS' && k.indexOf('WEATHER_') !== 0 && k.indexOf('DATE_') !== 0 && k.indexOf('COUNT_') !== 0) {  // the phone's own
       msg[k] = value(k, settings[k]);
     }
   }
   // The watch gets a zone as its offset, and its name as the text of a place showing it.
-  // A place showing the date gets its format there.
+  // A place showing the date gets its format there, one showing the countdown its day.
   CORNERS.concat(CENTERS).forEach(function (p) {
     var at = p.key.split('_')[1], z = zone(msg['ZONE_' + at]);
-    msg['ZONE_' + at] = msg[p.key] === DATE_ID ? value('DATE_' + at, settings['DATE_' + at]) : z.offset;
+    msg['ZONE_' + at] = msg[p.key] === DATE_ID ? value('DATE_' + at, settings['DATE_' + at]) :
+      msg[p.key] === COUNT_ID ? countDay(settings['COUNT_' + at]) : z.offset;
     if (msg[p.key] === ZONE_ID) {
       msg['TEXT_' + at] = z.name;
     }
@@ -300,6 +373,7 @@ if (typeof module === 'object') {
   module.exports = {
     SETTINGS_KEY: SETTINGS_KEY, COMPLICATIONS: COMPLICATIONS, CENTER_COMPLICATIONS: CENTER_COMPLICATIONS,
     CORNERS: CORNERS, CENTERS: CENTERS, SCHEMES: SCHEMES, SCHEME_ACCENT: SCHEME_ACCENT, HANDS: HANDS, RINGS: RINGS, VARIANTS: VARIANTS, family: family, ZONES: ZONES, zone: zone, DATE_ID: DATE_ID, DATE_FORMATS: DATE_FORMATS, yearDays: yearDays, yearDay: yearDay, isoWeek: isoWeek,
+    weekNumber: weekNumber, WEEK_STARTS: WEEK_STARTS, JOINS: JOINS, runs: runs, COUNT_ID: COUNT_ID, countDay: countDay,
     API_ID: API_ID, API_MAX: API_MAX, API_TYPES: API_TYPES, WEATHER_FREQS: WEATHER_FREQS,
     DEFAULTS: DEFAULTS, clean: clean, cleanText: cleanText, withDefaults: withDefaults, savedSettings: savedSettings, toMessage: toMessage
   };

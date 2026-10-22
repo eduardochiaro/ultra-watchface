@@ -10,6 +10,7 @@ typedef struct {
   const char *weather[9];   // weather_icon() order
   const char *active, *sleep;
   const char *points[8];    // compass points from N, clockwise
+  const char *left, *ago;   // after a count of days: to come, gone
 } Words;
 
 // In the LANG setting's language; Auto (0): the watch's, English if not one of these.

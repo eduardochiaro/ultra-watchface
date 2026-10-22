@@ -17,6 +17,9 @@ typedef struct {
   int16_t radius;     // arc centerline
   int16_t thickness;
   int32_t a0, a1;     // a0 = where a gauge starts filling from
+  // Its corner's own arc: what sits by the middle goes by its middle. The same
+  // as a0, a1 unless corners are joined, where the bar runs on past it.
+  int32_t c0, c1;
 } Slot;
 
 void draw_init(GSize screen);  // loads the vector font
@@ -28,15 +31,17 @@ void draw_zoom(GPoint pivot, int pct);
 
 GPoint polar(GPoint c, int32_t angle, int r);  // r px from c at a TRIG angle
 GPoint slot_point(const Slot *s, int pct, int dr);
+// The middle of its corner's arc, `dr` px out.
+GPoint slot_mid(const Slot *s, int dr);
 int slot_len(const Slot *s);  // px along the centerline
 // Point `px` pixels beyond an arc end (end: 0 = a0, 100 = a1) along its circle.
 GPoint slot_past(const Slot *s, int end, int px);
 // Pull an end `px` pixels in toward the other end.
 void slot_trim(Slot *s, int end, int px);
 // `px` past the arc's outer edge on the line to the screen corner nearest its
-// middle. Rect screens only.
+// corner's middle. Rect screens only.
 GPoint slot_corner(const Slot *s, int px);
-// The end (0 or 100) further left on screen.
+// The end (0 or 100) further left on screen; a0 when they are level (joined, down a side).
 int slot_left_end(const Slot *s);
 void slot_arc(GContext *ctx, const Slot *s, int from_pct, int to_pct, GColor color);
 // Arc segment with square ends, corners rounded by `r` px.

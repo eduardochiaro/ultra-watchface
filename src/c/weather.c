@@ -31,6 +31,7 @@ bool weather_handle_message(DictionaryIterator *iter) {
     { MESSAGE_KEY_SUNSET,   &g_weather.sunset },
     { MESSAGE_KEY_WIND,     &g_weather.wind },
     { MESSAGE_KEY_WIND_DIR, &g_weather.wind_dir },
+    { MESSAGE_KEY_PRESSURE, &g_weather.pressure },
   };
   for (unsigned i = 0; i < ARRAY_LENGTH(fields); i++) {
     Tuple *f = dict_find(iter, fields[i].key);

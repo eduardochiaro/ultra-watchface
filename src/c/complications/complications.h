@@ -3,7 +3,8 @@
 
 // Every complication is one draw function in its own file, handed the Slot
 // (arc geometry) it lives in. It draws its gauge with the slot_* helpers and
-// places labels with slot_point(), so any complication fits any corner.
+// places labels with slot_point() and slot_mid(), so any complication fits any
+// corner, or corners joined.
 //
 // Adding one: write complications/<name>.c, declare it below, add it to the
 // enum and the table in complications.c, and add an option to COMPLICATIONS in
@@ -48,6 +49,11 @@ typedef enum {
   COMP_YEAR,      // how much of the year is gone
   COMP_RAIN_HOURLY, // the chance of rain by the hour, -1h to +4h
   COMP_WEATHER_TEMP, // COMP_WEATHER and the temperature
+  COMP_COUNTDOWN, // days to or since the place's day
+  COMP_MONTH,     // how much of the month is gone
+  COMP_DAY,       // how much of the day is gone
+  COMP_PRESSURE,  // sea-level pressure
+  COMP_WEEK_PROGRESS, // how much of the week is gone, from g_settings.week_start
   COMP_COUNT
 } ComplicationId;
 
@@ -111,12 +117,17 @@ void comp_moon_draw(GContext *ctx, const Slot *s);
 void comp_location_draw(GContext *ctx, const Slot *s);
 void comp_week_draw(GContext *ctx, const Slot *s);
 void comp_year_draw(GContext *ctx, const Slot *s);
+void comp_month_draw(GContext *ctx, const Slot *s);
+void comp_day_draw(GContext *ctx, const Slot *s);
+void comp_week_progress_draw(GContext *ctx, const Slot *s);
+void comp_pressure_draw(GContext *ctx, const Slot *s);
 void comp_rain_hourly_draw(GContext *ctx, const Slot *s);
 void comp_weather_draw(GContext *ctx, const Slot *s);
 void comp_weather_temp_draw(GContext *ctx, const Slot *s);
 void comp_custom_draw(GContext *ctx, const Slot *s, const char *txt);  // not in the tables: needs its text
 void comp_zone_draw(GContext *ctx, const Slot *s, int offset, const char *name);  // nor this: minutes from UTC, and its name
 void comp_date_draw(GContext *ctx, const Slot *s, int format);  // nor this: a DateFormat
+void comp_countdown_draw(GContext *ctx, const Slot *s, int day, const char *name);  // nor this: days since the epoch, and its name
 void comp_api_draw(GContext *ctx, const Slot *s, int i);  // i: 0..API_MAX-1
 
 // Custom API complications: what the phone last sent for each (src/pkjs/api.js).
@@ -189,12 +200,17 @@ void center_moon_draw(GContext *ctx, GPoint c);
 void center_location_draw(GContext *ctx, GPoint c);
 void center_week_draw(GContext *ctx, GPoint c);
 void center_year_draw(GContext *ctx, GPoint c);
+void center_month_draw(GContext *ctx, GPoint c);
+void center_day_draw(GContext *ctx, GPoint c);
+void center_week_progress_draw(GContext *ctx, GPoint c);
+void center_pressure_draw(GContext *ctx, GPoint c);
 void center_rain_hourly_draw(GContext *ctx, GPoint c);
 void center_weather_draw(GContext *ctx, GPoint c);
 void center_weather_temp_draw(GContext *ctx, GPoint c);
 void center_custom_draw(GContext *ctx, GPoint c, const char *txt);
 void center_zone_draw(GContext *ctx, GPoint c, int offset, const char *name);
 void center_date_draw(GContext *ctx, GPoint c, int format);
+void center_countdown_draw(GContext *ctx, GPoint c, int day, const char *name);
 void center_api_draw(GContext *ctx, GPoint c, int i);
 // `size`, or the largest below it at which `txt` fits `width` px.
 int comp_fit(GContext *ctx, const char *txt, int size, int width);

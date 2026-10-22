@@ -13,7 +13,7 @@ static GColor icon_color(void) {
 static void corner(GContext *ctx, const Slot *s, bool temp) {
   const char *icon = weather_icon();
   if (!icon) {
-    text_draw_along(ctx, "--", slot_point(s, 50, 0), s->center, COMP_TEXT + 2, GColorWhite);
+    text_draw_along(ctx, "--", slot_mid(s, 0), s->center, COMP_TEXT + 2, GColorWhite);
     return;
   }
   char buf[24];

@@ -25,6 +25,8 @@ typedef struct {
   // Appended: 0 on older saves, no forecast.
   int32_t rain_start;        // the hour rain_hours[0] is for, hours since the epoch
   uint8_t rain_hours[RAIN_HOURS]; // precipitation probability per hour, %
+  // Appended: 0 on older saves, in the old size's padding.
+  int16_t pressure;          // at sea level now, hPa (the watch converts), <= 0 = unknown
 } Weather;
 
 extern Weather g_weather;

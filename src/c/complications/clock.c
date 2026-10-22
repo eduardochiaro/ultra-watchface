@@ -28,7 +28,7 @@ static void corner(GContext *ctx, const Slot *s, const struct tm *t, const char 
   char time[8], buf[24];
   const char *half = clock_text(time, sizeof(time), t);
   snprintf(buf, sizeof(buf), "%s%s%s%s%s", name, name[0] ? " " : "", time, half[0] ? " " : "", half);
-  text_draw_along(ctx, buf, slot_point(s, 50, 0), s->center, comp_fit(ctx, buf, COMP_TEXT + 2, slot_len(s)), GColorWhite);
+  text_draw_along(ctx, buf, slot_mid(s, 0), s->center, comp_fit(ctx, buf, COMP_TEXT + 2, slot_len(s)), GColorWhite);
 }
 
 // No ring: the time across the subdial, am/pm under it, `name` (or "") above.

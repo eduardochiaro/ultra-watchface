@@ -1,4 +1,5 @@
 #include "complications.h"
+#include "../settings.h"
 
 typedef void (*ComplicationDraw)(GContext *ctx, const Slot *s);
 
@@ -27,6 +28,10 @@ static const ComplicationDraw DRAW[COMP_COUNT] = {
   [COMP_LOCATION] = comp_location_draw,
   [COMP_WEEK]    = comp_week_draw,
   [COMP_YEAR]    = comp_year_draw,
+  [COMP_MONTH]   = comp_month_draw,
+  [COMP_DAY]     = comp_day_draw,
+  [COMP_WEEK_PROGRESS] = comp_week_progress_draw,
+  [COMP_PRESSURE] = comp_pressure_draw,
   [COMP_RAIN_HOURLY] = comp_rain_hourly_draw,
   [COMP_WEATHER] = comp_weather_draw,
   [COMP_WEATHER_TEMP] = comp_weather_temp_draw,
@@ -64,8 +69,17 @@ uint32_t complication_stamp(ComplicationId id, const struct tm *t) {
     case COMP_CALENDAR:
     case COMP_CALENDAR_PLAIN:
     case COMP_WEEK:
-    case COMP_YEAR: {
+    case COMP_YEAR:
+    case COMP_MONTH:
+    case COMP_COUNTDOWN: {
       return t->tm_mday;
+    }
+    case COMP_DAY: {  // a % at a time
+      return (t->tm_hour * 60 + t->tm_min) * 100 / (24 * 60);
+    }
+    case COMP_WEEK_PROGRESS: {  // the same, from the week's first day
+      int day = (t->tm_wday + 6 - g_settings.week_start) % 7;
+      return (day * 24 * 60 + t->tm_hour * 60 + t->tm_min) * 100 / (7 * 24 * 60);
     }
     case COMP_RAIN_HOURLY: {  // its sections move on with the hour
       return time(NULL) / 3600;
@@ -199,7 +213,7 @@ void comp_range_draw(GContext *ctx, const Slot *slot, int pct, const char *min, 
     slot_dot(ctx, s, lo ? 100 - pct : pct, s->thickness / 2, 2, GColorWhite, GColorBlack);
   }
   // Centered, not on the thumb: near min/max it would run off the arc end.
-  text_draw_along(ctx, value, slot_point(s, 50, COMP_THUMB), s->center, size, GColorWhite);
+  text_draw_along(ctx, value, slot_mid(s, COMP_THUMB), s->center, size, GColorWhite);
 #endif
 }
 
@@ -266,7 +280,7 @@ void comp_band_draw(GContext *ctx, const Slot *slot, int v, const Band *bands, c
   snprintf(label, sizeof(label), "%s %s", caption, value);
 #else
   const char *label = caption;
-  text_draw_along(ctx, value, slot_point(slot, 50, COMP_THUMB), slot->center, COMP_TEXT + 2, GColorWhite);
+  text_draw_along(ctx, value, slot_mid(slot, COMP_THUMB), slot->center, COMP_TEXT + 2, GColorWhite);
 #endif
   end_label(ctx, &s, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&s) / 2), GColorWhite);
   uint8_t argb[BANDS_MAX];
@@ -321,7 +335,7 @@ void comp_band_gauge_draw(GContext *ctx, const Slot *slot, int v, const Band *ba
   snprintf(label, sizeof(label), "%s %s", caption, value);
 #else
   const char *label = caption;
-  text_draw_along(ctx, value, slot_point(slot, 50, COMP_THUMB), slot->center, COMP_TEXT + 2, GColorWhite);
+  text_draw_along(ctx, value, slot_mid(slot, COMP_THUMB), slot->center, COMP_TEXT + 2, GColorWhite);
 #endif
   end_label(ctx, &s, left, label, comp_fit(ctx, label, COMP_TEXT, slot_len(&s) / 2), GColorWhite);
   if (pct < 0) {
@@ -355,7 +369,7 @@ void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color
   comp_icon(ctx, &b, icon, color);
   end_label(ctx, &b, left, txt, size, GColorWhite);
 #else
-  text_draw_along(ctx, txt, slot_point(s, 50, 0), s->center, comp_fit(ctx, txt, COMP_TEXT + 2, slot_len(s)), GColorWhite);
+  text_draw_along(ctx, txt, slot_mid(s, 0), s->center, comp_fit(ctx, txt, COMP_TEXT + 2, slot_len(s)), GColorWhite);
   comp_icon(ctx, &b, icon, color);
 #endif
 }

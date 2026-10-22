@@ -29,10 +29,11 @@ Customizations to consider. Tick one off when it ships, and add it to [CHANGELOG
 - [x] Location (1.6.0)
 - [x] Date formats: weekday, month, full, numeric, week number, day of year, year (1.6.0)
 - [x] Week and year progress (1.6.0)
-- [ ] Countdown to a date, days since
-- [ ] Month and day progress bars, week starts on Sunday
+- [x] Countdown to a date, days since (2.0.0)
+- [x] Month and day progress bars (2.0.0)
 - [ ] Bluetooth status
-- [ ] Weather: feels-like, tomorrow's forecast, pressure
+- [ ] Weather: feels-like, tomorrow's forecast
+- [x] Pressure (2.0.0)
 
 ## Color and themes
 
@@ -53,4 +54,5 @@ Customizations to consider. Tick one off when it ships, and add it to [CHANGELOG
 
 ## Settings page
 
+- [x] Main setting for the week start day, used by week number and week progress (2.0.0)
 - [ ] Redo the layout: the page is one long scroll of 8 sections. Three sketches in Ultra Settings v2, likely a mix of them: tabs (Face, Style, Data, Options) under a docked preview, tap a corner or subdial on the watch to pick its complication, and an index of rows showing each current value. Shelved, to be redone later.

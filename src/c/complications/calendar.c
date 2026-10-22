@@ -19,11 +19,13 @@ static void corner_calendar(GContext *ctx, const Slot *slot) {
   time_t now = time(NULL);
   const char *wday = words()->days[localtime(&now)->tm_wday];
   Slot b = *slot;
+  b.a0 = b.c0;  // the boxes stay in the corner's arc when it is joined
+  b.a1 = b.c1;
   int left = slot_left_end(&b);
 #if defined(PBL_PLATFORM_GABBRO)
   comp_end_label(ctx, &b, left, wday);
 #else
-  text_draw_along(ctx, wday, slot_point(slot, 50, COMP_THUMB + 2), slot->center, COMP_TEXT + 2, GColorWhite);
+  text_draw_along(ctx, wday, slot_mid(slot, COMP_THUMB + 2), slot->center, COMP_TEXT + 2, GColorWhite);
 #endif
   b.thickness = COMP_TEXT + 5;
   GColor ink = ink_on(GColorSunsetOrange);  // today's digits
@@ -58,6 +60,11 @@ static int year_days(int year) {
   return year % 4 == 0 && (year % 100 != 0 || year % 400 == 0) ? 366 : 365;
 }
 
+// Days since the week's first, g_settings.week_start after Monday.
+static int week_day(const struct tm *t) {
+  return (t->tm_wday + 6 - g_settings.week_start) % 7;
+}
+
 // ISO 8601: weeks start on Monday, and a week is of the year its Thursday is in.
 static int iso_week(const struct tm *t) {
   int year = t->tm_year + 1900;
@@ -68,6 +75,15 @@ static int iso_week(const struct tm *t) {
     thu -= year_days(year);
   }
   return thu / 7 + 1;
+}
+
+// ISO from Monday. From another day, as in the US: week 1 is the one 1 January is in.
+static int week_number(const struct tm *t) {
+  if (!g_settings.week_start) {
+    return iso_week(t);
+  }
+  int jan1 = (week_day(t) - t->tm_yday % 7 + 7) % 7;  // its day of the week
+  return (t->tm_yday + jan1) / 7 + 1;
 }
 
 #define DATE_PART 12  // room for any int: no truncation warnings
@@ -96,7 +112,7 @@ static void date_parts(DateFormat format, const struct tm *t, char *head, char *
     }
     case DATE_WEEK: {
       strcpy(head, w->week);
-      snprintf(value, DATE_PART, "%d", iso_week(t));
+      snprintf(value, DATE_PART, "%d", week_number(t));
       break;
     }
     case DATE_YEARDAY: {
@@ -138,10 +154,10 @@ void comp_date_draw(GContext *ctx, const Slot *s, int format) {
     snprintf(buf, sizeof(buf), "%s %s %s", head, value, words()->months[today()->tm_mon]);
 #else
     snprintf(buf, sizeof(buf), "%s %s", value, words()->months[today()->tm_mon]);
-    text_draw_along(ctx, head, slot_point(s, 50, COMP_THUMB + 2), s->center, COMP_TEXT + 2, GColorWhite);
+    text_draw_along(ctx, head, slot_mid(s, COMP_THUMB + 2), s->center, COMP_TEXT + 2, GColorWhite);
 #endif
   }
-  text_draw_along(ctx, buf, slot_point(s, 50, 0), s->center, comp_fit(ctx, buf, COMP_TEXT + 2, slot_len(s)), GColorWhite);
+  text_draw_along(ctx, buf, slot_mid(s, 0), s->center, comp_fit(ctx, buf, COMP_TEXT + 2, slot_len(s)), GColorWhite);
 }
 
 // DATE_CALENDAR: the page. The rest, no ring: the first part small in red (the
@@ -159,12 +175,12 @@ void center_date_draw(GContext *ctx, GPoint c, int format) {
   center_fit_text(ctx, low, GPoint(c.x, c.y + SUB_LOW + 1), SUB_SMALL, 2 * SUB_R, GColorLightGray);
 }
 
-// The week as 7 sections, Monday first, lit up to today: the weekday for a
+// The week as 7 sections from its first day, lit up to today: the weekday for a
 // caption, the day for a value. The bands are days of the month, today's in the lit one.
 static void week_bands(const struct tm *t, Band bands[7]) {
-  int monday = t->tm_mday - (t->tm_wday + 6) % 7;
+  int first = t->tm_mday - week_day(t);
   for (int i = 0; i < 7; i++) {
-    bands[i] = (Band){ i < 6 ? monday + i : INT16_MAX, GColorChromeYellowARGB8 };
+    bands[i] = (Band){ i < 6 ? first + i : INT16_MAX, GColorChromeYellowARGB8 };
   }
 }
 
@@ -182,32 +198,83 @@ void center_week_draw(GContext *ctx, GPoint c) {
   center_band_draw(ctx, c, t->tm_mday, bands, words()->days[t->tm_wday]);
 }
 
-// How much of the year is gone, in %; the year into `year`.
-static int year_pct(char year[DATE_PART]) {
+static int month_days(const struct tm *t) {
+  static const uint8_t DAYS[12] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+  return DAYS[t->tm_mon] + (t->tm_mon == 1 && year_days(t->tm_year + 1900) == 366);
+}
+
+// How much of the year, month, week or day is gone, in %; its name into `name`:
+// the year, the month, the Date's week head ("WEEK", 4 letters at most), the weekday.
+// The week's from its first day.
+static int progress(ComplicationId id, char name[DATE_PART]) {
   struct tm *t = today();
-  snprintf(year, DATE_PART, "%d", t->tm_year + 1900);
+  if (id == COMP_DAY) {
+    strcpy(name, words()->days[t->tm_wday]);
+    return (t->tm_hour * 60 + t->tm_min) * 100 / (24 * 60);
+  }
+  if (id == COMP_WEEK_PROGRESS) {
+    strcpy(name, words()->week);
+    return (week_day(t) * 24 * 60 + t->tm_hour * 60 + t->tm_min) * 100 / (7 * 24 * 60);
+  }
+  if (id == COMP_MONTH) {
+    strcpy(name, words()->mons[t->tm_mon]);
+    return (t->tm_mday - 1) * 100 / month_days(t);
+  }
+  snprintf(name, DATE_PART, "%d", t->tm_year + 1900);
   return t->tm_yday * 100 / year_days(t->tm_year + 1900);
 }
 
-// A bar like humidity's, the year curved by its middle, where a band's value
-// is. Gabbro has no room beside the arc: the year leads, like an icon.
-void comp_year_draw(GContext *ctx, const Slot *s) {
-  char year[DATE_PART], buf[16];
-  int pct = year_pct(year);
+// A bar like humidity's, its name curved by its middle, where a band's value
+// is. Gabbro has no room beside the arc: the name leads, like an icon.
+static void progress_draw(GContext *ctx, const Slot *s, ComplicationId id) {
+  char name[DATE_PART], buf[16];
+  int pct = progress(id, name);
   snprintf(buf, sizeof(buf), "%d" CORNER_PCT, pct);
 #if defined(PBL_PLATFORM_GABBRO)
-  comp_fill_gauge(ctx, s, pct, GColorChromeYellow, COMP_TRACK, buf, year);
+  comp_fill_gauge(ctx, s, pct, GColorChromeYellow, COMP_TRACK, buf, name);
 #else
   comp_fill_gauge(ctx, s, pct, GColorChromeYellow, COMP_TRACK, buf, NULL);
-  text_draw_along(ctx, year, slot_point(s, 50, COMP_THUMB), s->center, COMP_TEXT + 2, GColorWhite);
+  text_draw_along(ctx, name, slot_mid(s, COMP_THUMB), s->center, COMP_TEXT + 2, GColorWhite);
 #endif
 }
 
-void center_year_draw(GContext *ctx, GPoint c) {
-  char year[DATE_PART], buf[16];
-  int pct = year_pct(year);
+static void center_progress_draw(GContext *ctx, GPoint c, ComplicationId id) {
+  char name[DATE_PART], buf[16];
+  int pct = progress(id, name);
   snprintf(buf, sizeof(buf), "%d" SMALL_PCT, pct);
   center_gauge(ctx, c, pct, GColorChromeYellow);
   center_fit_text(ctx, buf, GPoint(c.x, c.y - 1), SUB_TEXT + 2, 2 * SUB_R - SUB_T - 4, GColorWhite);
-  text_draw(ctx, year, GPoint(c.x, c.y + SUB_LOW), SUB_SMALL, GColorWhite);
+  text_draw(ctx, name, GPoint(c.x, c.y + SUB_LOW), SUB_SMALL, GColorWhite);
+}
+
+void comp_year_draw(GContext *ctx, const Slot *s) {
+  progress_draw(ctx, s, COMP_YEAR);
+}
+
+void comp_month_draw(GContext *ctx, const Slot *s) {
+  progress_draw(ctx, s, COMP_MONTH);
+}
+
+void comp_day_draw(GContext *ctx, const Slot *s) {
+  progress_draw(ctx, s, COMP_DAY);
+}
+
+void comp_week_progress_draw(GContext *ctx, const Slot *s) {
+  progress_draw(ctx, s, COMP_WEEK_PROGRESS);
+}
+
+void center_year_draw(GContext *ctx, GPoint c) {
+  center_progress_draw(ctx, c, COMP_YEAR);
+}
+
+void center_month_draw(GContext *ctx, GPoint c) {
+  center_progress_draw(ctx, c, COMP_MONTH);
+}
+
+void center_day_draw(GContext *ctx, GPoint c) {
+  center_progress_draw(ctx, c, COMP_DAY);
+}
+
+void center_week_progress_draw(GContext *ctx, GPoint c) {
+  center_progress_draw(ctx, c, COMP_WEEK_PROGRESS);
 }

@@ -4,7 +4,8 @@
 
 Slot center_ring(GPoint c) {
   return (Slot){ .center = c, .radius = SUB_R, .thickness = SUB_T,
-                 .a0 = DEG_TO_TRIGANGLE(-120), .a1 = DEG_TO_TRIGANGLE(120) };
+                 .a0 = DEG_TO_TRIGANGLE(-120), .a1 = DEG_TO_TRIGANGLE(120),
+                 .c0 = DEG_TO_TRIGANGLE(-120), .c1 = DEG_TO_TRIGANGLE(120) };
 }
 
 void center_gauge(GContext *ctx, GPoint c, int pct, GColor fill) {
@@ -31,6 +32,9 @@ static const Subdial SUBDIAL[COMP_COUNT] = {
   [COMP_ACTIVE] = center_active_draw, [COMP_MOON] = center_moon_draw,
   [COMP_LOCATION] = center_location_draw,
   [COMP_WEEK] = center_week_draw, [COMP_YEAR] = center_year_draw,
+  [COMP_MONTH] = center_month_draw, [COMP_DAY] = center_day_draw,
+  [COMP_WEEK_PROGRESS] = center_week_progress_draw,
+  [COMP_PRESSURE] = center_pressure_draw,
   [COMP_RAIN_HOURLY] = center_rain_hourly_draw,
 };
 
@@ -46,6 +50,8 @@ void center_draw(GContext *ctx, GPoint c) {
       center_zone_draw(ctx, at[i], g_settings.zone[SLOT_POS_COUNT + i], g_settings.center_text[i]);
     } else if (id == COMP_CALENDAR) {
       center_date_draw(ctx, at[i], g_settings.zone[SLOT_POS_COUNT + i]);
+    } else if (id == COMP_COUNTDOWN) {
+      center_countdown_draw(ctx, at[i], g_settings.zone[SLOT_POS_COUNT + i], g_settings.center_text[i]);
     } else if (id == COMP_CALENDAR_PLAIN) {
       center_date_draw(ctx, at[i], DATE_WEEKDAY);
     } else if (id >= COMP_API && id <= COMP_API_LAST) {

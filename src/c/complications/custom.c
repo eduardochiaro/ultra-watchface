@@ -2,7 +2,7 @@
 
 // The user's text curved along the arc's middle, shrunk to fit it.
 void comp_custom_draw(GContext *ctx, const Slot *s, const char *txt) {
-  text_draw_along(ctx, txt, slot_point(s, 50, 0), s->center, comp_fit(ctx, txt, COMP_TEXT + 2, slot_len(s)), GColorWhite);
+  text_draw_along(ctx, txt, slot_mid(s, 0), s->center, comp_fit(ctx, txt, COMP_TEXT + 2, slot_len(s)), GColorWhite);
 }
 
 void center_fit_text(GContext *ctx, const char *txt, GPoint c, int size, int width, GColor color) {

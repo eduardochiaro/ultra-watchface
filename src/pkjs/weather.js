@@ -7,8 +7,8 @@ var send = require('./send');
 var WEATHER_KEY = 'ultra-weather';  // last message sent, for the settings preview
 // ComplicationId in src/c/complications/complications.h
 var LOCATION_ID = 36, AQI_IDS = [7, 27];
-// Everything the weather message feeds: temperature, rain (today's, hourly), AQI, elevation, UV, conditions, humidity, sun, wind, the place.
-var WEATHER_IDS = [2, 4, 7, 10, 11, 12, 13, 23, 25, 27, 28, 39, 40, LOCATION_ID];
+// Everything the weather message feeds: temperature, rain (today's, hourly), AQI, elevation, UV, conditions, humidity, sun, wind, pressure, the place.
+var WEATHER_IDS = [2, 4, 7, 10, 11, 12, 13, 23, 25, 27, 28, 39, 40, 44, LOCATION_ID];
 
 // Is one of these complications in a corner or a subdial?
 function shown(ids) {
@@ -19,7 +19,7 @@ function shown(ids) {
 function buildUrl(lat, lon, imperial) {
   return 'https://api.open-meteo.com/v1/forecast?latitude=' + lat +
     '&longitude=' + lon +
-    '&current=temperature_2m,relative_humidity_2m,uv_index,weather_code,is_day,wind_speed_10m,wind_direction_10m' +
+    '&current=temperature_2m,relative_humidity_2m,uv_index,weather_code,is_day,wind_speed_10m,wind_direction_10m,pressure_msl' +
     '&daily=temperature_2m_min,temperature_2m_max,precipitation_probability_max,sunrise,sunset' +
     // RAIN_HOURS in src/c/weather.h: the hour before this one, it and 7 more
     '&hourly=precipitation_probability&past_hours=1&forecast_hours=8' +
@@ -114,7 +114,8 @@ function buildMessage(data, aqi) {
     SUNRISE: minutes(d.sunrise && d.sunrise[0]),
     SUNSET: minutes(d.sunset && d.sunset[0]),
     WIND: typeof data.current.wind_speed_10m === 'number' ? Math.round(data.current.wind_speed_10m) : -1,  // km/h either way
-    WIND_DIR: Math.round(data.current.wind_direction_10m || 0) % 360
+    WIND_DIR: Math.round(data.current.wind_direction_10m || 0) % 360,
+    PRESSURE: typeof data.current.pressure_msl === 'number' ? Math.round(data.current.pressure_msl) : -1  // hPa either way
   };
 }
 

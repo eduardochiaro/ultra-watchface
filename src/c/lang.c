@@ -14,6 +14,7 @@ static const Words WORDS[] = {
     { "SUNNY", "CLEAR", "PT CLOUDY", "PT CLOUDY", "CLOUDY", "FOGGY", "RAINY", "SNOWY", "STORMY" },
     "ACTIVE", "SLEEP",
     { "N", "NE", "E", "SE", "S", "SW", "W", "NW" },
+    "DAYS LEFT", "DAYS AGO",
   },
   { // fr
     { "DIM", "LUN", "MAR", "MER", "JEU", "VEN", "SAM" },
@@ -24,6 +25,7 @@ static const Words WORDS[] = {
     { "SOLEIL", "DÉGAGÉ", "PEU NUAGEUX", "PEU NUAGEUX", "NUAGEUX", "BROUILLARD", "PLUIE", "NEIGE", "ORAGE" },
     "ACTIF", "SOMMEIL",
     { "N", "NE", "E", "SE", "S", "SO", "O", "NO" },
+    "JOURS RESTANTS", "JOURS PASSÉS",
   },
   { // de
     { "SO", "MO", "DI", "MI", "DO", "FR", "SA" },
@@ -34,6 +36,7 @@ static const Words WORDS[] = {
     { "SONNIG", "KLAR", "HEITER", "HEITER", "BEWÖLKT", "NEBEL", "REGEN", "SCHNEE", "GEWITTER" },
     "AKTIV", "SCHLAF",
     { "N", "NO", "O", "SO", "S", "SW", "W", "NW" },
+    "TAGE ÜBRIG", "TAGE HER",
   },
   { // nl
     { "ZO", "MA", "DI", "WO", "DO", "VR", "ZA" },
@@ -44,6 +47,7 @@ static const Words WORDS[] = {
     { "ZONNIG", "HELDER", "HALF BEWOLKT", "HALF BEWOLKT", "BEWOLKT", "MIST", "REGEN", "SNEEUW", "ONWEER" },
     "ACTIEF", "SLAAP",
     { "N", "NO", "O", "ZO", "Z", "ZW", "W", "NW" },
+    "DAGEN TE GAAN", "DAGEN GELEDEN",
   },
   { // it
     { "DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SAB" },
@@ -54,6 +58,7 @@ static const Words WORDS[] = {
     { "SOLE", "SERENO", "POCO NUVOLOSO", "POCO NUVOLOSO", "NUVOLOSO", "NEBBIA", "PIOGGIA", "NEVE", "TEMPORALE" },
     "ATTIVO", "SONNO",
     { "N", "NE", "E", "SE", "S", "SO", "O", "NO" },
+    "GIORNI MANCANTI", "GIORNI FA",
   },
   { // es
     { "DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB" },
@@ -64,6 +69,7 @@ static const Words WORDS[] = {
     { "SOLEADO", "DESPEJADO", "POCO NUBOSO", "POCO NUBOSO", "NUBLADO", "NIEBLA", "LLUVIA", "NIEVE", "TORMENTA" },
     "ACTIVO", "SUEÑO",
     { "N", "NE", "E", "SE", "S", "SO", "O", "NO" },
+    "DÍAS RESTANTES", "DÍAS ATRÁS",
   },
 };
 

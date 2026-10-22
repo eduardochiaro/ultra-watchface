@@ -130,6 +130,10 @@ GPoint slot_point(const Slot *s, int pct, int dr) {
   return polar(s->center, slot_angle(s, pct), s->radius + dr);
 }
 
+GPoint slot_mid(const Slot *s, int dr) {
+  return polar(s->center, (s->c0 + s->c1) / 2, s->radius + dr);
+}
+
 // px -> angle on this slot's circle.
 static int32_t px_angle(const Slot *s, int px) {
   return px * PX_ANGLE / s->radius;
@@ -165,7 +169,7 @@ static int isqrt(int n) {
 }
 
 GPoint slot_corner(const Slot *s, int px) {
-  GPoint m = slot_point(s, 50, 0);
+  GPoint m = slot_mid(s, 0);
   GPoint k = GPoint(m.x < s->center.x ? 0 : s_screen.w, m.y < s->center.y ? 0 : s_screen.h);
   int dx = k.x - s->center.x, dy = k.y - s->center.y;
   int r = s->radius + s->thickness / 2 + px, d = isqrt(dx * dx + dy * dy);
@@ -173,7 +177,7 @@ GPoint slot_corner(const Slot *s, int px) {
 }
 
 int slot_left_end(const Slot *s) {
-  return slot_point(s, 100, 0).x < slot_point(s, 0, 0).x ? 100 : 0;
+  return slot_point(s, 100, 0).x < slot_point(s, 0, 0).x - 1 ? 100 : 0;
 }
 
 // Subpixel polar, for fctx paths.

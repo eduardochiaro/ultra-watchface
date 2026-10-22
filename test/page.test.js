@@ -8,7 +8,7 @@ var config = require('../src/pkjs/config');
 // Message: ints, defaults filled in
 var msg = config.toMessage(config.withDefaults({ SLOT_TL: '4', SCHEME: 3, UNITS: 1 }));
 assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CENTER_T: 14, CENTER_L: 10, CENTER_R: 12, CENTER_B: 6,
-  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, SAVER: 0, SQUARE: 0, LANG: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
+  SCHEME: 3, UNITS: 1, STEP_GOAL: 10000, SECONDS: 0, SWEEP: 0, SHAKE_HIDE: 0, SAVER: 0, SQUARE: 0, LANG: 0, WEEK_START: 0, JOIN: 0, BG_COLOR: 0xC0, ACCENT_COLOR: 0xF8, HANDS: 0, RING: 0, BAND_COLOR: 0, HAND_COLOR: 0, MINUTE_COLOR: 0, SECOND_COLOR: 0,
   ZONE_TL: 0, ZONE_TR: 0, ZONE_BL: 0, ZONE_BR: 0, ZONE_T: 0, ZONE_L: 0, ZONE_R: 0, ZONE_B: 0,
   TEXT_TL: '', TEXT_TR: '', TEXT_BL: '', TEXT_BR: '', TEXT_T: 'PB', TEXT_L: '', TEXT_R: '', TEXT_B: '' });
 // Time zone: the watch gets the offset, and the name as the text of a place showing it; an unknown zone is UTC
@@ -393,6 +393,58 @@ assert.strictEqual(svg.split('stroke="#ffaa00" stroke-width="6"').length - 1, li
 assert.strictEqual(svg.split('>' + wd + '</text>').length - 1, 2, 'week: the weekday in a corner and a subdial');
 assert.ok(svg.indexOf('>' + gone + '%</text>') > 0 && svg.split('>' + yr + '</text>').length - 1 === 2, 'year progress and the year');
 
+// Week start: Sunday, the US week number (week 1 has 1 January) and the week's sections from Sunday; Monday is ISO
+assert.deepStrictEqual([[2026, 0, 1], [2026, 0, 3], [2026, 0, 4], [2026, 9, 22], [2022, 0, 1], [2022, 11, 31]].map(function (d) {
+  return config.weekNumber(new Date(d[0], d[1], d[2]), 6);
+}), [1, 1, 2, 43, 1, 53]);
+assert.deepStrictEqual([config.weekNumber(new Date(2026, 0, 3), 5), config.weekNumber(new Date(2026, 0, 4), 0)], [2, 1], 'Saturday: week 2 starts on the 3rd; Monday: ISO');
+assert.deepStrictEqual([config.withDefaults({ WEEK_START: '6' }).WEEK_START, config.withDefaults({ WEEK_START: 3 }).WEEK_START], [6, 0], 'Monday, Sunday or Saturday');
+ctx = load({ settings: { WEEK_START: 6, SLOT_TL: 37, SLOT_TR: 6, DATE_TR: 5, SLOT_BL: 0, SLOT_BR: 0 }, platform: 'emery' });
+svg = screen();
+assert.strictEqual(svg.split('stroke="#ffaa00" stroke-width="6"').length - 1, today.getDay() + 1, 'week from Sunday: a section per day so far');
+assert.ok(svg.indexOf('>WEEK ' + config.weekNumber(today, 6) + '</text>') > 0 && els['week-start'].value === 6 && els['week-start'].innerHTML.indexOf('<option value="6" selected>Sunday</option>') > 0, 'week number from Sunday; the picker');
+
+// Progress: the year, month or day, kinds of one pick
+assert.deepStrictEqual([config.family(42), config.family(43)], [38, 38]);
+ctx = load({ settings: { SLOT_TL: 42, SLOT_TR: 43, CENTER_T: 42, CENTER_L: 43, SLOT_BL: 0, SLOT_BR: 0, CENTER_R: 0, CENTER_B: 0 }, platform: 'emery' });
+svg = screen();
+var mpct = Math.trunc((md - 1) * 100 / new Date(yr, today.getMonth() + 1, 0).getDate());
+assert.ok(svg.indexOf('>' + mpct + '%</text>') > 0 && svg.split('>' + mo + '</text>').length - 1 === 2 && svg.split('>' + wd + '</text>').length - 1 === 2, 'month and day progress: corners and subdials, named by the month and the weekday');
+assert.ok(els.corners.innerHTML.indexOf('<option value="38" selected>Progress</option>') > 0 && els.corners.innerHTML.indexOf('<option value="42" selected>Month</option>') > 0, 'progress kind picker');
+// Week progress: from the week's first day, named WEEK
+assert.strictEqual(config.family(45), 38);
+[0, 6].forEach(function (start) {
+  load({ settings: { WEEK_START: start, SLOT_TL: 45, CENTER_T: 45, SLOT_TR: 0, SLOT_BL: 0, SLOT_BR: 0, CENTER_L: 0, CENTER_R: 0, CENTER_B: 0 }, platform: 'emery' });
+  var wpct = Math.trunc((((today.getDay() + 6 - start) % 7) * 1440 + new Date().getHours() * 60 + new Date().getMinutes()) * 100 / (7 * 1440));
+  svg = screen();
+  assert.ok(svg.indexOf('>' + wpct + '%</text>') > 0 && svg.split('>WEEK</text>').length - 1 === 2, 'week progress from ' + start + ': corner and subdial');
+});
+
+// Countdown: the day as days since the epoch on the wire, its name the place's text; the date stays on the phone
+assert.deepStrictEqual([config.countDay('2026-12-25'), config.countDay('1970-01-01'), config.countDay('2059-09-18'), config.countDay('2059-09-19'), config.countDay('soon')], [20812, 0, 32767, 0, 0]);
+msg = config.toMessage(config.withDefaults({ SLOT_TL: 41, COUNT_TL: '2026-12-25', TEXT_TL: 'Xmas', CENTER_T: 41, COUNT_T: 'nope', SLOT_TR: 32, ZONE_TR: 'PST', COUNT_TR: '2026-12-25' }));
+assert.deepStrictEqual([msg.ZONE_TL, msg.TEXT_TL, msg.ZONE_T, msg.ZONE_TR, msg.COUNT_TL], [20812, 'Xmas', 0, -480, undefined]);
+function iso(d) { return d.getFullYear() + '-' + ('0' + (d.getMonth() + 1)).slice(-2) + '-' + ('0' + d.getDate()).slice(-2); }
+var ahead = iso(new Date(yr, today.getMonth(), md + 64)), behind = iso(new Date(yr, today.getMonth(), md - 3));
+ctx = load({ settings: { SLOT_TL: 41, COUNT_TL: ahead, TEXT_TL: 'Xmas', SLOT_TR: 41, COUNT_TR: behind, CENTER_T: 41, COUNT_T: ahead, TEXT_T: 'XMAS', CENTER_L: 41 }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('>64 DAYS LEFT</text>') > 0 && svg.indexOf('>Xmas</text>') > 0 && svg.indexOf('>3 DAYS AGO</text>') > 0, 'countdown corners: to come and gone, the name beside the arc');
+assert.ok(svg.indexOf('>XMAS</text>') > 0 && svg.indexOf('>64</text>') > 0 && svg.indexOf('>DAYS LEFT</text>') > 0 && svg.indexOf('>--</text>') > 0, 'countdown subdials: name, count, words; none picked: --');
+assert.ok(els.corners.innerHTML.indexOf('<input type="date" data-count="COUNT_TL" data-slot-key="SLOT_TL" value="' + ahead + '"') > 0, 'a date per place');
+load({ settings: { SLOT_TL: 41, COUNT_TL: ahead, TEXT_TL: 'Xmas' }, platform: 'gabbro' });
+assert.ok(screen().indexOf('>Xmas 64 DAYS LEFT</text>') > 0, 'gabbro countdown: one line');
+
+// Pressure: hPa on the wire, a barometer's scale; inHg with imperial units
+weather = require('../src/pkjs/weather').buildMessage({ current: { pressure_msl: 1012.6 }, daily: { temperature_2m_min: [1], temperature_2m_max: [2], precipitation_probability_max: [3] } }, null);
+assert.strictEqual(weather.PRESSURE, 1013);
+load({ settings: { SLOT_TL: 44, CENTER_T: 44 }, weather: weather, platform: 'emery' });
+svg = screen();
+assert.ok(svg.split('>1013</text>').length - 1 === 2 && svg.split('>hPa</text>').length - 1 === 2 && svg.indexOf('>970</text>') < 0 && svg.indexOf('#aaffff') > 0, 'pressure: the value in a corner, the unit its icon, no gauge; the scale in the subdial');
+load({ settings: { SLOT_TL: 44, UNITS: 1 }, weather: weather, platform: 'gabbro' });
+assert.ok(screen().indexOf('>29.91 inHg</text>') > 0 && screen().indexOf('>28.6</text>') < 0, 'pressure in inHg; round: one line, no gauge');
+load({ settings: { SLOT_TL: 44 }, weather: { TEMP: 1 }, platform: 'emery' });
+assert.ok(screen().indexOf('>1016</text>') > 0, 'no pressure fetched yet: the sample');
+
 // Active calories: its own complication, corner and subdial
 load({ settings: { SLOT_TL: 30, CENTER_T: 30 }, platform: 'emery' });
 assert.ok(screen().split('>310</text>').length - 1 === 2 && screen().indexOf('1480') < 0, 'active calories');
@@ -412,6 +464,30 @@ ctx = load({ settings: { SLOT_TL: 35, CENTER_T: 35 }, platform: 'emery' });
 svg = screen();
 assert.ok(/>[\u25B4\u25BE]\d+%<\/text>/.test(svg) && svg.split(ctx.ICONS.moon).length - 1 === 1 && /A12 12 0 0 [01] 100 95A[\d.]+ 12 0 0 [01] 100 71Z" fill="#ffffff"/.test(svg), 'moon: lit share in the corner, its shape in the subdial');
 
+// Joined corners: runs clockwise, each showing its left end's corner, else its bottom one; emery joins top and bottom only
+function owned(join, round) { return config.runs(join, round).map(function (r) { return r.corners.join('+') + ':' + r.owner; }); }
+assert.deepStrictEqual(owned(0, true), ['SLOT_TL:SLOT_TL', 'SLOT_TR:SLOT_TR', 'SLOT_BR:SLOT_BR', 'SLOT_BL:SLOT_BL']);
+assert.deepStrictEqual(owned(1 | 4, false), ['SLOT_TL+SLOT_TR:SLOT_TL', 'SLOT_BR+SLOT_BL:SLOT_BL']);
+assert.deepStrictEqual(owned(2 | 8, false), owned(0, false), 'emery: no sides');
+assert.deepStrictEqual(owned(2 | 8, true), ['SLOT_TR+SLOT_BR:SLOT_BR', 'SLOT_BL+SLOT_TL:SLOT_BL'], 'gabbro sides: the bottom corner');
+assert.deepStrictEqual(owned(15, true), ['SLOT_BL+SLOT_TL+SLOT_TR+SLOT_BR:SLOT_BL'], 'all four: a ring open at the bottom');
+assert.deepStrictEqual(owned(2 | 4 | 8, true), ['SLOT_TR+SLOT_BR+SLOT_BL+SLOT_TL:SLOT_TL'], 'open at the top');
+assert.deepStrictEqual(owned(1 | 2, true), ['SLOT_TL+SLOT_TR+SLOT_BR:SLOT_TL', 'SLOT_BL:SLOT_BL'], 'one large, one small');
+assert.strictEqual(config.toMessage(config.withDefaults({ JOIN: 21 })).JOIN, 5);
+// The owner's bar runs through the gap, the other corner's complication is gone
+function tracks(svg) {
+  return (svg.match(/<path d="M[^"]*" fill="none" stroke="#000055"/g) || []).map(function (d) { return d.split('"')[1].match(/-?[\d.]+/g).map(Number); });
+}
+ctx = load({ settings: { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, JOIN: 5 }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('>6240</text>') > 0 && svg.indexOf('>82%</text>') > 0 && svg.indexOf('>21°</text>') < 0 && svg.indexOf(ctx.ICONS.umbrella) < 0, 'emery joined: steps and battery, no temperature or rain');
+assert.ok(tracks(svg).some(function (n) { return n[0] < 30 && n[7] > 170 && n[1] < 60; }), 'the steps bar runs across the top');
+assert.ok(els.joins.innerHTML.split('data-join=').length === 3 && els.corners.innerHTML.indexOf('data-corner="SLOT_TR"') > 0, 'emery: two switches');
+assert.strictEqual(els['corners-sum'].textContent, 'Steps · Battery');
+load({ settings: { SLOT_TL: 1, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, JOIN: 15 }, platform: 'gabbro' });
+svg = screen();
+assert.ok(svg.indexOf('>6240</text>') < 0 && svg.indexOf('>82<tspan') > 0 && svg.indexOf('>21°</text>') < 0, 'gabbro ring: the bottom left corner\'s battery alone');
+assert.ok(els.joins.innerHTML.split('data-join=').length === 5, 'gabbro: four switches');
 console.log('ok');
 
 // AQI and UV as range gauges, calories: corners and subdials
@@ -434,7 +510,7 @@ var i18n = require('../src/pkjs/i18n'), fs = require('fs');
 var cWords = fs.readFileSync('src/c/lang.c', 'utf8').split('WORDS[] = {')[1].split('\n};')[0].match(/"[^"]*"/g).map(JSON.parse);
 var jsWords = [].concat.apply([], i18n.LANG_CODES.map(function (c) {
   var w = i18n.FACE[c];
-  return [].concat(w.days, w.months, w.mons, w.week, w.day, w.weather, w.active, w.sleep, w.points);
+  return [].concat(w.days, w.months, w.mons, w.week, w.day, w.weather, w.active, w.sleep, w.points, w.left, w.ago);
 }));
 assert.deepStrictEqual(cWords, jsWords, 'lang.c matches FACE');
 var fontChars = require('../package.json').scripts.font.split('"')[1];
@@ -451,7 +527,7 @@ var english = (markup.match(/>[^<]+</g) || []).map(function (t) { return t.slice
   .concat((markup.match(/(placeholder|aria-label|data-title)="[^"]+"/g) || []).map(function (a) { return a.split('"')[1]; }))
   .concat((html.match(/_\("[^"]+"/g) || []).map(function (c) { return c.slice(3, -1).replace(/\\'/g, "'"); }))
   .concat(config.COMPLICATIONS.concat(config.CENTER_COMPLICATIONS, config.ZONES, [].concat.apply([], config.VARIANTS)).map(function (o) { return o.group; }).filter(Boolean))
-  .concat(config.COMPLICATIONS.concat(config.CENTER_COMPLICATIONS, [].concat.apply([], config.VARIANTS), config.CORNERS, config.CENTERS).map(function (o) { return o.label; }))
+  .concat(config.COMPLICATIONS.concat(config.CENTER_COMPLICATIONS, [].concat.apply([], config.VARIANTS), config.CORNERS, config.CENTERS, config.WEEK_STARTS, config.JOINS).map(function (o) { return o.label; }))
   .concat(config.DATE_FORMATS, config.API_TYPES, config.SCHEMES, config.HANDS, config.RINGS)
   .filter(function (t) { return t && ['Ultra', '°C km', '°F mi'].indexOf(t) < 0; });  // names, units
 var missing = english.filter(function (t) { return !(t in i18n.PAGE.fr); });
@@ -490,6 +566,7 @@ assert.deepStrictEqual([config.withDefaults({ WEATHER_PLACE: { name: 'x', lat: '
 var NO_WEATHER = { SLOT_TL: 1, SLOT_TR: 3, SLOT_BL: 6, SLOT_BR: 8, CENTER_T: 14, CENTER_L: 35, CENTER_R: 31, CENTER_B: 6 };
 assert.strictEqual(fetched(NO_WEATHER), '', 'no weather complication: no position, no request');
 assert.strictEqual(fetched(Object.assign({}, NO_WEATHER, { SLOT_TL: 2 })), 'position api.open-meteo.com', 'temperature: the forecast alone');
+assert.strictEqual(fetched(Object.assign({}, NO_WEATHER, { CENTER_T: 44 })), 'position api.open-meteo.com', 'pressure: the forecast');
 assert.strictEqual(fetched(Object.assign({}, NO_WEATHER, { CENTER_T: 27, CENTER_L: 36 })), 'position api.open-meteo.com air-quality-api.open-meteo.com api.bigdatacloud.net', 'AQI and location: theirs too');
 assert.strictEqual(fetched(Object.assign({}, NO_WEATHER, { CENTER_T: 27, CENTER_L: 36, WEATHER_PLACE: PICKED })), 'api.open-meteo.com air-quality-api.open-meteo.com', 'picked place: no position, no reverse geocoding');
 console.log('ok weather');
