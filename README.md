@@ -75,7 +75,7 @@ The phone makes the requests, so the watch needs a connection to it. A value tha
 Limits:
 - Up to 8 custom complications.
 - No request headers: the API has to work with a plain `GET`, any key in the URL.
-- Numbers are rounded to 2 decimals. Text keeps only letters, digits, spaces and `% , - . / :`, so no `°` or accents.
+- Numbers are rounded to 2 decimals. Text keeps only letters (accented ones too), digits, spaces and `% , - . / :`, so no `°`.
 - The bar and gauge use the accent color.
 - A bar's value shrinks to leave half the corner to the bar.
 - A gauge in a subdial hides its min and max when either is longer than 3 characters.

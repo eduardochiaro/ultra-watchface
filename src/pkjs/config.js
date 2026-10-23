@@ -259,13 +259,15 @@ function cleanPlace(p) {
 }
 
 // Only characters the watch font has, `n` bytes at most: the watch keeps
-// UTF-8, an accented letter takes 2. One the font lacks loses its accent: "ã" is "a".
-var FONT = /[ %,\-./0-9:A-Za-zÀÁÂÄÇÈÉÊËÌÍÎÏÑÒÓÔÖÙÚÛÜßàáâäçèéêëìíîïñòóôöùúûü]/;
+// UTF-8, an accented letter takes 2. One the font lacks loses its accent: "ś" is "s".
+// Those with no accent to lose are in BASE: "ł" is "l", not dropped.
+var FONT = /[ %,\-./0-9:A-Za-zÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÑÒÓÔÕÖØÙÚÛÜßàáâãäåæçèéêëìíîïñòóôõöøùúûüŒœ]/;
+var BASE = { 'Đ': 'D', 'đ': 'd', 'Ð': 'D', 'ð': 'd', 'Ħ': 'H', 'ħ': 'h', 'ı': 'i', 'Ł': 'L', 'ł': 'l' };
 function clean(s, n) {
   var out = '', bytes = 0;
   s = String(s);
   (s.normalize ? s.normalize('NFC') : s).split('').every(function (c) {
-    c = FONT.test(c) ? c : c.normalize ? c.normalize('NFD')[0] : '';
+    c = FONT.test(c) ? c : BASE[c] || (c.normalize ? c.normalize('NFD')[0] : '');
     if (!FONT.test(c)) {
       return true;
     }

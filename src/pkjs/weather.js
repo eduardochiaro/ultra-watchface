@@ -56,7 +56,7 @@ function place(geo, lat, lon) {
       LOCATION_CODE: config.clean(geo.countryCode || '', 4)
     };
   }
-  var words = name.replace(/[^A-Za-zÀ-ÿ ]/g, ' ').split(' ').filter(Boolean);
+  var words = name.replace(/[^A-Za-zÀ-ÿŒœ ]/g, ' ').split(' ').filter(Boolean);
   var code = words.length > 1 ? words.map(function(w) { return w[0]; }).join('') : (words[0] || name).slice(0, 3);
   return { LOCATION: name, LOCATION_CODE: config.clean(code.toUpperCase(), 4) };
 }

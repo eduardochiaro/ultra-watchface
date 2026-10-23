@@ -15,9 +15,9 @@ assert.deepStrictEqual(msg, { SLOT_TL: 4, SLOT_TR: 2, SLOT_BL: 3, SLOT_BR: 4, CE
 msg = config.toMessage(config.withDefaults({ SLOT_TL: 32, ZONE_TL: 'PST', TEXT_TL: 'mine', CENTER_T: 32, ZONE_T: 'CST-CN', CENTER_B: 0, ZONE_B: 'IST', ZONE_L: 'nope' }));
 assert.deepStrictEqual([msg.ZONE_TL, msg.TEXT_TL, msg.ZONE_T, msg.TEXT_T, msg.ZONE_B, msg.TEXT_B, msg.ZONE_L], [-480, 'PST', 480, 'CST', 330, '', 0]);
 assert.ok(config.ZONES.every(function (z) { return z.name.length <= 4 && config.zone(z.value) === z; }), 'zone names fit a subdial, values are unique');
-// Text: only glyphs the watch font has, 12 bytes max; one it lacks loses its accent
-var texts = config.withDefaults({ TEXT_TL: 'Héllo <b>&"x" 12:30 and more', TEXT_B: 'Hello', TEXT_TR: 'São ÉÉÉÉÉÉÉ' });
-assert.deepStrictEqual([texts.TEXT_TL, texts.TEXT_B, texts.TEXT_TR], ['Héllo bx 12', 'Hell', 'Sao ÉÉÉÉ']);
+// Text: only glyphs the watch font has, 12 bytes max; one it lacks loses its accent, or is its base letter
+var texts = config.withDefaults({ TEXT_TL: 'Héllo <b>&"x" 12:30 and more', TEXT_B: 'Hello', TEXT_TR: 'Łódź ÉÉÉÉÉÉÉ', TEXT_BR: 'São Ørsted' });
+assert.deepStrictEqual([texts.TEXT_TL, texts.TEXT_B, texts.TEXT_TR, texts.TEXT_BR], ['Héllo bx 12', 'Hell', 'Lódz ÉÉÉ', 'São Ørsted']);
 
 // Custom API complications: cleaned on the way in, kept off the settings message
 var apis = config.withDefaults({ APIS: [{ url: ' https://x.test/a ', freq: 0.2, type: '2', title: ' Solar power ', header: '{{u}}', text: '{{a}}', min: 5 }, null, { name: 'KW' }] }).APIS;
@@ -350,7 +350,7 @@ assert.ok(screen().indexOf('>AQI 42</text>') > 0 && screen().indexOf('>--</text>
 // Location: the city in a corner, its short code in a subdial; coordinates and the country without a name
 var place = require('../src/pkjs/weather').place;
 assert.deepStrictEqual(place({ city: 'Seattle' }, 47.6, -122.3), { LOCATION: 'Seattle', LOCATION_CODE: 'SEA' });
-assert.deepStrictEqual(place({ city: 'São Paulo' }, -23.5, -46.6), { LOCATION: 'Sao Paulo', LOCATION_CODE: 'SP' }, 'accents off, initials');
+assert.deepStrictEqual(place({ city: 'São Paulo' }, -23.5, -46.6), { LOCATION: 'São Paulo', LOCATION_CODE: 'SP' }, 'accents kept, initials');
 assert.deepStrictEqual(place({ city: '', locality: 'St. Louis' }, 38.6, -90.2), { LOCATION: 'St. Louis', LOCATION_CODE: 'SL' }, 'locality when no city');
 assert.deepStrictEqual(place({ city: '東京', countryCode: 'JP' }, 35.68, 139.69), { LOCATION: '35.7N 139.7E', LOCATION_CODE: 'JP' }, 'nothing the font has');
 assert.deepStrictEqual(place({ city: 'Gemeente Utrecht' }, 52.09, 5.12), { LOCATION: 'Utrecht', LOCATION_CODE: 'UTR' }, 'not the municipality');
