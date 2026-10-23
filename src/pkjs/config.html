@@ -1793,7 +1793,10 @@
 			return;
 		}
 		if (b.id === "back") {
-			return history.back();
+			if (pushed) {
+				return history.back();
+			}
+			return show("");
 		}
 		if (b.dataset.scheme) {
 			settings.SCHEME = +b.dataset.scheme;
@@ -1869,9 +1872,28 @@
 	});
 
 	// A page per index row, by the URL's hash: the phone's back button goes back to the index, where it was.
-	var homeY = 0;
-	window.addEventListener("hashchange", function () {
-		var open = "page-" + location.hash.slice(1), title = "";
+	// Android's app stops the rows' links, even to a #, so a row opens its page here and
+	// pushState, which no webview gets to stop, gives the phone's back button its entry.
+	var homeY = 0, pushed = false;
+	document.addEventListener("click", function (e) {
+		var a = e.target.closest('a.row[href^="#"]');
+		if (!a) {
+			return;
+		}
+		e.preventDefault();
+		try {
+			history.pushState(null, "", a.hash);
+			pushed = true;
+		} catch (err) {
+			pushed = false;  // no entry: the page's Back goes home by itself
+		}
+		show(a.hash.slice(1));
+	});
+	window.addEventListener("popstate", function () {
+		show(location.hash.slice(1));
+	});
+	function show(name) {
+		var open = "page-" + name, title = "";
 		if (!$("home").hidden) {
 			homeY = window.pageYOffset;
 		}
@@ -1883,7 +1905,7 @@
 		$("crumb").hidden = !title;
 		$("title").textContent = title || "Ultra";
 		window.scrollTo(0, title ? 0 : homeY);
-	});
+	}
 
 	translate();
 	render();

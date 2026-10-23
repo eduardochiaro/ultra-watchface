@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.1.0
+
+- **Settings on Android:** tapping a row on the settings page opens its page again, and the phone's back button still returns to the list.
+
 ## 2.0.0
 
 - **Older watches:** Ultra now runs on the Pebble Time, Pebble Time Round, Pebble 2 and Pebble 2 Duo. They have no corner complications: the dial fills the screen, with the four subdials, every ring and every hand style, in the same smooth text as on the Time 2 and Round 2.
