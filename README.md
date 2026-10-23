@@ -2,12 +2,15 @@
 
 An analog watchface for Pebble with eight complications you choose yourself. Four gauges curve around the corners, four subdials sit inside the dial, and every one is yours to swap.
 
+Runs on the Pebble Time 2 and Time Round 2 with all eight, and on the Pebble Time, Time Round, Pebble 2 and Pebble 2 Duo with the four subdials, the dial filling the screen.
+
 - **Eight slots, your pick.** Steps, distance, calories, active minutes, sleep, heart rate, battery, the date in eight formats, the week, year, month, week and day progress, days until or since a date, temperature, rain (today or by the hour), humidity, wind, air quality and UV index (as sections or a gauge), pressure, elevation, location, sunrise and sunset, moon phase, digital time, other time zones, .beat time, current weather, your own text, or a value from any JSON API.
 - **Joined corners.** Let one corner's bar run on into its neighbor: one long gauge across the top or bottom, or, on the Round 2, up a side or all the way round.
 - **Five color schemes.** Black, White, two monochromes, or Accent: any background and accent from the watch's 64 colors.
 - **Seven rings.** Default, Minimal, Sport, Chronograph, Roman, Tachymeter or Compass, the banded ones in a color you pick.
 - **Six hands.** Line, Bar, Outline, Pointer, Sword or Dauphine hands, each in its own color. Or none, with the time in a complication.
-- **Live preview.** The settings page draws the face as you change it.
+- **Six languages.** English, French, German, Dutch, Italian or Spanish, on the face and the settings page. Accented letters too: "Zürich", "São Paulo".
+- **Live preview.** The settings page draws your watch's face as you change it.
 - **No account, no API key.** Weather and air quality come from [Open-Meteo](https://open-meteo.com), refreshed every 30 minutes, or as often as you set. The Location complication names your city with [BigDataCloud](https://www.bigdatacloud.com), asked only while it is on the face.
 
 ## Screenshots
@@ -35,18 +38,19 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 ### Settings
 | Setting | What it does |
 | --- | --- |
-| Corners | The four arc gauges outside the dial: top left, top right, bottom left, bottom right. |
+| Corners | The four arc gauges outside the dial: top left, top right, bottom left, bottom right. Time 2 and Round 2 only. |
 | Join corners | One complication across two corners, its bar running on through the gap. Time 2: the top pair and the bottom pair. Round 2: any neighbors, up to all four as one closed ring, its labels at 6 o'clock. The run shows the complication picked in its left corner (the bottom one for a side). |
 | Center | The four subdials inside the dial: top, left, right, bottom. |
 | Time zone | Pick **Time zone** in any slot, then its zone under it. Every slot showing one has its own. |
 | Date | Pick **Date** in any slot, then its format under it: Calendar (yesterday, today and tomorrow in a corner, a tear-off page in a subdial), Weekday and day (TUE 6), Month and day (OCT 6), Full date (TUE over 6 OCTOBER in a corner, TUE 6 OCT in a subdial), Numeric (6/10/2026; month first with °F and miles), Week number (ISO from Monday; from Sunday or Saturday, week 1 is the one 1 January is in), Day of year or Year. Every slot showing one has its own. |
 | Days until / since | Pick **Days until / since** in any slot, then its date and a name under it: "64 DAYS LEFT" before the date, "3 DAYS AGO" after. The name (up to 12 characters in a corner, 4 in a subdial) goes beside the arc or above the count. |
-| Text | Pick **Text** in any slot to show your own label: up to 12 characters in a corner, 4 in a subdial. |
+| Text | Pick **Text** in any slot to show your own label: up to 12 characters in a corner, 4 in a subdial. Accented letters count twice; one the watch font lacks loses its accent ("Ł" is "L"). |
 | Custom complications | Show a value from any JSON API. Create up to 8, then pick them in any corner or subdial. See below. |
-| Color scheme | Black, White, White on black, Black on white, or Accent. Accent adds a background and an accent color picker. |
-| Ring | Default, Minimal (ticks only, no numerals), Sport (a white band of minute numerals over an accent ring), Chronograph (the white band alone, black on white, hours 1 to 12), Roman (Default with its hours in Roman numerals, turned along the dial), Tachymeter (seconds ticks around a colored band of 10 to 60, a dot between each) or Compass (a compass bezel: N, E, S, W and the degrees between, 30 to 330, on a band; it is fixed and does not turn to north). Minimal, Sport, Chronograph, Tachymeter and Compass leave a larger center: the subdials grow to fill it and the hands run longer. Sport, Chronograph, Tachymeter and Compass take a band color; ticks and numerals turn black or white to stay readable on it. Tachymeter's band follows the seconds color until it has its own. Picking a color scheme resets it. |
+| Color scheme | Black, White, White on black, Black on white, or Accent. Accent adds a background and an accent color picker. On the Pebble 2 and 2 Duo: White on black or Black on white. |
+| Ring | Default, Minimal (ticks only, no numerals), Sport (a white band of minute numerals over an accent ring), Chronograph (the white band alone, black on white, hours 1 to 12), Roman (Default with its hours in Roman numerals, turned along the dial), Tachymeter (seconds ticks around a colored band of 10 to 60, a dot between each) or Compass (a compass bezel: N, E, S, W and the degrees between, 30 to 330, on a band; it is fixed and does not turn to north). Minimal, Sport, Chronograph, Tachymeter and Compass leave a larger center: the subdials grow to fill it and the hands run longer. Sport, Chronograph, Tachymeter and Compass take a band color; ticks and numerals turn black or white to stay readable on it. Tachymeter's band follows the seconds color until it has its own. Picking a color scheme resets it. On the Pebble Time, Pebble 2 and 2 Duo, **Rectangular** makes the ring follow the screen's edge, its numerals upright; the subdials stay round. |
 | Hands | Line, Bar, Outline, Pointer, Sword or Dauphine for the hour and minute hands, or None to hide them (the seconds hand has its own switch), and a color each for the hour, minute and seconds hands. The seconds color is also the 12, 3, 6 and 9 notches'. Picking a color scheme resets the colors; picking an accent resets the seconds color. |
 | Weather | **Refresh every** 15 or 30 minutes, 1, 2 or 3 hours. **Location**: the phone's, or search a city and pick it; weather, air quality, sun times and the Location complication are then that city's, and the phone's position is not asked. |
+| Language | Auto (the watch's language), English, French, German, Dutch, Italian or Spanish: the face's words (weekdays, months, conditions, captions, compass points) and the settings page. The city search answers in it too. |
 | Units | °C, km, km/h and hPa, or °F, miles, mph and inHg. |
 | Week starts on | Monday, Sunday or Saturday. The Week complication's first section, Week progress and the week number follow it. |
 | Daily step goal | 1,000 to 30,000 steps. Fills the steps, distance and calories gauges. |
@@ -55,7 +59,7 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 | Shake to hide hands | Experimental. Off by default. Shake the watch twice to hide the hands for 5 seconds, so the center complications show whole. |
 | Battery saver | Experimental. Off by default. After an hour with no steps and no pulse, the face sleeps: the seconds hand stops, and weather and custom complications refresh once an hour, until a step, a pulse or a shake wakes it. The time stays right. Never on the charger. |
 
-Pick **None** to leave a slot empty. **Shake to hide hands** and **Battery saver** sit in their own **Experimental** group at the bottom of the page: they work, but may change.
+Pick **None** to leave a slot empty. **Shake to hide hands** and **Battery saver** are marked **Experimental**: they work, but may change.
 
 ### Custom complications
 Each one reads a JSON API of your choice and shows a value from it.
