@@ -72,7 +72,7 @@ var CENTER_COMPLICATIONS = [
 // a ComplicationId of its own, saved as the place's: the watch knows no families.
 // The first is the one listed in COMPLICATIONS.
 var VARIANTS = [
-  [{ label: 'Today', value: 2 }, { label: 'Now', value: 46 }, { label: 'Feels', value: 47 }], // Temperature
+  [{ label: 'Today', value: 2 }, { label: 'Now', value: 46 }, { label: 'Feels like', value: 47 }], // Temperature
   [{ label: 'Today', value: 4 }, { label: 'Hourly', value: 39 }],     // Chance of rain
   [{ label: 'Sections', value: 7 }, { label: 'Gauge', value: 27 }],   // Air quality
   [{ label: 'Sections', value: 11 }, { label: 'Gauge', value: 28 }],  // UV index
