@@ -18,6 +18,7 @@ Customizations to consider. Tick one off when it ships, and add it to [CHANGELOG
 ## Subdials and corners
 
 - [x] Calories bar, filled by the step goal like distance (1.6.0)
+- [ ] Joined corners show more: a complication run across two or more corners uses the extra room for more info
 
 ## New complications
 
@@ -32,7 +33,8 @@ Customizations to consider. Tick one off when it ships, and add it to [CHANGELOG
 - [x] Countdown to a date, days since (2.0.0)
 - [x] Month and day progress bars (2.0.0)
 - [ ] Bluetooth status
-- [ ] Weather: feels-like, tomorrow's forecast
+- [x] Temperature: feels like, and the temperature alone (2.2.0)
+- [ ] Weather: tomorrow's forecast
 - [x] Pressure (2.0.0)
 
 ## Color and themes
