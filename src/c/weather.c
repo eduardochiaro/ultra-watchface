@@ -6,7 +6,7 @@
 // shorter saved copy leaves them as initialized below.
 #define PK_WEATHER 25
 
-Weather g_weather = { .wind = -1 };
+Weather g_weather = { .wind = -1, .feels = FEELS_UNKNOWN };
 
 void weather_init(void) {
   persist_read_data(PK_WEATHER, &g_weather, sizeof(g_weather));
@@ -32,6 +32,7 @@ bool weather_handle_message(DictionaryIterator *iter) {
     { MESSAGE_KEY_WIND,     &g_weather.wind },
     { MESSAGE_KEY_WIND_DIR, &g_weather.wind_dir },
     { MESSAGE_KEY_PRESSURE, &g_weather.pressure },
+    { MESSAGE_KEY_FEELS,    &g_weather.feels },
   };
   for (unsigned i = 0; i < ARRAY_LENGTH(fields); i++) {
     Tuple *f = dict_find(iter, fields[i].key);

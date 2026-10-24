@@ -50,3 +50,49 @@ void center_temp_draw(GContext *ctx, GPoint c) {
   temp_shades(fill);
   center_range_draw(ctx, c, pct, min, max, now, NULL, fill, STOPS);
 }
+
+// "21°", or "--" unknown.
+static void degrees(char buf[8], int t) {
+  if (g_weather.valid && t != FEELS_UNKNOWN) {
+    snprintf(buf, 8, "%d°", t);
+  } else {
+    snprintf(buf, 8, "--");
+  }
+}
+
+// The temperature alone, large, along the arc's middle.
+void comp_temp_now_draw(GContext *ctx, const Slot *s) {
+  char now[8];
+  degrees(now, g_weather.temp);
+  text_draw_along(ctx, now, slot_mid(s, 0), s->center, COMP_TEXT + 6, GColorWhite);
+}
+
+// No ring: the temperature across the subdial.
+void center_temp_now_draw(GContext *ctx, GPoint c) {
+  char now[8];
+  degrees(now, g_weather.temp);
+  center_fit_text(ctx, now, c, (SUB_R + 2) * 4 / 5, 2 * SUB_R, GColorWhite);
+}
+
+// "24° 21°" centered on the arc: what it feels like, large, then the temperature
+// smaller and dimmer.
+void comp_feels_draw(GContext *ctx, const Slot *s) {
+  char feels[8], now[8];
+  degrees(feels, g_weather.feels);
+  degrees(now, g_weather.temp);
+  Slot b = *s;
+  int left = slot_left_end(&b);
+  int w = text_width(ctx, feels, COMP_TEXT + 4) + COMP_GAP + b.thickness / 2 + text_width(ctx, now, COMP_TEXT);
+  slot_trim(&b, left, (slot_len(&b) - w) / 2);
+  comp_label(ctx, &b, left, feels, COMP_TEXT + 4, GColorWhite);
+  comp_label(ctx, &b, left, now, COMP_TEXT, GColorLightGray);
+}
+
+// No ring: what it feels like across the subdial, the temperature under it, dimmer.
+void center_feels_draw(GContext *ctx, GPoint c) {
+  char feels[8], now[8];
+  degrees(feels, g_weather.feels);
+  degrees(now, g_weather.temp);
+  center_fit_text(ctx, feels, GPoint(c.x, c.y - 2), SUB_TEXT + 3, 2 * SUB_R, GColorWhite);
+  text_draw(ctx, now, GPoint(c.x, c.y + SUB_LOW + 1), SUB_SMALL, GColorLightGray);
+}

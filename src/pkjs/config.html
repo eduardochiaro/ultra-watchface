@@ -380,14 +380,14 @@
 
 	// Last weather sent to the watch, else a sample. Health and battery live on
 	// the watch only, so the preview always samples them.
-	var SAMPLE = { TEMP: 21, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, SUNRISE: 390, SUNSET: 1195, WIND: 14, WIND_DIR: 315, PRESSURE: 1016, LOCATION: "Seattle", LOCATION_CODE: "SEA",
+	var SAMPLE = { TEMP: 21, FEELS: 23, TEMP_MIN: 19, TEMP_MAX: 24, RAIN: 30, AQI: 42, UV: 5, HUMIDITY: 62, CONDITION: 2, ELEVATION: 290, SUNRISE: 390, SUNSET: 1195, WIND: 14, WIND_DIR: 315, PRESSURE: 1016, LOCATION: "Seattle", LOCATION_CODE: "SEA",
 		RAIN_START: Math.floor(Date.now() / 3600000) - 1, RAIN_HOURS: [10, 20, 40, 70, 90, 50, 20, 0, 0], imperial: false };
 	var weather = state.weather || SAMPLE;
 	// What the phone has not fetched yet, a complication just picked: the sample's,
 	// so the preview shows it drawn. Not the temperatures: they come in the saved unit.
 	Object.keys(SAMPLE).forEach(function (k) {
 		var unknown = weather[k] === undefined || (weather[k] === -1 && /^(AQI|UV|HUMIDITY|WIND|PRESSURE)$/.test(k));
-		if (unknown && k.indexOf("TEMP") !== 0) {
+		if (unknown && k.indexOf("TEMP") !== 0 && k !== "FEELS") {
 			weather[k] = SAMPLE[k];
 		}
 	});
@@ -534,6 +534,10 @@
 	function temp(t) {
 		var f = settings.UNITS === 1;
 		return f === !!weather.imperial ? t : Math.round(f ? t * 9 / 5 + 32 : (t - 32) * 5 / 9);
+	}
+	// degrees() in temp.c: "21°", "--" unknown
+	function degrees(t) {
+		return typeof t === "number" ? temp(t) + "°" : "--";
 	}
 	// distance_text() in distance.c, step_pct() in steps.c
 	function distance() {
@@ -911,6 +915,17 @@
 			} else if (id === 12 || id === 40) {
 				along("--", mid(s), s.r, g.TEXT + 2, C.white);
 			}
+			// comp_temp_now_draw: large along the arc's middle
+			if (id === 46) {
+				along(degrees(weather.TEMP), mid(s), s.r, g.TEXT + 6, C.white);
+			}
+			// comp_feels_draw: "24° 21°" centered on the arc, the temperature smaller and dimmer
+			if (id === 47) {
+				var fl = degrees(weather.FEELS), tn = degrees(weather.TEMP), lt = leftEnd(s);
+				trim(s, lt, (slen(s) - width(fl, g.TEXT + 4) - 4 - s.t / 2 - width(tn, g.TEXT)) / 2);
+				endLabel(s, lt, fl, g.TEXT + 4);
+				endLabel(s, lt, tn, g.TEXT, C.lg);
+			}
 			if (id === 2) {
 				rangeGauge(s, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°", TEMP_COLOR);
 			}
@@ -1216,6 +1231,12 @@
 		var SUBDIAL = {
 			// center_custom_draw: up to 4 characters, as big as fits across the ring
 			14: function (c, t) { fit(t, c, Math.trunc((g.SUB_R + 2) * 4 / 5), 2 * g.SUB_R, C.white); },
+			// center_temp_now_draw, center_feels_draw: no ring
+			46: function (c) { fit(degrees(weather.TEMP), c, Math.trunc((g.SUB_R + 2) * 4 / 5), 2 * g.SUB_R, C.white); },
+			47: function (c) {
+				fit(degrees(weather.FEELS), [c[0], c[1] - 2], ST + 3, 2 * g.SUB_R, C.white);
+				text(degrees(weather.TEMP), [c[0], c[1] + SL + 1], SS, C.lg, 0);
+			},
 			2: function (c) {
 				subRange(c, tempPct(), String(temp(weather.TEMP_MIN)), String(temp(weather.TEMP_MAX)), temp(weather.TEMP) + "°", null, TEMP_COLOR);
 			},

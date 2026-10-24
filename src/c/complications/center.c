@@ -19,7 +19,8 @@ void center_gauge(GContext *ctx, GPoint c, int pct, GColor fill) {
 typedef void (*Subdial)(GContext *ctx, GPoint c);
 
 static const Subdial SUBDIAL[COMP_COUNT] = {
-  [COMP_TEMP] = center_temp_draw, [COMP_RAIN] = center_rain_draw, [COMP_AQI] = center_aqi_draw,
+  [COMP_TEMP] = center_temp_draw, [COMP_TEMP_NOW] = center_temp_now_draw, [COMP_FEELS] = center_feels_draw,
+  [COMP_RAIN] = center_rain_draw, [COMP_AQI] = center_aqi_draw,
   [COMP_BATTERY] = center_battery_draw, [COMP_HEART] = center_heart_draw,
   [COMP_DISTANCE] = center_distance_draw, [COMP_ELEVATION] = center_elevation_draw, [COMP_UV] = center_uv_draw,
   [COMP_WEATHER] = center_weather_draw, [COMP_WEATHER_TEMP] = center_weather_temp_draw,

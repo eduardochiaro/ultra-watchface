@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.2.0
+
+- **Temperature kinds:** Temperature gets a picker beside it, like Weather's. Today is the temperature on today's range, as before. Now shows the temperature alone, large ("21°"). Feels shows what it feels like, large, and the temperature smaller and dimmer beside it ("19° 21°"); in a subdial the temperature goes under it. Corners and subdials.
+
 ## 2.1.0
 
 - **Settings on Android:** tapping a row on the settings page opens its page again, and the phone's back button still returns to the list.

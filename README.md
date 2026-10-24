@@ -4,7 +4,7 @@ An analog watchface for Pebble with eight complications you choose yourself. Fou
 
 Runs on the Pebble Time 2 and Time Round 2 with all eight, and on the Pebble Time, Time Round, Pebble 2 and Pebble 2 Duo with the four subdials, the dial filling the screen.
 
-- **Eight slots, your pick.** Steps, distance, calories, active minutes, sleep, heart rate, battery, the date in eight formats, the week, year, month, week and day progress, days until or since a date, temperature, rain (today or by the hour), humidity, wind, air quality and UV index (as sections or a gauge), pressure, elevation, location, sunrise and sunset, moon phase, digital time, other time zones, .beat time, current weather, your own text, or a value from any JSON API.
+- **Eight slots, your pick.** Steps, distance, calories, active minutes, sleep, heart rate, battery, the date in eight formats, the week, year, month, week and day progress, days until or since a date, temperature (with today's range, alone, or feels like), rain (today or by the hour), humidity, wind, air quality and UV index (as sections or a gauge), pressure, elevation, location, sunrise and sunset, moon phase, digital time, other time zones, .beat time, current weather, your own text, or a value from any JSON API.
 - **Joined corners.** Let one corner's bar run on into its neighbor: one long gauge across the top or bottom, or, on the Round 2, up a side or all the way round.
 - **Five color schemes.** Black, White, two monochromes, or Accent: any background and accent from the watch's 64 colors.
 - **Seven rings.** Default, Minimal, Sport, Chronograph, Roman, Tachymeter or Compass, the banded ones in a color you pick.

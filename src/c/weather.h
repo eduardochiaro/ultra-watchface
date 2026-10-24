@@ -27,7 +27,11 @@ typedef struct {
   uint8_t rain_hours[RAIN_HOURS]; // precipitation probability per hour, %
   // Appended: 0 on older saves, in the old size's padding.
   int16_t pressure;          // at sea level now, hPa (the watch converts), <= 0 = unknown
+  // Appended: FEELS_UNKNOWN on older saves.
+  int16_t feels;             // apparent temperature now
 } Weather;
+
+#define FEELS_UNKNOWN INT16_MIN
 
 extern Weather g_weather;
 

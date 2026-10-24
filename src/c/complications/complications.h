@@ -54,6 +54,8 @@ typedef enum {
   COMP_DAY,       // how much of the day is gone
   COMP_PRESSURE,  // sea-level pressure
   COMP_WEEK_PROGRESS, // how much of the week is gone, from g_settings.week_start
+  COMP_TEMP_NOW,  // the temperature alone, large
+  COMP_FEELS,     // what it feels like, large, the temperature smaller beside it
   COMP_COUNT
 } ComplicationId;
 
@@ -95,6 +97,8 @@ uint32_t complication_stamp(ComplicationId id, const struct tm *t);
 
 void comp_steps_draw(GContext *ctx, const Slot *s);
 void comp_temp_draw(GContext *ctx, const Slot *s);
+void comp_temp_now_draw(GContext *ctx, const Slot *s);
+void comp_feels_draw(GContext *ctx, const Slot *s);
 void comp_battery_draw(GContext *ctx, const Slot *s);
 void comp_rain_draw(GContext *ctx, const Slot *s);
 void comp_heart_draw(GContext *ctx, const Slot *s);
@@ -178,6 +182,8 @@ Slot center_ring(GPoint c);
 void center_gauge(GContext *ctx, GPoint c, int pct, GColor fill);
 
 void center_temp_draw(GContext *ctx, GPoint c);
+void center_temp_now_draw(GContext *ctx, GPoint c);
+void center_feels_draw(GContext *ctx, GPoint c);
 void center_battery_draw(GContext *ctx, GPoint c);
 void center_rain_draw(GContext *ctx, GPoint c);
 void center_aqi_draw(GContext *ctx, GPoint c);
@@ -250,5 +256,7 @@ void center_band_gauge_draw(GContext *ctx, GPoint c, int v, const Band *bands, i
 void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color, const char *txt);
 // Label along the arc at an end (0 or 100); trims that end of *s to make room.
 void comp_end_label(GContext *ctx, Slot *s, int end, const char *txt);
+// The same at any size and color.
+void comp_label(GContext *ctx, Slot *s, int end, const char *txt, int size, GColor color);
 // Gabbro trims the left end of *s for the icon; call it before the label.
 void comp_icon(GContext *ctx, Slot *s, const char *icon, GColor color);
