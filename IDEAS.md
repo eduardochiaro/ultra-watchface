@@ -23,6 +23,7 @@ Customizations to consider. Tick one off when it ships, and add it to [CHANGELOG
 ## New complications
 
 - [x] Digital time (1.6.0)
+- [x] Hours, minutes, seconds and AM/PM subdials (2.3.0)
 - [x] Second time zone (1.6.0)
 - [x] Sleep last night (1.6.0)
 - [x] Active minutes (1.6.0)

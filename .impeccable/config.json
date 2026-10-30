@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "cramped-padding",
+        "value": "*",
+        "files": [
+          "src/pkjs/config.html"
+        ],
+        "createdAt": "2026-10-30T18:30:09.224Z",
+        "reason": "Claude measured: details.howto summary has min-height 44px with centered text, 13.5px from the card's top edge and 13px from its left; the detector sees the summary box flush, not the text"
+      }
+    ]
+  }
+}

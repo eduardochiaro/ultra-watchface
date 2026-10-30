@@ -1198,6 +1198,10 @@
 				text(t, p, Math.min(cap, width * 0.7 / (t.length * 0.6)), col, 0);
 			}
 		}
+		// part() in clock.c: one part of the time across the subdial; -1: "--"
+		function part(c, v, zero, col) {
+			fit(v < 0 ? "--" : zero ? ("0" + v).slice(-2) : String(v), c, (g.SUB_R + 2) * 4 / 5, 2 * g.SUB_R, col);
+		}
 		// center_range_draw: min and max under the value, a name above it
 		function subRange(c, pct, min, max, value, name, cols) {
 			if (pct < 0) {
@@ -1344,6 +1348,16 @@
 				fit(SUN ? sunTime(day ? down : up) : "--", [c[0], c[1] - 1], ST, INNER, C.white);
 				icon(day ? "down" : "up", [c[0], c[1] + SL], SS + 1, C.yellow);
 			},
+			// center_hours_draw and on, part(): one part of the time, as big as fits
+			48: function (c) { part(c, now.getHours(), true, C.white); },
+			49: function (c) { part(c, now.getHours(), false, C.white); },
+			50: function (c) { part(c, now.getMinutes(), true, C.white); },
+			51: function (c) { part(c, now.getMinutes(), false, C.white); },
+			// center_seconds_draw: in the accent, "--" with the seconds hand off
+			52: function (c) { part(c, settings.SECONDS ? now.getSeconds() : -1, true, C.accent); },
+			53: function (c) { part(c, settings.SECONDS ? now.getSeconds() : -1, false, C.accent); },
+			// center_ampm_draw
+			54: function (c) { fit(now.getHours() < 12 ? "AM" : "PM", c, (g.SUB_R + 2) * 4 / 5, 2 * g.SUB_R, C.white); },
 			// center_beat_draw: the beats, a small @ under them
 			24: function (c) {
 				text(beats(now), [c[0], c[1] - 3], ST + 2, C.white, 0);

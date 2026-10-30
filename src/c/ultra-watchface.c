@@ -433,7 +433,8 @@ static void save_cache(GContext *ctx) {
   // Color screens: a byte per pixel.
   if (format == GBitmapFormat8Bit || format == GBitmapFormat8BitCircular) {
     GSize screen = gbitmap_get_bounds(fb).size;
-    bool lines = g_settings.hands == HANDS_LINE || g_settings.hands == HANDS_NONE;
+    // Line hands need no fctx over the cache; seconds in a subdial do.
+    bool lines = (g_settings.hands == HANDS_LINE || g_settings.hands == HANDS_NONE) && !center_has_seconds();
     int size = pack(fb, NULL);
     if ((int)heap_bytes_free() > size + CACHE_HEADROOM + (lines ? 0 : screen.w * screen.h)) {
       s_cache = malloc(size);
@@ -597,6 +598,11 @@ static void update_proc(Layer *layer, GContext *ctx) {
     draw_face(ctx, b, c);
     save_cache(ctx);
     s_stale = false;
+  }
+  if (center_has_seconds()) {
+    draw_zoom(c, reach().center * 100 / INNER_R);
+    center_seconds_draw(ctx, c, t.tm_sec, s_seconds, ACCENT);
+    draw_zoom(c, 100);
   }
   // It sweeps over the cached face only: a face drawn whole 8 times a second would stall the watch.
   int32_t sa = DEG(t.tm_sec * 6);

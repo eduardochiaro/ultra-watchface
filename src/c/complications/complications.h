@@ -56,6 +56,13 @@ typedef enum {
   COMP_WEEK_PROGRESS, // how much of the week is gone, from g_settings.week_start
   COMP_TEMP_NOW,  // the temperature alone, large
   COMP_FEELS,     // what it feels like, large, the temperature smaller beside it
+  COMP_HOURS,     // subdials only: the time's parts, "09"; _PLAIN: "9"
+  COMP_HOURS_PLAIN,
+  COMP_MINUTES,
+  COMP_MINUTES_PLAIN,
+  COMP_SECONDS,   // drawn over the cached face, see center_seconds_draw
+  COMP_SECONDS_PLAIN,
+  COMP_AMPM,      // subdials only: AM or PM, in either clock style
   COMP_COUNT
 } ComplicationId;
 
@@ -200,6 +207,16 @@ void center_uv_gauge_draw(GContext *ctx, GPoint c);
 void center_calories_draw(GContext *ctx, GPoint c);
 void center_calories_active_draw(GContext *ctx, GPoint c);
 void center_time_draw(GContext *ctx, GPoint c);
+void center_hours_draw(GContext *ctx, GPoint c);
+void center_hours_plain_draw(GContext *ctx, GPoint c);
+void center_minutes_draw(GContext *ctx, GPoint c);
+void center_minutes_plain_draw(GContext *ctx, GPoint c);
+void center_ampm_draw(GContext *ctx, GPoint c);
+// Whether a subdial shows the seconds.
+bool center_has_seconds(void);
+// They change every tick, the cached face doesn't: drawn over it, in `color`,
+// "--" unless `running`. Under the same draw_zoom as center_draw.
+void center_seconds_draw(GContext *ctx, GPoint c, int sec, bool running, GColor color);
 void center_sleep_draw(GContext *ctx, GPoint c);
 void center_active_draw(GContext *ctx, GPoint c);
 void center_moon_draw(GContext *ctx, GPoint c);

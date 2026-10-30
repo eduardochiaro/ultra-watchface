@@ -333,6 +333,20 @@ ctx = load({ settings: { SLOT_TL: 24, CENTER_T: 24 }, platform: 'emery' });
 svg = screen();
 assert.ok(svg.split('>@</text>').length - 1 === 2 && svg.split(/>\.\d{3}<\/text>/).length - 1 === 2, '.beat corner and subdial');
 
+// Hours, minutes, seconds: subdials only, with or without the zero; seconds only with the seconds hand
+load({ settings: { CENTER_T: 52, CENTER_L: 53, CENTER_R: 14, CENTER_B: 0, TEXT_R: 'X' }, platform: 'emery' });
+assert.strictEqual(screen().split('>--</text>').length - 1, 2, 'no seconds hand: --');
+load({ settings: { CENTER_T: 52, CENTER_L: 0, CENTER_R: 0, CENTER_B: 0, SECONDS: 1 }, platform: 'emery' });
+svg = screen();
+assert.ok(/>\d\d<\/text>/.test(svg) && svg.indexOf('>--</text>') < 0, 'seconds, zero padded');
+var at = new Date(), pad = function (n) { return ('0' + n).slice(-2); };
+load({ settings: { CENTER_T: 48, CENTER_L: 51, CENTER_R: 0, CENTER_B: 0 }, platform: 'emery' });
+svg = screen();
+assert.ok(svg.indexOf('>' + pad(at.getHours()) + '</text>') > 0 && svg.indexOf('>' + at.getMinutes() + '</text>') > 0, 'hours padded, minutes plain');
+assert.ok(els.centers.innerHTML.indexOf('<option value="48" selected>Hours</option>') > 0 && els.corners.innerHTML.indexOf('>Hours</option>') < 0, 'center pickers only');
+load({ settings: { CENTER_T: 54, CENTER_L: 0, CENTER_R: 0, CENTER_B: 0 }, platform: 'emery' });
+assert.ok(screen().indexOf('>' + (at.getHours() < 12 ? 'AM' : 'PM') + '</text>') > 0, 'am/pm');
+
 // Wind: km/h on the wire, the page converts; speed and direction in the corner, direction, speed and unit in the subdial
 weather = require('../src/pkjs/weather').buildMessage({ current: { wind_speed_10m: 13.6, wind_direction_10m: 338 }, daily: { temperature_2m_min: [1],
   temperature_2m_max: [2], precipitation_probability_max: [3] } }, null);

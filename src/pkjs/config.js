@@ -53,6 +53,10 @@ var CENTER_COMPLICATIONS = [
   { group: 'Weather', label: 'UV index', value: 11 },
   { group: 'Weather', label: 'Pressure', value: 44 },
   { group: 'Time and date', label: 'Digital time', value: 31 },
+  { group: 'Time and date', label: 'Hours', value: 48 },
+  { group: 'Time and date', label: 'Minutes', value: 50 },
+  { group: 'Time and date', label: 'Seconds', value: 52 },
+  { group: 'Time and date', label: 'AM/PM', value: 54 },
   { group: 'Time and date', label: 'Time zone', value: 32 },
   { group: 'Time and date', label: '.beat time', value: 24 },
   { group: 'Time and date', label: 'Date', value: 6 },
@@ -78,7 +82,10 @@ var VARIANTS = [
   [{ label: 'Sections', value: 11 }, { label: 'Gauge', value: 28 }],  // UV index
   [{ label: 'Total', value: 29 }, { label: 'Active', value: 30 }],    // Calories
   [{ label: 'Icon', value: 12 }, { label: 'Icon + temp', value: 40 }], // Weather
-  [{ label: 'Year', value: 38 }, { label: 'Month', value: 42 }, { label: 'Week', value: 45 }, { label: 'Day', value: 43 }] // Progress
+  [{ label: 'Year', value: 38 }, { label: 'Month', value: 42 }, { label: 'Week', value: 45 }, { label: 'Day', value: 43 }], // Progress
+  [{ label: 'Leading zero', value: 48 }, { label: 'No leading zero', value: 49 }], // Hours
+  [{ label: 'Leading zero', value: 50 }, { label: 'No leading zero', value: 51 }], // Minutes
+  [{ label: 'Leading zero', value: 52 }, { label: 'No leading zero', value: 53 }]  // Seconds
 ];
 // The listed complication `id` is a kind of; itself with no kinds.
 function family(id) {

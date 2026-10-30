@@ -37,28 +37,59 @@ static const Subdial SUBDIAL[COMP_COUNT] = {
   [COMP_WEEK_PROGRESS] = center_week_progress_draw,
   [COMP_PRESSURE] = center_pressure_draw,
   [COMP_RAIN_HOURLY] = center_rain_hourly_draw,
+  [COMP_HOURS] = center_hours_draw, [COMP_HOURS_PLAIN] = center_hours_plain_draw,
+  [COMP_MINUTES] = center_minutes_draw, [COMP_MINUTES_PLAIN] = center_minutes_plain_draw,
+  [COMP_AMPM] = center_ampm_draw,
 };
 
-void center_draw(GContext *ctx, GPoint c) {
+// The subdial at CenterPos `i`.
+static GPoint subdial_at(GPoint c, int i) {
   const GPoint at[CENTER_POS_COUNT] = {
     GPoint(c.x, c.y - SUB_D), GPoint(c.x - SUB_D, c.y), GPoint(c.x + SUB_D, c.y), GPoint(c.x, c.y + SUB_D),
   };
+  return at[i];
+}
+
+bool center_has_seconds(void) {
+  for (int i = 0; i < CENTER_POS_COUNT; i++) {
+    if (g_settings.center[i] == COMP_SECONDS || g_settings.center[i] == COMP_SECONDS_PLAIN) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void center_seconds_draw(GContext *ctx, GPoint c, int sec, bool running, GColor color) {
   for (int i = 0; i < CENTER_POS_COUNT; i++) {
     uint8_t id = g_settings.center[i];
+    if (id == COMP_SECONDS || id == COMP_SECONDS_PLAIN) {
+      char buf[4] = "--";
+      if (running) {
+        snprintf(buf, sizeof(buf), id == COMP_SECONDS ? "%02d" : "%d", sec);
+      }
+      center_fit_text(ctx, buf, subdial_at(c, i), (SUB_R + 2) * 4 / 5, 2 * SUB_R, color);
+    }
+  }
+}
+
+void center_draw(GContext *ctx, GPoint c) {
+  for (int i = 0; i < CENTER_POS_COUNT; i++) {
+    uint8_t id = g_settings.center[i];
+    GPoint at = subdial_at(c, i);
     if (id == COMP_CUSTOM) {
-      center_custom_draw(ctx, at[i], g_settings.center_text[i]);
+      center_custom_draw(ctx, at, g_settings.center_text[i]);
     } else if (id == COMP_ZONE) {
-      center_zone_draw(ctx, at[i], g_settings.zone[SLOT_POS_COUNT + i], g_settings.center_text[i]);
+      center_zone_draw(ctx, at, g_settings.zone[SLOT_POS_COUNT + i], g_settings.center_text[i]);
     } else if (id == COMP_CALENDAR) {
-      center_date_draw(ctx, at[i], g_settings.zone[SLOT_POS_COUNT + i]);
+      center_date_draw(ctx, at, g_settings.zone[SLOT_POS_COUNT + i]);
     } else if (id == COMP_COUNTDOWN) {
-      center_countdown_draw(ctx, at[i], g_settings.zone[SLOT_POS_COUNT + i], g_settings.center_text[i]);
+      center_countdown_draw(ctx, at, g_settings.zone[SLOT_POS_COUNT + i], g_settings.center_text[i]);
     } else if (id == COMP_CALENDAR_PLAIN) {
-      center_date_draw(ctx, at[i], DATE_WEEKDAY);
+      center_date_draw(ctx, at, DATE_WEEKDAY);
     } else if (id >= COMP_API && id <= COMP_API_LAST) {
-      center_api_draw(ctx, at[i], id - COMP_API);
+      center_api_draw(ctx, at, id - COMP_API);
     } else if (id < COMP_COUNT && SUBDIAL[id]) {
-      SUBDIAL[id](ctx, at[i]);
+      SUBDIAL[id](ctx, at);
     }
   }
 }

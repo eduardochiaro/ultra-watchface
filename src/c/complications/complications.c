@@ -62,6 +62,13 @@ static int32_t health(HealthMetric metric) {
 // Weather, API values, text and the place change with a message: 0 here.
 uint32_t complication_stamp(ComplicationId id, const struct tm *t) {
   switch (id) {
+    case COMP_HOURS:
+    case COMP_HOURS_PLAIN:
+    case COMP_AMPM: {
+      return t->tm_hour;
+    }
+    case COMP_MINUTES:
+    case COMP_MINUTES_PLAIN:
     case COMP_TIME:
     case COMP_ZONE:
     case COMP_BEAT:

@@ -42,6 +42,8 @@ Runs on the Pebble Time 2 and Time Round 2 with all eight, and on the Pebble Tim
 | Join corners | One complication across two corners, its bar running on through the gap. Time 2: the top pair and the bottom pair. Round 2: any neighbors, up to all four as one closed ring, its labels at 6 o'clock. The run shows the complication picked in its left corner (the bottom one for a side). |
 | Center | The four subdials inside the dial: top, left, right, bottom. |
 | Time zone | Pick **Time zone** in any slot, then its zone under it. Every slot showing one has its own. |
+| Hours, minutes, seconds | Subdials only: pick **Hours**, **Minutes** or **Seconds**, then with or without the leading zero under it. Seconds are in the accent color and show "--" while the seconds hand is off. |
+| AM/PM | Subdials only: AM or PM, in either clock style. |
 | Date | Pick **Date** in any slot, then its format under it: Calendar (yesterday, today and tomorrow in a corner, a tear-off page in a subdial), Weekday and day (TUE 6), Month and day (OCT 6), Full date (TUE over 6 OCTOBER in a corner, TUE 6 OCT in a subdial), Numeric (6/10/2026; month first with °F and miles), Week number (ISO from Monday; from Sunday or Saturday, week 1 is the one 1 January is in), Day of year or Year. Every slot showing one has its own. |
 | Days until / since | Pick **Days until / since** in any slot, then its date and a name under it: "64 DAYS LEFT" before the date, "3 DAYS AGO" after. The name (up to 12 characters in a corner, 4 in a subdial) goes beside the arc or above the count. |
 | Text | Pick **Text** in any slot to show your own label: up to 12 characters in a corner, 4 in a subdial. Accented letters count twice; one the watch font lacks loses its accent ("Ł" is "L"). |

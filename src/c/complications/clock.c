@@ -57,3 +57,35 @@ void comp_zone_draw(GContext *ctx, const Slot *s, int offset, const char *name) 
 void center_zone_draw(GContext *ctx, GPoint c, int offset, const char *name) {
   subdial(ctx, c, zone_now(offset), name);
 }
+
+// One part of the time across the subdial, as big as fits.
+static void part(GContext *ctx, GPoint c, int v, bool zero) {
+  char buf[4];
+  snprintf(buf, sizeof(buf), zero ? "%02d" : "%d", v);
+  center_fit_text(ctx, buf, c, (SUB_R + 2) * 4 / 5, 2 * SUB_R, GColorWhite);
+}
+
+static int hour_now(void) {
+  int h = local_now()->tm_hour;
+  return clock_is_24h_style() ? h : (h + 11) % 12 + 1;
+}
+
+void center_hours_draw(GContext *ctx, GPoint c) {
+  part(ctx, c, hour_now(), true);
+}
+
+void center_hours_plain_draw(GContext *ctx, GPoint c) {
+  part(ctx, c, hour_now(), false);
+}
+
+void center_minutes_draw(GContext *ctx, GPoint c) {
+  part(ctx, c, local_now()->tm_min, true);
+}
+
+void center_minutes_plain_draw(GContext *ctx, GPoint c) {
+  part(ctx, c, local_now()->tm_min, false);
+}
+
+void center_ampm_draw(GContext *ctx, GPoint c) {
+  center_fit_text(ctx, local_now()->tm_hour < 12 ? "AM" : "PM", c, (SUB_R + 2) * 4 / 5, 2 * SUB_R, GColorWhite);
+}

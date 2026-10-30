@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.3.0
+
+- **Hours, minutes and seconds:** three new subdials, each one part of the time as big as it fits, with or without the leading zero ("09" or "9"). Hours follow the watch's 12 or 24h style. Seconds are in the accent color and tick only while the seconds hand runs: with it off, in Quiet Time, on a low battery or with the face asleep they show "--".
+- **AM/PM:** a new subdial, AM or PM as big as it fits, in either clock style.
+
 ## 2.2.0
 
 - **Temperature kinds:** Temperature gets a picker beside it, like Weather's. Today is the temperature on today's range, as before. Now shows the temperature alone, large ("21°"). Feels like shows what it feels like, large, and the temperature smaller and dimmer beside it ("19° 21°"); in a subdial the temperature goes under it. Corners and subdials.
