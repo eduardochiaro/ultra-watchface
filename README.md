@@ -30,6 +30,30 @@ Runs on the Pebble Time 2 and Time Round 2 with all eight, and on the Pebble Tim
 ![Gabbro 4](assets/gabbro_4.png)
 ![Gabbro 5](assets/gabbro_5.png)
 
+### Pebble Time
+![Basalt 1](assets/basalt_1.png)
+![Basalt 2](assets/basalt_2.png)
+![Basalt 3](assets/basalt_3.png)
+![Basalt 4](assets/basalt_4.png)
+
+### Pebble Time Round
+![Chalk 1](assets/chalk_1.png)
+![Chalk 2](assets/chalk_2.png)
+![Chalk 3](assets/chalk_3.png)
+![Chalk 4](assets/chalk_4.png)
+
+### Pebble 2
+![Diorite 1](assets/diorite_1.png)
+![Diorite 2](assets/diorite_2.png)
+![Diorite 3](assets/diorite_3.png)
+![Diorite 4](assets/diorite_4.png)
+
+### Pebble 2 Duo
+![Flint 1](assets/flint_1.png)
+![Flint 2](assets/flint_2.png)
+![Flint 3](assets/flint_3.png)
+![Flint 4](assets/flint_4.png)
+
 ## Store
 [Rebble App Store](https://apps.rebble.io/en_US/application/6abf59c037b3780009304810)
 
