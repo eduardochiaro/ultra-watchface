@@ -96,8 +96,12 @@ void slot_dot(GContext *ctx, const Slot *s, int pct, int r, int edge, GColor fil
 #define ICON_DOWN     "\uE010"
 #define ICON_WIND     "\uE011"
 #define ICON_FLAME    "\uE012"
+// Watch status, from Wall Flip's PDC icons, outlined: the phone link and quiet time's mouse.
+#define ICON_BLUETOOTH "\uE013"
+#define ICON_QUIET     "\uE014"
+#define ICON_QUIET_FILL "\uE015"  // its insides, drawn under it
 // Not an icon: a "%" 3/4 the size, for a subdial's value.
-#define SMALL_PCT     "\uE013"
+#define SMALL_PCT     "\uE016"
 // A corner's "%": gabbro's is the small one too.
 #if defined(PBL_ROUND)
 #define CORNER_PCT    SMALL_PCT

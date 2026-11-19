@@ -15,6 +15,8 @@ static const Words WORDS[] = {
     "ACTIVE", "SLEEP",
     { "N", "NE", "E", "SE", "S", "SW", "W", "NW" },
     "DAYS LEFT", "DAYS AGO",
+    "ALARM",
+    "ON", "OFF",
   },
   { // fr
     { "DIM", "LUN", "MAR", "MER", "JEU", "VEN", "SAM" },
@@ -26,6 +28,8 @@ static const Words WORDS[] = {
     "ACTIF", "SOMMEIL",
     { "N", "NE", "E", "SE", "S", "SO", "O", "NO" },
     "JOURS RESTANTS", "JOURS PASSÉS",
+    "RÉVEIL",
+    "ON", "OFF",
   },
   { // de
     { "SO", "MO", "DI", "MI", "DO", "FR", "SA" },
@@ -37,6 +41,8 @@ static const Words WORDS[] = {
     "AKTIV", "SCHLAF",
     { "N", "NO", "O", "SO", "S", "SW", "W", "NW" },
     "TAGE ÜBRIG", "TAGE HER",
+    "WECKER",
+    "AN", "AUS",
   },
   { // nl
     { "ZO", "MA", "DI", "WO", "DO", "VR", "ZA" },
@@ -48,6 +54,8 @@ static const Words WORDS[] = {
     "ACTIEF", "SLAAP",
     { "N", "NO", "O", "ZO", "Z", "ZW", "W", "NW" },
     "DAGEN TE GAAN", "DAGEN GELEDEN",
+    "WEKKER",
+    "AAN", "UIT",
   },
   { // it
     { "DOM", "LUN", "MAR", "MER", "GIO", "VEN", "SAB" },
@@ -59,6 +67,8 @@ static const Words WORDS[] = {
     "ATTIVO", "SONNO",
     { "N", "NE", "E", "SE", "S", "SO", "O", "NO" },
     "GIORNI MANCANTI", "GIORNI FA",
+    "SVEGLIA",
+    "ON", "OFF",
   },
   { // es
     { "DOM", "LUN", "MAR", "MIÉ", "JUE", "VIE", "SÁB" },
@@ -70,6 +80,8 @@ static const Words WORDS[] = {
     "ACTIVO", "SUEÑO",
     { "N", "NE", "E", "SE", "S", "SO", "O", "NO" },
     "DÍAS RESTANTES", "DÍAS ATRÁS",
+    "ALARMA",
+    "ON", "OFF",
   },
 };
 

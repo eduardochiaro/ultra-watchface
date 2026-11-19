@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.4.0
+
+- **Next alarm:** a new complication, the watch's next alarm, named ALARM: "ALARM 7:00 AM" along a corner's arc, or the time under its name in a subdial, in the watch's 12 or 24h style. "--" with no alarm set. On the Pebble Time 2, Pebble 2 Duo and Round 2 only: the other watches have no alarms a face can read, so the settings page hides it there.
+- **Bluetooth:** a new complication, whether the phone is connected: the Bluetooth icon lit blue and ON, or gray and OFF. It changes the moment the phone comes or goes. Corners and subdials, on every watch.
+- **Quiet Time:** a new complication, whether Quiet Time is on: a mouse, lit lavender and ON, or gray and OFF. Corners and subdials, on every watch.
+- **Status corners:** on the Pebble Time 2 the Bluetooth and Quiet Time icons sit in the screen's corner with ON or OFF on the arc, on the same line from the center; on the Round 2 the icon leads ON or OFF along the arc.
+
 ## 2.3.0
 
 - **Hours, minutes and seconds:** three new subdials, each one part of the time as big as it fits, with or without the leading zero ("09" or "9"). Hours follow the watch's 12 or 24h style. Seconds are in the accent color and tick only while the seconds hand runs: with it off, in Quiet Time, on a low battery or with the face asleep they show "--".

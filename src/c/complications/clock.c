@@ -1,7 +1,13 @@
 #include "complications.h"
+#include "../lang.h"
 
 // "10:09" in the watch's 12 or 24h style. Returns "AM" or "PM", "" in 24h style.
+// No time (t NULL): "--".
 static const char *clock_text(char *buf, size_t n, const struct tm *t) {
+  if (!t) {
+    snprintf(buf, n, "--");
+    return "";
+  }
   if (clock_is_24h_style()) {
     snprintf(buf, n, "%02d:%02d", t->tm_hour, t->tm_min);
     return "";
@@ -13,6 +19,17 @@ static const char *clock_text(char *buf, size_t n, const struct tm *t) {
 static struct tm *local_now(void) {
   time_t now = time(NULL);
   return localtime(&now);
+}
+
+// When the watch's next enabled alarm fires, NULL for none. Always NULL where
+// the SDK has no alarm service (basalt, chalk, diorite): the page hides it there.
+// ponytail: the time only, no day; an alarm is rarely more than a day off.
+static struct tm *alarm_next(void) {
+  time_t at = 0;
+  if (!alarm_service_peek_next(&at)) {
+    return NULL;
+  }
+  return localtime(&at);
 }
 
 // A time zone: a fixed offset from UTC, in minutes.
@@ -48,6 +65,15 @@ void comp_time_draw(GContext *ctx, const Slot *s) {
 
 void center_time_draw(GContext *ctx, GPoint c) {
   subdial(ctx, c, local_now(), "");
+}
+
+// Like a time zone, named ALARM.
+void comp_alarm_draw(GContext *ctx, const Slot *s) {
+  corner(ctx, s, alarm_next(), words()->alarm);
+}
+
+void center_alarm_draw(GContext *ctx, GPoint c) {
+  subdial(ctx, c, alarm_next(), words()->alarm);
 }
 
 void comp_zone_draw(GContext *ctx, const Slot *s, int offset, const char *name) {

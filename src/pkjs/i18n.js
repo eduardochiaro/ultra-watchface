@@ -21,7 +21,9 @@ var FACE = {
     weather: ['SUNNY', 'CLEAR', 'PT CLOUDY', 'PT CLOUDY', 'CLOUDY', 'FOGGY', 'RAINY', 'SNOWY', 'STORMY'],
     active: 'ACTIVE', sleep: 'SLEEP',
     points: ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'],
-    left: 'DAYS LEFT', ago: 'DAYS AGO'
+    left: 'DAYS LEFT', ago: 'DAYS AGO',
+    alarm: 'ALARM',
+    on: 'ON', off: 'OFF'
   },
   fr: {
     days: ['DIM', 'LUN', 'MAR', 'MER', 'JEU', 'VEN', 'SAM'],
@@ -31,7 +33,9 @@ var FACE = {
     weather: ['SOLEIL', 'DÉGAGÉ', 'PEU NUAGEUX', 'PEU NUAGEUX', 'NUAGEUX', 'BROUILLARD', 'PLUIE', 'NEIGE', 'ORAGE'],
     active: 'ACTIF', sleep: 'SOMMEIL',
     points: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
-    left: 'JOURS RESTANTS', ago: 'JOURS PASSÉS'
+    left: 'JOURS RESTANTS', ago: 'JOURS PASSÉS',
+    alarm: 'RÉVEIL',
+    on: 'ON', off: 'OFF'
   },
   de: {
     days: ['SO', 'MO', 'DI', 'MI', 'DO', 'FR', 'SA'],
@@ -41,7 +45,9 @@ var FACE = {
     weather: ['SONNIG', 'KLAR', 'HEITER', 'HEITER', 'BEWÖLKT', 'NEBEL', 'REGEN', 'SCHNEE', 'GEWITTER'],
     active: 'AKTIV', sleep: 'SCHLAF',
     points: ['N', 'NO', 'O', 'SO', 'S', 'SW', 'W', 'NW'],
-    left: 'TAGE ÜBRIG', ago: 'TAGE HER'
+    left: 'TAGE ÜBRIG', ago: 'TAGE HER',
+    alarm: 'WECKER',
+    on: 'AN', off: 'AUS'
   },
   nl: {
     days: ['ZO', 'MA', 'DI', 'WO', 'DO', 'VR', 'ZA'],
@@ -51,7 +57,9 @@ var FACE = {
     weather: ['ZONNIG', 'HELDER', 'HALF BEWOLKT', 'HALF BEWOLKT', 'BEWOLKT', 'MIST', 'REGEN', 'SNEEUW', 'ONWEER'],
     active: 'ACTIEF', sleep: 'SLAAP',
     points: ['N', 'NO', 'O', 'ZO', 'Z', 'ZW', 'W', 'NW'],
-    left: 'DAGEN TE GAAN', ago: 'DAGEN GELEDEN'
+    left: 'DAGEN TE GAAN', ago: 'DAGEN GELEDEN',
+    alarm: 'WEKKER',
+    on: 'AAN', off: 'UIT'
   },
   it: {
     days: ['DOM', 'LUN', 'MAR', 'MER', 'GIO', 'VEN', 'SAB'],
@@ -61,7 +69,9 @@ var FACE = {
     weather: ['SOLE', 'SERENO', 'POCO NUVOLOSO', 'POCO NUVOLOSO', 'NUVOLOSO', 'NEBBIA', 'PIOGGIA', 'NEVE', 'TEMPORALE'],
     active: 'ATTIVO', sleep: 'SONNO',
     points: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
-    left: 'GIORNI MANCANTI', ago: 'GIORNI FA'
+    left: 'GIORNI MANCANTI', ago: 'GIORNI FA',
+    alarm: 'SVEGLIA',
+    on: 'ON', off: 'OFF'
   },
   es: {
     days: ['DOM', 'LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB'],
@@ -71,7 +81,9 @@ var FACE = {
     weather: ['SOLEADO', 'DESPEJADO', 'POCO NUBOSO', 'POCO NUBOSO', 'NUBLADO', 'NIEBLA', 'LLUVIA', 'NIEVE', 'TORMENTA'],
     active: 'ACTIVO', sleep: 'SUEÑO',
     points: ['N', 'NE', 'E', 'SE', 'S', 'SO', 'O', 'NO'],
-    left: 'DÍAS RESTANTES', ago: 'DÍAS ATRÁS'
+    left: 'DÍAS RESTANTES', ago: 'DÍAS ATRÁS',
+    alarm: 'ALARMA',
+    on: 'ON', off: 'OFF'
   }
 };
 
@@ -170,6 +182,9 @@ var PAGE = {
     'Month': 'Mois',
     'Day': 'Jour',
     'Days until / since': 'Jours avant / depuis',
+    'Next alarm': 'Prochaine alarme',
+    'Bluetooth': 'Bluetooth',
+    'Quiet time': 'Mode silencieux',
     'Pressure': 'Pression',
     'Week starts on': 'Début de la semaine',
     'Monday': 'Lundi',
@@ -368,6 +383,9 @@ var PAGE = {
     'Month': 'Monat',
     'Day': 'Tag',
     'Days until / since': 'Tage bis / seit',
+    'Next alarm': 'Nächster Wecker',
+    'Bluetooth': 'Bluetooth',
+    'Quiet time': 'Ruhezeit',
     'Pressure': 'Luftdruck',
     'Week starts on': 'Woche beginnt am',
     'Monday': 'Montag',
@@ -566,6 +584,9 @@ var PAGE = {
     'Month': 'Maand',
     'Day': 'Dag',
     'Days until / since': 'Dagen tot / sinds',
+    'Next alarm': 'Volgende wekker',
+    'Bluetooth': 'Bluetooth',
+    'Quiet time': 'Stille tijd',
     'Pressure': 'Luchtdruk',
     'Week starts on': 'Week begint op',
     'Monday': 'Maandag',
@@ -764,6 +785,9 @@ var PAGE = {
     'Month': 'Mese',
     'Day': 'Giorno',
     'Days until / since': 'Giorni a / da',
+    'Next alarm': 'Prossima sveglia',
+    'Bluetooth': 'Bluetooth',
+    'Quiet time': 'Modalità silenziosa',
     'Pressure': 'Pressione',
     'Week starts on': 'La settimana inizia di',
     'Monday': 'Lunedì',
@@ -962,6 +986,9 @@ var PAGE = {
     'Month': 'Mes',
     'Day': 'Día',
     'Days until / since': 'Días hasta / desde',
+    'Next alarm': 'Próxima alarma',
+    'Bluetooth': 'Bluetooth',
+    'Quiet time': 'Modo silencio',
     'Pressure': 'Presión',
     'Week starts on': 'La semana empieza el',
     'Monday': 'Lunes',

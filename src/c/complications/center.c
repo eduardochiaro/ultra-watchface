@@ -40,6 +40,8 @@ static const Subdial SUBDIAL[COMP_COUNT] = {
   [COMP_HOURS] = center_hours_draw, [COMP_HOURS_PLAIN] = center_hours_plain_draw,
   [COMP_MINUTES] = center_minutes_draw, [COMP_MINUTES_PLAIN] = center_minutes_plain_draw,
   [COMP_AMPM] = center_ampm_draw,
+  [COMP_ALARM] = center_alarm_draw,
+  [COMP_BLUETOOTH] = center_bluetooth_draw, [COMP_QUIET] = center_quiet_draw,
 };
 
 // The subdial at CenterPos `i`.

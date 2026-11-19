@@ -461,6 +461,15 @@
 	if (g.lite) {
 		CORNERS.forEach(function (c) { settings[c.key] = 0; });
 	}
+	// No alarm service in the SDK there: no next alarm (56).
+	var ALARMS = !GEO[state.platform] || ALARM_PLATFORMS.indexOf(state.platform) >= 0;
+	if (!ALARMS) {
+		CORNERS.concat(CENTERS).forEach(function (c) {
+			if (settings[c.key] === 56) {
+				settings[c.key] = 0;
+			}
+		});
+	}
 	if (g.bw) {
 		settings.SCHEME = lightScheme(settings.SCHEME) ? 3 : 2;  // black on white, white on black
 		settings.HAND_COLOR = settings.MINUTE_COLOR = settings.SECOND_COLOR = settings.BAND_COLOR = 0;
@@ -468,7 +477,7 @@
 	var C = { black: "#000000", white: "#FFFFFF", dg: "#555555", lg: "#AAAAAA", track: "#000055", green: "#00FF00",
 		accent: "#FFAA00", picton: "#55AAFF", red: "#FF0000", celeste: "#AAFFFF", melon: "#FFAAAA",
 		candy: "#AA0000", rose: "#550000", cyan: "#00FFFF",
-		forest: "#00AA00", yellow: "#FFFF00", coral: "#FF5555" };
+		forest: "#00AA00", yellow: "#FFFF00", coral: "#FF5555", lavender: "#AA55FF" };
 
 	function $(id) { return document.getElementById(id); }
 
@@ -646,11 +655,16 @@
 				(edge ? ' stroke="' + T(edge) + '" stroke-width="1.5"' : "") + "/>");
 		}
 		// Font icon glyphs: the 24px box fills `s`, centered on p
+		// An icon with a <name>_fill glyph has it under it, light: ICON_QUIET_FILL in status.c, lit
+		var FILLS = { quiet: "#FFAAFF" };
 		function icon(name, p, s, c, rot) {
+			if (FILLS[name]) {
+				icon(name + "_fill", p, s, FILLS[name], rot);
+			}
 			out.push('<path d="' + ICONS[name] + '" transform="' + (rot ? "rotate(" + f(rot) + " " + f(p[0]) + " " + f(p[1]) + ") " : "") + 'translate(' + f(p[0] - s / 2) + " " + f(p[1] - s / 2) + ") scale(" + f(s / 24) + ')" fill="' + T(c) + '"/>');
 		}
 		// draw.h: a "%" 3/4 the size, a subdial's; CORNER_PCT is a corner's
-		var SMALL_PCT = "\uE013", CORNER_PCT = g.round ? SMALL_PCT : "%";
+		var SMALL_PCT = "\uE016", CORNER_PCT = g.round ? SMALL_PCT : "%";
 		function glyphs(s) { return String(s).replace(SMALL_PCT, '<tspan font-size="75%">%</tspan>'); }
 		function text(s, p, cap, c, rot) {
 			out.push('<text x="' + f(p[0]) + '" y="' + f(p[1]) + '" font-size="' + f(cap / 0.7) + '" fill="' + T(c) +
@@ -748,8 +762,9 @@
 			}
 			trim(s, end, w + (named ? 8 : 4));
 		}
-		// comp_icon_text: no bar, text on the arc's middle, icon toward the corner; round: "ICON 72 BPM" centered
-		function iconText(s, ic, label, c) {
+		// comp_icon_text: no bar, text on the arc's middle, icon toward the corner; round: "ICON 72 BPM" centered.
+		// column (comp_icon_fill_text): not round, the text on the arc on the icon's ray from the center
+		function iconText(s, ic, label, c, column) {
 			if (g.round) {
 				var left = leftEnd(s), lead = iconWidth(ic) + (ic.name === undefined ? 4 : 8);
 				var cap = fitCap(label, g.TEXT, slen(s) - lead);
@@ -757,7 +772,12 @@
 				compIcon(s, ic, c);
 				return endLabel(s, left, label, cap);
 			}
-			along(label, mid(s), s.r, fitCap(label, g.TEXT + 2, slen(s)), C.white);
+			var at = mid(s);
+			if (column) {  // on the icon's ray from the center
+				var k = corner(s, 4 + g.ICON / 2);
+				at = Math.atan2(k[0] - cx, cy - k[1]) * 180 / Math.PI;
+			}
+			along(label, at, s.r, fitCap(label, g.TEXT + 2, slen(s)), C.white);
 			compIcon(s, ic, c);
 		}
 		// comp_sections(): a section per color, 2px apart; `mark` 2px thicker
@@ -1028,6 +1048,15 @@
 				}
 			}
 			// clock.c: the time, the place's zone's after its name; text only, like the Text complication
+			// comp_alarm_draw: like a time zone, named ALARM; a sample at 7:00, the watch's alarms are not here
+			if (id === 56) {
+				var al = W.alarm + " " + clock(7, 0);
+				along(al, mid(s), s.r, fitCap(al, g.TEXT + 2, slen(s)), C.white);
+			}
+			// status.c: lit, ON; the watch's state is not here
+			if (id === 57 || id === 58) {
+				iconText(s, id === 57 ? "bluetooth" : "quiet", W.on, id === 57 ? C.picton : C.lavender, true);
+			}
 			if (id === 31 || id === 32) {
 				var z = zone(settings["ZONE_" + k.slice(5)]);
 				var label = id === 31 ? clock(now.getHours(), now.getMinutes()) : z.name + " " + zoneClock(now, z.offset);
@@ -1401,6 +1430,14 @@
 			},
 			// center_time_draw, center_zone_draw: the time across the subdial, the zone's name above
 			31: function (c) { fit(clock(now.getHours(), now.getMinutes()), c, ST + 3, 2 * g.SUB_R, C.white); },
+			// center_alarm_draw: the time zone's, named ALARM
+			56: function (c) {
+				text(W.alarm, [c[0], c[1] - g.SUB_R + 5], SS, C.accent, 0);
+				fit(clock(7, 0), [c[0], c[1] + 2], ST + 3, 2 * g.SUB_R, C.white);
+			},
+			// center_bluetooth_draw, center_quiet_draw: the icon big, ON under it
+			57: function (c) { icon("bluetooth", [c[0], c[1] - 2], g.SUB_R + 2, C.picton); text(W.on, [c[0], c[1] + SL + 2], SS, C.white, 0); },
+			58: function (c) { icon("quiet", [c[0], c[1] - 2], g.SUB_R + 2, C.lavender); text(W.on, [c[0], c[1] + SL + 2], SS, C.white, 0); },
 			32: function (c, t, z) {
 				text(z.name, [c[0], c[1] - g.SUB_R + 5], SS, C.accent, 0);
 				fit(zoneClock(now, z.offset), [c[0], c[1] + 2], ST + 3, 2 * g.SUB_R, C.white);
@@ -1627,7 +1664,7 @@
 	// Their labels in the page's language
 	function said(options) { return options.map(function (o) { return { group: o.group, label: _(o.label), value: o.value }; }); }
 	function pickers(places, options) {
-		options = said(options);
+		options = said(options.filter(function (o) { return ALARMS || o.value !== 56; }));
 		options = options.slice(0, -1).concat(settings.APIS.map(function (a, i) {
 			return { group: "Custom", label: esc(a.title) || _("Custom {0}", i + 1), value: API_ID + i };
 		}), options.slice(-1));  // None stays last

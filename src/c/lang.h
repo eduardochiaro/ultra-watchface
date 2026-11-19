@@ -11,6 +11,8 @@ typedef struct {
   const char *active, *sleep;
   const char *points[8];    // compass points from N, clockwise
   const char *left, *ago;   // after a count of days: to come, gone
+  const char *alarm;        // the next alarm's name
+  const char *on, *off;     // a status: bluetooth, quiet time
 } Words;
 
 // In the LANG setting's language; Auto (0): the watch's, English if not one of these.

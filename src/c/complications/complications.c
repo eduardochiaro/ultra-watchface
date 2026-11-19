@@ -37,6 +37,9 @@ static const ComplicationDraw DRAW[COMP_COUNT] = {
   [COMP_RAIN_HOURLY] = comp_rain_hourly_draw,
   [COMP_WEATHER] = comp_weather_draw,
   [COMP_WEATHER_TEMP] = comp_weather_temp_draw,
+  [COMP_ALARM]   = comp_alarm_draw,
+  [COMP_BLUETOOTH] = comp_bluetooth_draw,
+  [COMP_QUIET]   = comp_quiet_draw,
 };
 
 void complication_draw(ComplicationId id, GContext *ctx, const Slot *s) {
@@ -74,6 +77,16 @@ uint32_t complication_stamp(ComplicationId id, const struct tm *t) {
     case COMP_BEAT:
     case COMP_SUN: {  // the subdial's thumb is now
       return t->tm_hour * 60 + t->tm_min;
+    }
+    case COMP_ALARM: {  // no event when one is set: polled with the tick; its time doesn't move, so the 12/24h style too
+      time_t at = 0;
+      return (alarm_service_peek_next(&at) ? (uint32_t)at : 0) * 2 + clock_is_24h_style();
+    }
+    case COMP_BLUETOOTH: {  // its event redraws at once; this keeps the stamp in step
+      return connection_service_peek_pebble_app_connection();
+    }
+    case COMP_QUIET: {  // no event: polled with the tick
+      return quiet_time_is_active();
     }
     case COMP_CALENDAR:
     case COMP_CALENDAR_PLAIN:
@@ -369,17 +382,39 @@ void center_band_gauge_draw(GContext *ctx, GPoint c, int v, const Band *bands, i
 // No bar: the text curved along the arc's middle, the icon toward the corner.
 // Gabbro: "ICON 72 BPM" centered on the arc. A long text shrinks to fit the slot.
 void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color, const char *txt) {
-  Slot b = *s;
 #if defined(PBL_PLATFORM_GABBRO)
-  int left = slot_left_end(&b);
-  int lead = text_width(ctx, icon, icon_size(icon)) + icon_gap(icon);
-  int size = comp_fit(ctx, txt, COMP_TEXT, slot_len(&b) - lead);
-  slot_trim(&b, left, (slot_len(&b) - lead - text_width(ctx, txt, size)) / 2);
-  comp_icon(ctx, &b, icon, color);
-  comp_label(ctx, &b, left, txt, size, GColorWhite);
+  comp_icon_fill_text(ctx, s, icon, color, NULL, color, txt);
 #else
+  Slot b = *s;
   text_draw_along(ctx, txt, slot_mid(s, 0), s->center, comp_fit(ctx, txt, COMP_TEXT + 2, slot_len(s)), GColorWhite);
   comp_icon(ctx, &b, icon, color);
+#endif
+}
+
+void comp_icon_fill_text(GContext *ctx, const Slot *s, const char *icon, GColor color, const char *fill, GColor fill_color, const char *txt) {
+  int isize = icon_size(icon);
+#if defined(PBL_PLATFORM_GABBRO)
+  Slot b = *s;
+  int left = slot_left_end(&b), w = text_width(ctx, icon, isize);
+  int lead = w + icon_gap(icon);
+  int size = comp_fit(ctx, txt, COMP_TEXT, slot_len(&b) - lead);
+  slot_trim(&b, left, (slot_len(&b) - lead - text_width(ctx, txt, size)) / 2);
+  GPoint at = slot_past(&b, left, -w / 2);
+  if (fill) {
+    text_draw_along(ctx, fill, at, b.center, isize, fill_color);
+  }
+  text_draw_along(ctx, icon, at, b.center, isize, color);
+  slot_trim(&b, left, lead);
+  comp_label(ctx, &b, left, txt, size, GColorWhite);
+#else
+  // The icon in the corner, the text on the arc on the same ray from the center.
+  GPoint at = slot_corner(s, COMP_GAP + COMP_ICON / 2);
+  int32_t ray = atan2_lookup(at.x - s->center.x, s->center.y - at.y);  // polar()'s angle: sin is x, -cos is y
+  if (fill) {
+    text_draw(ctx, fill, at, isize, fill_color);
+  }
+  text_draw(ctx, icon, at, isize, color);
+  text_draw_arc(ctx, txt, s->center, ray, s->radius, comp_fit(ctx, txt, COMP_TEXT + 2, slot_len(s)), GColorWhite);
 #endif
 }
 

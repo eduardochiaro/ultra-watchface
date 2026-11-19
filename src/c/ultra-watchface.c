@@ -723,6 +723,12 @@ static void tick_handler(struct tm *t, TimeUnits changed) {
   layer_mark_dirty(s_layer);
 }
 
+// The phone came or went: COMP_BLUETOOTH shows it now, not at the minute.
+static void connection_handler(bool connected) {
+  s_stale = true;
+  layer_mark_dirty(s_layer);
+}
+
 static void sweep_step(void *data) {
   s_sweep = app_timer_register(SWEEP_MS, sweep_step, NULL);
   if (s_cache && !s_hide) {
@@ -917,6 +923,7 @@ int main(void) {
 #if defined(PBL_HEALTH)
   health_service_events_subscribe(health_handler, NULL);
 #endif
+  connection_service_subscribe((ConnectionHandlers) { .pebble_app_connection_handler = connection_handler });
   app_message_register_inbox_received(inbox_received);
   app_message_register_outbox_failed(outbox_failed);
   app_message_open(512, 64);  // settings with all 8 texts: ~440 bytes
@@ -924,6 +931,7 @@ int main(void) {
   app_event_loop();
   tick_timer_service_unsubscribe();
   accel_tap_service_unsubscribe();
+  connection_service_unsubscribe();
 #if defined(PBL_HEALTH)
   health_service_events_unsubscribe();
 #endif

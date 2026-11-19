@@ -28,14 +28,20 @@ var COMPLICATIONS = [
   { group: 'Time and date', label: 'Week', value: 37 },
   { group: 'Time and date', label: 'Progress', value: 38 },
   { group: 'Time and date', label: 'Days until / since', value: 41 },
+  { group: 'Time and date', label: 'Next alarm', value: 56 },  // the watch's own; hidden where it has none, ALARM_PLATFORMS
   { group: 'Sun and moon', label: 'Sunrise / sunset', value: 23 },
   { group: 'Sun and moon', label: 'Moon phase', value: 35 },
   { group: 'Place', label: 'Location', value: 36 },
   { group: 'Place', label: 'Elevation', value: 10 },
   { group: 'Watch', label: 'Battery', value: 3 },
+  { group: 'Watch', label: 'Bluetooth', value: 57 },
+  { group: 'Watch', label: 'Quiet time', value: 58 },
   { group: 'Watch', label: 'Text', value: 14 },
   { label: 'None', value: 0 }
 ];
+
+// Where the SDK has alarm_service_peek_next(): the next alarm (56) is listed there only.
+var ALARM_PLATFORMS = ['emery', 'flint', 'gabbro'];
 
 // Subdials have their own designs, so their own list.
 var CENTER_COMPLICATIONS = [
@@ -63,11 +69,14 @@ var CENTER_COMPLICATIONS = [
   { group: 'Time and date', label: 'Week', value: 37 },
   { group: 'Time and date', label: 'Progress', value: 38 },
   { group: 'Time and date', label: 'Days until / since', value: 41 },
+  { group: 'Time and date', label: 'Next alarm', value: 56 },  // the watch's own; hidden where it has none, ALARM_PLATFORMS
   { group: 'Sun and moon', label: 'Sunrise / sunset', value: 23 },
   { group: 'Sun and moon', label: 'Moon phase', value: 35 },
   { group: 'Place', label: 'Location', value: 36 },
   { group: 'Place', label: 'Elevation', value: 10 },
   { group: 'Watch', label: 'Battery', value: 3 },
+  { group: 'Watch', label: 'Bluetooth', value: 57 },
+  { group: 'Watch', label: 'Quiet time', value: 58 },
   { group: 'Watch', label: 'Text', value: 14 },
   { label: 'None', value: 0 }
 ];
@@ -382,7 +391,7 @@ function toMessage(settings) {
 
 if (typeof module === 'object') {
   module.exports = {
-    SETTINGS_KEY: SETTINGS_KEY, COMPLICATIONS: COMPLICATIONS, CENTER_COMPLICATIONS: CENTER_COMPLICATIONS,
+    SETTINGS_KEY: SETTINGS_KEY, COMPLICATIONS: COMPLICATIONS, CENTER_COMPLICATIONS: CENTER_COMPLICATIONS, ALARM_PLATFORMS: ALARM_PLATFORMS,
     CORNERS: CORNERS, CENTERS: CENTERS, SCHEMES: SCHEMES, SCHEME_ACCENT: SCHEME_ACCENT, HANDS: HANDS, RINGS: RINGS, VARIANTS: VARIANTS, family: family, ZONES: ZONES, zone: zone, DATE_ID: DATE_ID, DATE_FORMATS: DATE_FORMATS, yearDays: yearDays, yearDay: yearDay, isoWeek: isoWeek,
     weekNumber: weekNumber, WEEK_STARTS: WEEK_STARTS, JOINS: JOINS, runs: runs, COUNT_ID: COUNT_ID, countDay: countDay,
     API_ID: API_ID, API_MAX: API_MAX, API_TYPES: API_TYPES, WEATHER_FREQS: WEATHER_FREQS,

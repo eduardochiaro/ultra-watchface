@@ -346,6 +346,18 @@ assert.ok(svg.indexOf('>' + pad(at.getHours()) + '</text>') > 0 && svg.indexOf('
 assert.ok(els.centers.innerHTML.indexOf('<option value="48" selected>Hours</option>') > 0 && els.corners.innerHTML.indexOf('>Hours</option>') < 0, 'center pickers only');
 load({ settings: { CENTER_T: 54, CENTER_L: 0, CENTER_R: 0, CENTER_B: 0 }, platform: 'emery' });
 assert.ok(screen().indexOf('>' + (at.getHours() < 12 ? 'AM' : 'PM') + '</text>') > 0, 'am/pm');
+// Next alarm: offered and drawn where the SDK has the alarm service, hidden and sent as none where not
+load({ settings: { SLOT_TL: 56, CENTER_T: 56 }, platform: 'gabbro' });
+assert.ok(els.corners.innerHTML.indexOf('<option value="56" selected>Next alarm</option>') > 0 && els.centers.innerHTML.indexOf('<option value="56" selected>Next alarm</option>') > 0 &&
+  screen().indexOf('>ALARM 07:00</text>') > 0 && screen().indexOf('>ALARM</text>') > 0, 'gabbro: next alarm, corner and subdial');
+ctx = load({ settings: { CENTER_T: 56 }, platform: 'chalk' });
+assert.ok(els.centers.innerHTML.indexOf('value="56"') < 0, 'chalk: no next alarm offered');
+clicks[0]({ target: { closest: function () { return save; } } });
+assert.strictEqual(JSON.parse(decodeURIComponent(ctx.location.href.split('#')[1])).CENTER_T, 0, 'chalk: sent as none');
+// Bluetooth and quiet time: offered everywhere, a corner and a subdial each, lit and ON in the preview
+load({ settings: { SLOT_TL: 57, SLOT_TR: 58, CENTER_T: 57, CENTER_B: 58 }, platform: 'emery' });
+assert.ok(els.corners.innerHTML.indexOf('<option value="57" selected>Bluetooth</option>') > 0 && els.centers.innerHTML.indexOf('<option value="58" selected>Quiet time</option>') > 0 &&
+  screen().split('>ON</text>').length - 1 === 4, 'emery: bluetooth and quiet time, corners and subdials');
 
 // Wind: km/h on the wire, the page converts; speed and direction in the corner, direction, speed and unit in the subdial
 weather = require('../src/pkjs/weather').buildMessage({ current: { wind_speed_10m: 13.6, wind_direction_10m: 338 }, daily: { temperature_2m_min: [1],
@@ -524,7 +536,7 @@ var i18n = require('../src/pkjs/i18n'), fs = require('fs');
 var cWords = fs.readFileSync('src/c/lang.c', 'utf8').split('WORDS[] = {')[1].split('\n};')[0].match(/"[^"]*"/g).map(JSON.parse);
 var jsWords = [].concat.apply([], i18n.LANG_CODES.map(function (c) {
   var w = i18n.FACE[c];
-  return [].concat(w.days, w.months, w.mons, w.week, w.day, w.weather, w.active, w.sleep, w.points, w.left, w.ago);
+  return [].concat(w.days, w.months, w.mons, w.week, w.day, w.weather, w.active, w.sleep, w.points, w.left, w.ago, w.alarm, w.on, w.off);
 }));
 assert.deepStrictEqual(cWords, jsWords, 'lang.c matches FACE');
 var fontChars = require('../package.json').scripts.font.split('"')[1];

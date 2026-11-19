@@ -16,7 +16,7 @@ const opentype = require('opentype.js');
 const parsePath = require('svg-path-parser');
 
 const ICONS = ['heart', 'runner', 'bolt', 'umbrella', 'arrow',
-  'sun', 'moon', 'sun_cloud', 'moon_cloud', 'cloud', 'fog', 'rain', 'snow', 'storm', 'drop', 'up', 'down', 'wind', 'flame'];
+  'sun', 'moon', 'sun_cloud', 'moon_cloud', 'cloud', 'fog', 'rain', 'snow', 'storm', 'drop', 'up', 'down', 'wind', 'flame', 'bluetooth', 'quiet', 'quiet_fill'];
 
 const [, , inPath, outPath, fontId, chars] = process.argv;
 if (!inPath || !outPath || !fontId || !chars) {
@@ -82,6 +82,11 @@ function iconPath(d) {
       }
     }
     c.code = c.code.toUpperCase();
+    // An arc that rounds to where the pen is: fctx-compiler can't pack it, and it draws nothing.
+    if (c.code === 'A' && X(c.x) === X(at.x) && Y(c.y) === Y(at.y)) {
+      Object.assign(at, { x: c.x, y: c.y });
+      return '';
+    }
     if (c.code === 'Z') {
       Object.assign(at, start);
     } else {

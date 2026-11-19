@@ -63,6 +63,10 @@ typedef enum {
   COMP_SECONDS,   // drawn over the cached face, see center_seconds_draw
   COMP_SECONDS_PLAIN,
   COMP_AMPM,      // subdials only: AM or PM, in either clock style
+  COMP_RETIRED_55, // kept for the next calendar event, from the phone's calendar plugin: see explore/plugins
+  COMP_ALARM,     // the watch's next alarm; emery, flint and gabbro only, "--" elsewhere
+  COMP_BLUETOOTH, // the phone connected or not
+  COMP_QUIET,     // quiet time on or off
   COMP_COUNT
 } ComplicationId;
 
@@ -135,6 +139,9 @@ void comp_pressure_draw(GContext *ctx, const Slot *s);
 void comp_rain_hourly_draw(GContext *ctx, const Slot *s);
 void comp_weather_draw(GContext *ctx, const Slot *s);
 void comp_weather_temp_draw(GContext *ctx, const Slot *s);
+void comp_alarm_draw(GContext *ctx, const Slot *s);
+void comp_bluetooth_draw(GContext *ctx, const Slot *s);
+void comp_quiet_draw(GContext *ctx, const Slot *s);
 void comp_custom_draw(GContext *ctx, const Slot *s, const char *txt);  // not in the tables: needs its text
 void comp_zone_draw(GContext *ctx, const Slot *s, int offset, const char *name);  // nor this: minutes from UTC, and its name
 void comp_date_draw(GContext *ctx, const Slot *s, int format);  // nor this: a DateFormat
@@ -230,6 +237,9 @@ void center_pressure_draw(GContext *ctx, GPoint c);
 void center_rain_hourly_draw(GContext *ctx, GPoint c);
 void center_weather_draw(GContext *ctx, GPoint c);
 void center_weather_temp_draw(GContext *ctx, GPoint c);
+void center_alarm_draw(GContext *ctx, GPoint c);
+void center_bluetooth_draw(GContext *ctx, GPoint c);
+void center_quiet_draw(GContext *ctx, GPoint c);
 void center_custom_draw(GContext *ctx, GPoint c, const char *txt);
 void center_zone_draw(GContext *ctx, GPoint c, int offset, const char *name);
 void center_date_draw(GContext *ctx, GPoint c, int format);
@@ -271,6 +281,10 @@ void comp_band_gauge_draw(GContext *ctx, const Slot *s, int v, const Band *bands
 void center_band_gauge_draw(GContext *ctx, GPoint c, int v, const Band *bands, int top, const char *caption);
 // No bar: an icon and a text (heart, elevation, wind).
 void comp_icon_text(GContext *ctx, const Slot *s, const char *icon, GColor color, const char *txt);
+// For a short text: gabbro, "ICON ON" centered along the arc; elsewhere the icon
+// in the corner, the text on the arc on its ray from the center. The icon is
+// over `fill` (a glyph of its insides, NULL: none) in `fill_color`.
+void comp_icon_fill_text(GContext *ctx, const Slot *s, const char *icon, GColor color, const char *fill, GColor fill_color, const char *txt);
 // Label along the arc at an end (0 or 100); trims that end of *s to make room.
 void comp_end_label(GContext *ctx, Slot *s, int end, const char *txt);
 // The same at any size and color.
