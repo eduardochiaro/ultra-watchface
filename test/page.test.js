@@ -349,7 +349,7 @@ assert.ok(screen().indexOf('>' + (at.getHours() < 12 ? 'AM' : 'PM') + '</text>')
 // Next alarm: offered and drawn where the SDK has the alarm service, hidden and sent as none where not
 load({ settings: { SLOT_TL: 56, CENTER_T: 56 }, platform: 'gabbro' });
 assert.ok(els.corners.innerHTML.indexOf('<option value="56" selected>Next alarm</option>') > 0 && els.centers.innerHTML.indexOf('<option value="56" selected>Next alarm</option>') > 0 &&
-  screen().indexOf('>ALARM 07:00</text>') > 0 && screen().indexOf('>ALARM</text>') > 0, 'gabbro: next alarm, corner and subdial');
+  screen().indexOf('>07:00</text>') > 0 && screen().indexOf('>ALARM</text>') > 0, 'gabbro: next alarm, corner and subdial');
 ctx = load({ settings: { CENTER_T: 56 }, platform: 'chalk' });
 assert.ok(els.centers.innerHTML.indexOf('value="56"') < 0, 'chalk: no next alarm offered');
 clicks[0]({ target: { closest: function () { return save; } } });

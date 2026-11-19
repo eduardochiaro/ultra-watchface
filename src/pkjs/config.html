@@ -656,7 +656,7 @@
 		}
 		// Font icon glyphs: the 24px box fills `s`, centered on p
 		// An icon with a <name>_fill glyph has it under it, light: ICON_QUIET_FILL in status.c, lit
-		var FILLS = { quiet: "#FFAAFF" };
+		var FILLS = { quiet: "#FFAAFF", alarm: "#FFFFAA" };
 		function icon(name, p, s, c, rot) {
 			if (FILLS[name]) {
 				icon(name + "_fill", p, s, FILLS[name], rot);
@@ -664,7 +664,7 @@
 			out.push('<path d="' + ICONS[name] + '" transform="' + (rot ? "rotate(" + f(rot) + " " + f(p[0]) + " " + f(p[1]) + ") " : "") + 'translate(' + f(p[0] - s / 2) + " " + f(p[1] - s / 2) + ") scale(" + f(s / 24) + ')" fill="' + T(c) + '"/>');
 		}
 		// draw.h: a "%" 3/4 the size, a subdial's; CORNER_PCT is a corner's
-		var SMALL_PCT = "\uE016", CORNER_PCT = g.round ? SMALL_PCT : "%";
+		var SMALL_PCT = "\uE018", CORNER_PCT = g.round ? SMALL_PCT : "%";
 		function glyphs(s) { return String(s).replace(SMALL_PCT, '<tspan font-size="75%">%</tspan>'); }
 		function text(s, p, cap, c, rot) {
 			out.push('<text x="' + f(p[0]) + '" y="' + f(p[1]) + '" font-size="' + f(cap / 0.7) + '" fill="' + T(c) +
@@ -1048,10 +1048,9 @@
 				}
 			}
 			// clock.c: the time, the place's zone's after its name; text only, like the Text complication
-			// comp_alarm_draw: like a time zone, named ALARM; a sample at 7:00, the watch's alarms are not here
+			// comp_alarm_draw: the alarm clock and the time, like the status corners; a sample at 7:00, the watch's alarms are not here
 			if (id === 56) {
-				var al = W.alarm + " " + clock(7, 0);
-				along(al, mid(s), s.r, fitCap(al, g.TEXT + 2, slen(s)), C.white);
+				iconText(s, "alarm", clock(7, 0), C.accent, true);
 			}
 			// status.c: lit, ON; the watch's state is not here
 			if (id === 57 || id === 58) {
@@ -1563,6 +1562,34 @@
 	}
 	// The corners showing a complication: one per run of joined ones
 	function owners() { return runs(settings.JOIN, g.round).map(function (r) { return r.owner; }); }
+	// Each corner's card in its own cell, the others staying put when some join: a run's
+	// card spans the cells of a joined pair, or all four, named for its side ("Top").
+	// Three in a run make an L, no box: the card keeps its cell, named for the sides.
+	var CELLS = { SLOT_TL: [1, 1], SLOT_TR: [2, 1], SLOT_BL: [1, 2], SLOT_BR: [2, 2] };
+	var SIDES = { SLOT_TL: { SLOT_TR: "Top", SLOT_BL: "Left" }, SLOT_BR: { SLOT_TR: "Right", SLOT_BL: "Bottom" } };
+	function side(a, b) { return (SIDES[a] || {})[b] || (SIDES[b] || {})[a]; }
+	function joinCards() {
+		var cards = {};
+		[].forEach.call(document.querySelectorAll("[data-corner]"), function (l) {
+			cards[l.dataset.corner] = l;
+			l.style.gridColumn = CELLS[l.dataset.corner][0];
+			l.style.gridRow = CELLS[l.dataset.corner][1];
+			l.querySelector("span").textContent = _(CORNERS.filter(function (c) { return c.key === l.dataset.corner; })[0].label);
+		});
+		runs(settings.JOIN, g.round).forEach(function (r) {
+			var n = r.corners.length, card = cards[r.owner];
+			if (n === 1 || !card) {
+				return;
+			}
+			if (n !== 3) {
+				var cols = r.corners.map(function (k) { return CELLS[k][0]; }), rows = r.corners.map(function (k) { return CELLS[k][1]; });
+				card.style.gridColumn = Math.min.apply(null, cols) + " / " + (Math.max.apply(null, cols) + 1);
+				card.style.gridRow = Math.min.apply(null, rows) + " / " + (Math.max.apply(null, rows) + 1);
+			}
+			card.querySelector("span").textContent = n === 4 ? _("All corners") :
+				r.corners.slice(1).map(function (k, i) { return _(side(r.corners[i], k)); }).join(" + ");
+		});
+	}
 	function names(places) { return places.map(function (p) { return compLabel(settings[p.key]); }).join(" · "); }
 	function freqLabel(m) { return m < 60 ? _("Every {0} minutes", m) : m === 60 ? _("Every hour") : _("Every {0} hours", m / 60); }
 	var dirty = false;  // changed since the page opened
@@ -1629,6 +1656,7 @@
 		// A joined corner's card goes: its run shows the owner's complication.
 		[].forEach.call(document.querySelectorAll("[data-join]"), function (b) { b.setAttribute("aria-checked", !!(settings.JOIN & b.dataset.join)); });
 		[].forEach.call(document.querySelectorAll("[data-corner]"), function (l) { l.hidden = owners().indexOf(l.dataset.corner) < 0; });
+		joinCards();
 		[].forEach.call(document.querySelectorAll("[data-text]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== 14 && settings[i.dataset.slotKey] !== COUNT_ID; });
 		[].forEach.call(document.querySelectorAll("[data-count]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== COUNT_ID; });
 		[].forEach.call(document.querySelectorAll("[data-zone]"), function (i) { i.hidden = settings[i.dataset.slotKey] !== ZONE_ID; });

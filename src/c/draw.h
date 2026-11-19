@@ -100,8 +100,10 @@ void slot_dot(GContext *ctx, const Slot *s, int pct, int r, int edge, GColor fil
 #define ICON_BLUETOOTH "\uE013"
 #define ICON_QUIET     "\uE014"
 #define ICON_QUIET_FILL "\uE015"  // its insides, drawn under it
+#define ICON_ALARM      "\uE016"  // an alarm clock, from PebbleOS iconography
+#define ICON_ALARM_FILL "\uE017"
 // Not an icon: a "%" 3/4 the size, for a subdial's value.
-#define SMALL_PCT     "\uE016"
+#define SMALL_PCT     "\uE018"
 // A corner's "%": gabbro's is the small one too.
 #if defined(PBL_ROUND)
 #define CORNER_PCT    SMALL_PCT

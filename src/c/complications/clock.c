@@ -67,9 +67,15 @@ void center_time_draw(GContext *ctx, GPoint c) {
   subdial(ctx, c, local_now(), "");
 }
 
-// Like a time zone, named ALARM.
+// The alarm clock for a name, like the status corners (status.c): lit when
+// one is set, gray and "--" when not.
 void comp_alarm_draw(GContext *ctx, const Slot *s) {
-  corner(ctx, s, alarm_next(), words()->alarm);
+  struct tm *t = alarm_next();
+  char time[8], buf[12];
+  const char *half = clock_text(time, sizeof(time), t);
+  snprintf(buf, sizeof(buf), "%s%s%s", time, half[0] ? " " : "", half);
+  comp_icon_fill_text(ctx, s, ICON_ALARM, t ? GColorChromeYellow : GColorDarkGray,
+                      ICON_ALARM_FILL, t ? GColorPastelYellow : GColorLightGray, buf);
 }
 
 void center_alarm_draw(GContext *ctx, GPoint c) {
